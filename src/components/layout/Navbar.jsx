@@ -1,0 +1,226 @@
+import React, { useState } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useTheme } from '../../context/ThemeContext'
+import useAuth from '../../hooks/auth/useAuth'
+import { useFilter } from '../../context/FilterContext'
+import companyLogo from '../../assets/companyLogo.png'
+import OrderNowModal from '../modal/OrderNowModal'
+import SearchBar from '../Common/SearchBar'
+import { useSiteConfig } from '../../context/SiteConfigContext'
+import { FaBoxes } from 'react-icons/fa'
+
+export default function Navbar() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { mode } = useTheme()
+  const { user, userName, logout: authLogout, setIsLoginOpen } = useAuth()
+  const { searchkey, setSearchkey } = useFilter()
+  const { config } = useSiteConfig()
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
+
+  const handleSearchChange = (val) => {
+    setSearchkey(val)
+    if (location.pathname !== '/allproducts') {
+      navigate('/allproducts')
+    }
+  }
+
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'kingshukdash123@gmail.com'
+  const navlinks = [
+    { title: "Home", path: "/" },
+    { title: "Products", path: "/allproducts" },
+    { title: "Order", path: "/orders" },
+  ]
+
+  const isAdmin = user?.user?.email?.toLowerCase() === adminEmail.toLowerCase() || user?.user?.role === 'ADMIN';
+
+  const mobiliLinks = [
+    { label: "Home", path: "/", icon: "home" },
+    { label: "Products", path: "/allproducts", icon: "package_2" },
+    ...(isAdmin ? [{ label: "Admin", path: "/dashboard", icon: "admin_panel_settings" }] : []),
+    { label: "Cart", path: "/cart", icon: "shopping_bag", isCart: true },
+    { label: user ? "Profile" : "Login", path: user ? "/profile" : null, onClick: user ? null : () => setIsLoginOpen(true), icon: user ? "person" : "login" }
+  ]
+
+
+  const pass = 1
+
+  // Get cart items from localStorage without using useSelector
+  const cartLength = JSON.parse(localStorage.getItem('cart') || '[]').length;
+
+  return (
+    <>
+      <div className="fixed top-0 left-0 right-0 z-50 bg-bg-surface border-b border-border-base shadow-sm">
+
+        {/* Top Navbar */}
+        <div className="h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8">
+
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2">
+            <img
+              src={config.companyLogo || companyLogo}
+              className="w-9 h-9 sm:w-10 sm:h-10 object-contain"
+              alt={config.companyName || "CompanyName"}
+            />
+
+            <h1
+              className="hidden sm:block text-xl lg:text-2xl font-extrabold tracking-tight"
+              style={{ fontFamily: "Pirou" }}
+            >
+              {config.companyName || "CompanyName"}
+            </h1>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center gap-8">
+            {navlinks.map((navlink, idx) => (
+              <Link
+                key={idx}
+                to={navlink.path}
+                className="text-sm font-semibold text-gray-700 hover:text-primary transition"
+              >
+                {navlink.title}
+              </Link>
+            ))}
+
+            {(user?.user?.email?.toLowerCase() === adminEmail.toLowerCase() || user?.user?.role === 'ADMIN') && (
+              <Link
+                to="/dashboard"
+                className="text-sm font-semibold text-gray-700 hover:text-primary transition"
+              >
+                Admin
+              </Link>
+            )}
+          </div>
+
+          {/* Right Actions */}
+          <div className="flex items-center gap-4">
+
+            {/* Desktop Search Bar */}
+            <div className="hidden lg:block">
+              <SearchBar
+                searchkey={searchkey}
+                setSearchkey={handleSearchChange}
+                searchClass="px-3 py-1 bg-gray-200 rounded-full"
+              />
+            </div>
+
+            {/* Mobile Search Toggle */}
+            <button
+              onClick={() => setIsMobileSearchOpen((prev) => !prev)}
+              className="lg:hidden text-gray-700 hover:text-primary transition"
+            >
+              <span className="material-symbols-outlined">search</span>
+            </button>
+
+            {/* Cart & Profile Area (Desktop Only) */}
+            <div className="hidden lg:flex items-center gap-5">
+              <Link to="/cart" className="relative text-gray-700 hover:text-primary">
+                <span className="material-symbols-outlined">
+                  shopping_bag
+                </span>
+
+                {cartLength > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-primary text-white text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center">
+                    {cartLength}
+                  </span>
+                )}
+              </Link>
+
+              {user ? (
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Link
+                    to="/profile"
+                    className="w-8 h-8 sm:w-9 h-9 rounded-full bg-primary flex items-center justify-center shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-compli text-sm sm:text-base">
+                      person
+                    </span>
+                  </Link>
+
+                  <button
+                    onClick={authLogout}
+                    className="text-gray-700 hover:text-red-500 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined icon-xl">
+                      logout
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsLoginOpen(true)}
+                  className="px-3 py-1.5 sm:px-5 sm:py-2 rounded-full bg-gray-200 hover:bg-gray-300 font-semibold text-[10px] sm:text-xs transition cursor-pointer"
+                >
+                  Login
+                </button>
+              )}
+            </div>
+
+          </div>
+        </div>
+
+        {/* Mobile Search Overlay Panel */}
+        {isMobileSearchOpen && (
+          <div className="lg:hidden px-4 py-2.5 bg-bg-surface border-t border-border-base flex items-center gap-3 animate-in slide-in-from-top duration-200">
+            <div className="relative flex-1">
+              <input type="text" placeholder="Search products..." value={searchkey} onChange={(e) => handleSearchChange(e.target.value)} className="w-full pl-9 pr-3 py-1.5 rounded-full border border-border-base bg-bg-base focus:outline-none focus:ring-1 focus:ring-primary text-xs" />
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">
+                search
+              </span>
+            </div>
+            <button
+              onClick={() => setIsMobileSearchOpen(false)}
+              className="text-xs font-semibold text-text-muted hover:text-text-base transition"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* Mobile Bottom Navigation */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 lg:hidden z-50">
+          <div className="grid h-16" style={{ gridTemplateColumns: `repeat(${mobiliLinks.length}, minmax(0, 1fr))` }}>
+            {mobiliLinks.map((item, index) => {
+              const innerContent = (
+                <div className="flex flex-col items-center justify-center relative">
+                  <span className="material-symbols-outlined">{item.icon}</span>
+                  {item.isCart && cartLength > 0 && (
+                    <span className="absolute -top-1 -right-3 bg-primary text-white text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center">
+                      {cartLength}
+                    </span>
+                  )}
+                  <span className="text-[11px] mt-0.5">{item.label}</span>
+                </div>
+              );
+
+              if (item.path) {
+                return (
+                  <Link
+                    key={index}
+                    to={item.path}
+                    className="flex flex-col items-center justify-center text-gray-600 hover:text-primary transition"
+                  >
+                    {innerContent}
+                  </Link>
+                );
+              }
+
+              return (
+                <button
+                  key={index}
+                  onClick={item.onClick}
+                  className="flex flex-col items-center justify-center text-gray-600 hover:text-primary transition cursor-pointer"
+                >
+                  {innerContent}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+      </div>
+
+    </>
+  )
+}

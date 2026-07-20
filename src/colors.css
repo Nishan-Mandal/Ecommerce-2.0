@@ -1,0 +1,68 @@
+/* HN Enterprise Theme Color Variables */
+
+:root {
+  /* =========================
+     Brand Colors
+  ========================= */
+  --color-primary: #17700d;                /* Green primary brand color */
+  --color-primary-hover: #15803d;          /* Darker green hover state */
+  --color-primary-light: #dcfce7;          /* Soft green tint background/badge */
+  
+  --color-secondary: #4f46e5;              /* Secondary brand color (Indigo) */
+  --color-secondary-hover: #4338ca;        /* Hover state for secondary actions */
+  
+  --color-accent: #6bff8f;                 /* Accent color for badges/highlights */
+  --color-accent-text: #002109;            /* Contrast text for badges/highlights */
+
+  /* =========================
+     Background Colors
+  ========================= */
+  --color-bg-base: #ffffff;                /* Main page background */
+  --color-bg-surface: #f9fafb;             /* Surface cards and section background */
+  
+  /* =========================
+     Text Colors
+  ========================= */
+  --color-text-base: #111827;              /* Primary text color (slate-900) */
+  --color-text-compli: #ffffff;              /* complementary text color (white) */
+  --color-text-muted: #4b5563;             /* Secondary/muted text (slate-600) */
+  
+  /* =========================
+     Border Colors
+  ========================= */
+  --color-border-base: #e5e7eb;            /* Default border/divider color */
+
+  /* =========================
+     Status Colors
+  ========================= */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+}
+
+/* Dark Mode Palette Overrides */
+.dark {
+  /* =========================
+     Background Colors (Dark)
+  ========================= */
+  --color-bg-base: #0f172a;                /* Slate-900 background */
+  --color-bg-surface: #1e293b;             /* Slate-800 surface */
+  
+  /* =========================
+     Text Colors (Dark)
+  ========================= */
+  --color-text-base: #f8fafc;              /* Slate-50 primary text */
+  --color-text-muted: #94a3b8;             /* Slate-400 secondary text */
+  
+  /* =========================
+     Border Colors (Dark)
+  ========================= */
+  --color-border-base: #334155;            /* Slate-700 divider */
+  
+  /* =========================
+     Brand Colors (Dark Override)
+  ========================= */
+  --color-primary: #22c55e;                /* Bright green primary for dark mode */
+  --color-primary-hover: #4ade80;          /* Lighter green hover */
+  --color-primary-light: #14532d;          /* Dark green tint background/badge */
+}

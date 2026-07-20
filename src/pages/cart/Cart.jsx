@@ -1,105 +1,119 @@
-import React, { useContext, useEffect, useState } from 'react'
-import myContext from '../../context/data/myContext';
-import Layout from '../../components/layout/Layout';
-import Modal from '../../components/modal/Modal';
+import React, { useEffect } from 'react'
+import { useTheme } from '../../context/ThemeContext';
+import OrderSummary from './sections/OrderSummery';
+import CrossSellSection from './sections/CrossSellSection';
+import CartItem from './sections/cartitem';
 import { useDispatch, useSelector } from 'react-redux';
-import { deleteFromCart } from '../../redux/cartSlice';
+import { deleteFromCart, updateCartQuantity, addToCart } from '../../redux/cartSlice';
 import { toast } from 'react-toastify';
-
-
+import { useNavigate } from 'react-router-dom';
+import useProducts from '../../hooks/product/useProducts';
 
 function Cart() {
-
-  const context = useContext(myContext)
-  const { mode } = context;
+  const navigate = useNavigate();
+  const { mode } = useTheme();
+  const { products } = useProducts();
 
   const dispatch = useDispatch()
-  const cartItems = useSelector((state) => state.cart)
+  const cart = useSelector((state) => state.cart)
 
-  const [totalAmount, setTotalAmount] = useState(0);
+  // Sync cart to localStorage whenever it changes
   useEffect(() => {
-    let temp = 0;
-    cartItems.forEach((cartItem) => {
-      temp = temp + parseInt(cartItem.price)
-    })
-    setTotalAmount(temp);
-  }, [cartItems])
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart])
 
-  const shipping = parseInt(0);
-  const grandTotal = shipping + totalAmount
+  // Quantity updates handler
+  const handleUpdateQuantity = (item, newQuantity) => {
+    if (newQuantity <= 0) {
+      handleRemoveItem(item);
+    } else {
+      dispatch(updateCartQuantity({
+        id: item.id,
+        selectedVariant: item.selectedVariant,
+        quantity: newQuantity
+      }));
+    }
+  };
 
-  // Delete from cart
-  const deleteCart = (item) => {
-    dispatch(deleteFromCart(item))
-    toast.success('Item deleted from cart');
-  }
+  // Remove item handler
+  const handleRemoveItem = (item) => {
+    dispatch(deleteFromCart(item));
+    toast.success('Removed from cart!');
+  };
 
-  useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
-  }, [cartItems])
+  // Add suggested item directly to cart
+  const handleAddToCart = (product) => {
+    const hasVariants = product.variantTypes && product.variantTypes.length > 0;
+    if (hasVariants) {
+      navigate(`/productdetails/${product.id}`);
+      toast.info('Please select variant options first.');
+    } else {
+      dispatch(addToCart({
+        ...product,
+        price: product.price,
+        originalPrice: product.originalPrice || product.price,
+        selectedVariant: null,
+        quantity: 1
+      }));
+      toast.success('Added to cart!');
+    }
+  };
 
+  // Derived calculations
+  const totalItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const subtotal = cart.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
 
-
-
+  // Filter suggested cross-sell items (products in DB not already in cart)
+  const SUGGESTED_ITEMS = products
+    .filter(p => !cart.some(cItem => cItem.id === p.id))
+    .slice(0, 2);
 
   return (
-    <Layout >
-      <div className="h-screen bg-gray-100 pt-5 " style={{ backgroundColor: mode === 'dark' ? '#282c34' : '', color: mode === 'dark' ? 'white' : '', }}>
-        <h1 className="mb-10 text-center text-2xl font-bold">Cart Items</h1>
-        <div className="mx-auto max-w-5xl justify-center px-6 md:flex md:space-x-6 xl:px-0 ">
-          <div className="rounded-lg md:w-2/3 overflow-y-auto md:max-h-[85vh] sm:max-h-[60vh] " >
-
-            {cartItems.map((item, index) => {
-              return (
-                <div key={index} onClick={(e) => window.location.href = `/productinfo/${item.id}`} className="justify-between mb-6 rounded-lg border  drop-shadow-xl bg-white p-6  sm:flex  sm:justify-start" style={{ backgroundColor: mode === 'dark' ? 'rgb(32 33 34)' : '', color: mode === 'dark' ? 'white' : '', }}>
-                  <img src={item.imageUrl} alt="product-image" className="w-full rounded-lg sm:w-40" />
-                  <div className="sm:ml-4 sm:flex sm:w-full sm:justify-between">
-                    <div className="mt-5 sm:mt-0">
-                      <h2 className="text-lg font-bold text-gray-900" style={{ color: mode === 'dark' ? 'white' : '' }}>{item.title}</h2>
-                      <h2 className="text-sm text-gray-900" style={{ color: mode === 'dark' ? 'white' : '' }}>
-                        {window.innerWidth <= 576
-                        ? item.description.length > 80?item.description.slice(0, 80) + '...':item.description
-                        : item.description.length > 350?item.description.slice(0, 350) + '...':item.description}                 
-                      </h2>
-                      <p className="mt-1 text-xs font-semibold text-gray-700" style={{ color: mode === 'dark' ? 'white' : '' }}>₹{item.price}</p>
-                    </div>
-                    <div onClick={(e) => {e.stopPropagation(); e.preventDefault(); deleteCart(item)}} className="mt-4 flex justify-between sm:space-y-6 sm:mt-0 sm:block sm:space-x-6">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                      </svg>
-
-                    </div>
-                  </div>
+    <div className="bg-bg-base text-text-base  flex flex-col transition-colors duration-300">  
+      <main className="flex-grow  md:px-6 max-w-8xl w-full mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Shopping Cart Stack */}
+          <div className="lg:col-span-8 space-y-8">
+            <h1 className="md:text-3xl text-xl font-extrabold text-text-base mb-2 sm:mb-8 font-h1">
+              Your Cart ({totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'})
+            </h1>
+            
+            <div className="space-y-4">
+              {cart.length > 0 ? (
+                cart.map((item, index) => (
+                  <CartItem 
+                    key={`${item.id}-${index}`} 
+                    item={item} 
+                    onUpdateQuantity={handleUpdateQuantity} 
+                    onRemove={handleRemoveItem} 
+                  />
+                ))
+              ) : (
+                <div className="text-center py-20 bg-bg-surface text-text-muted text-sm font-semibold rounded-[24px] border border-dashed border-border-base">
+                  Your shopping cart is empty.
                 </div>
-              )
-            })}
+              )}
+            </div>
 
-          </div>
-
-          <div className="mt-6 h-full rounded-lg border bg-white p-6 shadow-md md:mt-0 md:w-1/3" style={{ backgroundColor: mode === 'dark' ? 'rgb(32 33 34)' : '', color: mode === 'dark' ? 'white' : '', }}>
-            <div className="mb-2 flex justify-between">
-              <p className="text-gray-700" style={{ color: mode === 'dark' ? 'white' : '' }}>Subtotal</p>
-              <p className="text-gray-700" style={{ color: mode === 'dark' ? 'white' : '' }}>₹{totalAmount}</p>
-            </div>
-            <div className="flex justify-between">
-              <p className="text-gray-700" style={{ color: mode === 'dark' ? 'white' : '' }}>Shipping</p>
-              <p className="text-gray-700" style={{ color: mode === 'dark' ? 'white' : '' }}>₹{shipping}</p>
-            </div>
-            <hr className="my-4" />
-            <div className="flex justify-between mb-3">
-              <p className="text-lg font-bold" style={{ color: mode === 'dark' ? 'white' : '' }}>Total</p>
-              <div>
-                <p className="mb-1 text-lg font-bold" style={{ color: mode === 'dark' ? 'white' : '' }}>₹{grandTotal}</p>
-              </div>
-            </div>
-            <Modal
-              setGrandTotal={grandTotal}
-              items={cartItems}
+            <CrossSellSection 
+              items={SUGGESTED_ITEMS} 
+              onAddToCart={handleAddToCart} 
             />
           </div>
+
+          {/* Pricing Calculations Summary Sidebar */}
+          <OrderSummary 
+            subtotal={subtotal} 
+            shippingFee="Free" 
+            taxRate={0.05} 
+            cartItems={cart}
+            onCheckout={() => navigate('/order')}
+          />
+          
         </div>
-      </div>
-    </Layout>
+      </main>
+    </div>
   )
 }
 

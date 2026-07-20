@@ -1,27 +1,17 @@
-import {
-    BrowserRouter as Router,
-    Route,
-    Routes,
-    Navigate,
-} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Dialog, Transition } from '@headlessui/react'
-import { Fragment, useState, useContext, useEffect } from 'react'
-import myContext from '../../context/data/myContext'
+import { Fragment, useState, useEffect } from 'react'
 import { toast } from 'react-toastify';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
-import { fireDB, storage } from '../../firebase/FirebaseConfig';
-import { deleteFromCart } from '../../redux/cartSlice';
-import { useDispatch, useSelector } from 'react-redux';
-import { ProtectedRoutes } from '../../App.jsx';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-
-
-
+import { Timestamp } from 'firebase/firestore';
+import { orderService } from '../../services/order/orderService';
+import { clearCart } from '../../redux/cartSlice';
+import { useDispatch } from 'react-redux';
+import useAuth from '../../hooks/auth/useAuth';
 
 export default function Modal({ setGrandTotal, items }) {
-    const context = useContext(myContext);
+    const navigate = useNavigate();
+    const { user, setIsLoginOpen } = useAuth();
     let [isOpen, setIsOpen] = useState(false)
-    const { getOrderData } = context;
 
     function closeModal() {
         setIsOpen(false)
@@ -32,8 +22,8 @@ export default function Modal({ setGrandTotal, items }) {
     }
 
     function handleClick() {
-        if (JSON.parse(localStorage.getItem('user')) === null) {
-            window.location.href = `/login`;
+        if (!user) {
+            setIsLoginOpen(true);
         } else {
             openModal();
         }
@@ -48,9 +38,6 @@ export default function Modal({ setGrandTotal, items }) {
     /************************************************** PAYMENT INTEGRATION **************************************************
      ******************************************************** RAZORPAY *******************************************************/
     const dispatch = useDispatch()
-    const deleteCart = (item) => {
-        dispatch(deleteFromCart(item))
-    }
 
     const buyNow = async () => {
         try {
@@ -102,8 +89,8 @@ export default function Modal({ setGrandTotal, items }) {
                 addressInfo,
                 date: Timestamp.now(),
                 edDate: new Date(new Date().setDate(new Date().getDate() + 12)),
-                email: JSON.parse(localStorage.getItem("user")).user.email,
-                userid: JSON.parse(localStorage.getItem("user")).user.uid,
+                email: user?.user?.email,
+                userid: user?.user?.uid,
                 status: 'Order Placed',
                 totalAmount: parseInt(setGrandTotal),
                 paymentMode: paymentMode,
@@ -114,8 +101,7 @@ export default function Modal({ setGrandTotal, items }) {
 
             if (paymentMode === 'Online Payment') {
                 var options = {
-                    key: "rzp_live_u15YWDispUV9NK",
-                    key_secret: "QnpyM3kaNT7sMZKg7y0psCCi",
+                    key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_u15YWDispUV9NK",
                     amount: parseInt(setGrandTotal * 100),
                     currency: "INR",
                     order_receipt: 'order_rcptid_' + name,
@@ -124,7 +110,7 @@ export default function Modal({ setGrandTotal, items }) {
                     handler: async function (response) {
                         orderInfo.paymentId = response.razorpay_payment_id;
                         toast.success('Payment Successful');
-                        await addDoc(collection(fireDB, "orders"), orderInfo);
+                        await orderService.createOrder(orderInfo);
                         toast.success('Order Placed Successfully')
                     },
 
@@ -136,19 +122,13 @@ export default function Modal({ setGrandTotal, items }) {
                 pay.open();
             } else {
                 orderInfo.totalAmount += 40;
-                await addDoc(collection(fireDB, "orders"), orderInfo);
+                await orderService.createOrder(orderInfo);
                 toast.success('Order Placed Successfully')
             }
 
             //Clearing the cart
-            const cartData = JSON.parse(localStorage.getItem('cart')) ?? [];
-            if (JSON.stringify(cartData) === JSON.stringify(items)) {
-                items.map((item) => {
-                    deleteCart(item)
-                })
-            }
+            dispatch(clearCart());
             closeModal();
-            getOrderData();
         } catch (error) {
             console.log(error);
             closeModal();
