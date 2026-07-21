@@ -1,0 +1,84 @@
+import { FaStar, FaRegStar, FaExclamationTriangle } from "react-icons/fa";
+
+function StarRating({ rating = 0 }) {
+    return (
+        <div className="flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((s) =>
+                s <= rating ? (
+                    <FaStar key={s} className="text-amber-400 text-[11px]" />
+                ) : (
+                    <FaRegStar key={s} className="text-border-base text-[11px]" />
+                )
+            )}
+        </div>
+    );
+}
+
+function DeleteReviewModal({ open, review, products = {}, deleting, onClose, onDelete }) {
+    if (!open) return null;
+
+    const productName = review?.productId
+        ? products[review.productId] || review.productId
+        : "—";
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="w-full max-w-sm bg-bg-surface border border-border-base rounded-xl shadow-lg text-xs overflow-hidden">
+
+                {/* Icon + Title */}
+                <div className="p-5 text-center">
+                    <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+                        <FaExclamationTriangle size={20} />
+                    </div>
+                    <h2 className="text-base font-bold mt-3">Delete Review?</h2>
+                    <p className="text-[11px] text-text-muted mt-2 leading-relaxed">
+                        This will permanently remove the review by
+                        <span className="font-bold text-text-base"> {review?.userName}</span>.
+                        This cannot be undone.
+                    </p>
+                </div>
+
+                {/* Review Preview Card */}
+                {review && (
+                    <div className="mx-4 mb-4 rounded-lg border border-border-base bg-bg-base p-3 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <p className="font-bold text-text-base">{review.userName}</p>
+                            <StarRating rating={review.rating} />
+                        </div>
+
+                        <p className="text-[10px] text-primary font-semibold truncate">
+                            {productName}
+                        </p>
+
+                        <p className="text-[11px] text-text-muted leading-relaxed line-clamp-2">
+                            "{review.review}"
+                        </p>
+                    </div>
+                )}
+
+                {/* Actions */}
+                <div className="border-t border-border-base p-3.5 flex gap-2">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={deleting}
+                        className="flex-1 py-1.5 rounded-lg border border-border-base bg-bg-base hover:bg-bg-base/70 font-semibold transition disabled:opacity-50 text-xs"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onDelete}
+                        disabled={deleting}
+                        className="flex-1 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition disabled:opacity-50 text-xs"
+                    >
+                        {deleting ? "Deleting..." : "Delete Review"}
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    );
+}
+
+export default DeleteReviewModal;

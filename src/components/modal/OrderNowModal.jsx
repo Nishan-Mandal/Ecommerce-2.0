@@ -1,23 +1,18 @@
-import React from 'react';
-
+import React, { Fragment, useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react'
-import { Fragment, useState, useContext, useEffect } from 'react'
-import myContext from '../../context/data/myContext'
 import { toast } from 'react-toastify';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
-import { fireDB, storage } from '../../firebase/FirebaseConfig';
+import { Timestamp } from 'firebase/firestore';
+import { orderService } from '../../services/order/orderService';
+import { uploadService } from '../../services/upload/uploadService';
 import { deleteFromCart } from '../../redux/cartSlice';
 import { useDispatch, useSelector } from 'react-redux';
-import { ProtectedRoutes } from '../../App.jsx';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Loader from '../../components/loader/Loader'
-
+import useAuth from '../../hooks/auth/useAuth';
 
 function OrderNowModal() {
-    const context = useContext(myContext);
+    const { user, setIsLoginOpen } = useAuth();
     let [isOpen, setIsOpen] = useState(false)
-    const { getOrderData, loading, setLoading } = context;
-
+    const [loading, setLoading] = useState(false);
 
     function closeModal() {
         setIsOpen(false)
@@ -28,8 +23,8 @@ function OrderNowModal() {
     }
 
     function handleClick() {
-        if (JSON.parse(localStorage.getItem('user')) === null) {
-            window.location.href = `/login`;
+        if (!user) {
+            setIsLoginOpen(true);
         } else {
             openModal();
         }
@@ -108,11 +103,8 @@ function OrderNowModal() {
 
             setLoading(true);
 
-            // Uploading Image
-            const storageRef = storage;
-            const imageRef = ref(storageRef, `orders/${selectedImage.name}`);
-            await uploadBytes(imageRef, selectedImage);
-            const downloadURL = await getDownloadURL(imageRef);
+            // Uploading Image via service
+            const downloadURL = await uploadService.uploadFile(selectedImage, 'orders');
 
             const addressInfo = {
                 name,
@@ -132,8 +124,8 @@ function OrderNowModal() {
                 addressInfo,
                 date: Timestamp.now(),
                 edDate: new Date(new Date().setDate(new Date().getDate() + 12)),
-                email: JSON.parse(localStorage.getItem("user")).user.email,
-                userid: JSON.parse(localStorage.getItem("user")).user.uid,
+                email: user?.user?.email,
+                userid: user?.user?.uid,
                 image: downloadURL,
                 totalAmount: totalAmount+(sliderValue*50-50),
                 status: 'Order Placed',
@@ -154,7 +146,7 @@ function OrderNowModal() {
                     handler: async function (response) {
                         toast.success('Payment Successful')
                         orderInfo.paymentId = response.razorpay_payment_id;
-                        await addDoc(collection(fireDB, "orders"), orderInfo);
+                        await orderService.createOrder(orderInfo);
                         toast.success('Order Placed Successfully');
                     },
                     theme: {
@@ -166,11 +158,10 @@ function OrderNowModal() {
             }
             else {
                 orderInfo.totalAmount += 40;
-                await addDoc(collection(fireDB, "orders"), orderInfo);
+                await orderService.createOrder(orderInfo);
                 toast.success('Order Placed Successfully');
             }
             closeModal();
-            getOrderData();
             setLoading(false);
         } catch (error) {
             console.log(error);

@@ -1,0 +1,48 @@
+import React from 'react';
+
+/**
+ * Header Component
+ * Sticky top navigation header (height: 64px) with viewport menu toggles, title, and profile details.
+ */
+export default function Header({
+    setDrawerOpen,
+    sidebarCollapsed,
+    setSidebarCollapsed,
+    title
+}) {
+    return (
+        <header className="sticky top-0 z-30 bg-bg-surface/85 backdrop-blur-md border-b border-border-base/60 flex items-center justify-between px-4 md:px-6 lg:px-8 h-16 shrink-0">
+            <div className="flex items-center gap-4">
+                {/* Mobile Menu Toggle */}
+                <button
+                    onClick={() => setDrawerOpen(true)}
+                    className="md:hidden flex items-center justify-center text-text-base cursor-pointer hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
+                    title="Open Menu"
+                >
+                    <span className="material-symbols-outlined text-[24px]">menu</span>
+                </button>
+
+                {/* Tablet Menu Toggle */}
+                <button
+                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    className="hidden md:flex lg:hidden items-center justify-center text-text-base cursor-pointer hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
+                    title="Toggle Sidebar"
+                >
+                    <span className="material-symbols-outlined text-[24px]">menu</span>
+                </button>
+
+                {/* Page Title */}
+                <h1 className="text-[20px] md:text-[24px] lg:text-[28px] font-bold text-text-base tracking-tight leading-none">
+                    {title}
+                </h1>
+            </div>
+
+            {/* Right Area: Admin Badge */}
+            <div className="flex items-center gap-3">
+                <div className="px-3 py-1 bg-emerald-50 border border-emerald-100 rounded-full text-[#17700d] font-bold text-[10px] md:text-xs uppercase tracking-wider">
+                    Admin
+                </div>
+            </div>
+        </header>
+    );
+}

@@ -1,0 +1,172 @@
+import {
+    doc,
+    getDoc,
+    setDoc,
+    updateDoc,
+    collection,
+    getDocs,
+    addDoc,
+    deleteDoc,
+    query,
+    orderBy,
+    serverTimestamp,
+    writeBatch,
+} from "firebase/firestore";
+import { fireDB } from "../../firebase/FirebaseConfig";
+
+import { uploadService } from "../upload/uploadService";
+
+const SITE_DOC = () => doc(fireDB, "configure", "site");
+const BANNERS_COL = () => collection(fireDB, "configure", "site", "banners");
+const COLLECTIONS_COL = () => collection(fireDB, "configure", "site", "collections");
+
+// ─── Default config (used when document doesn't exist yet) ───────────────────
+export const DEFAULT_SOCIAL_LINKS = [
+    { platform: "facebook",  icon: "fa-facebook-f",  url: "", isActive: false },
+    { platform: "instagram", icon: "fa-instagram",   url: "", isActive: false },
+    { platform: "twitter",   icon: "fa-x-twitter",   url: "", isActive: false },
+    { platform: "youtube",   icon: "fa-youtube",     url: "", isActive: false },
+    { platform: "linkedin",  icon: "fa-linkedin-in", url: "", isActive: false },
+    { platform: "pinterest", icon: "fa-pinterest-p", url: "", isActive: false },
+    { platform: "whatsapp",  icon: "fa-whatsapp",    url: "", isActive: false },
+];
+
+export const DEFAULT_CONFIG = {
+    companyName: "",
+    companyTagline: "",
+    companyLogo: "",
+    faviconUrl: "",
+    address: { line1: "", line2: "", city: "", state: "", pincode: "", country: "India", mapUrl: "" },
+    phones: [],
+    emails: [],
+    socialLinks: DEFAULT_SOCIAL_LINKS,
+    bannersCount: 0,
+    collectionsCount: 0,
+    legal: { termsAndConditions: "", privacyPolicy: "", returnPolicy: "", aboutUs: "" },
+    seo: { metaTitle: "", metaDescription: "", ogImageUrl: "", keywords: [] },
+    updatedAt: null,
+    updatedBy: "",
+};
+
+export const configureService = {
+
+    // ─── Root Config Document ─────────────────────────────────────────────────
+
+    /** Fetch the site config document */
+    async getSiteConfig() {
+        const snap = await getDoc(SITE_DOC());
+        if (!snap.exists()) return { ...DEFAULT_CONFIG };
+        return { ...DEFAULT_CONFIG, ...snap.data() };
+    },
+
+    /** Partially update the site config (merge) */
+    async saveSiteConfig(data, adminUid = "") {
+        await setDoc(
+            SITE_DOC(),
+            { ...data, updatedAt: serverTimestamp(), updatedBy: adminUid },
+            { merge: true }
+        );
+    },
+
+    // ─── Banners Sub-collection ───────────────────────────────────────────────
+
+    /** Fetch all banners ordered by their display order */
+    async getBanners() {
+        const snap = await getDocs(query(BANNERS_COL(), orderBy("order", "asc")));
+        return snap.docs.map((d) => ({ bannerId: d.id, ...d.data() }));
+    },
+
+    /**
+     * Upload a banner image to the active provider, then write a banner doc.
+     * @param {File} file - The image file to upload
+     * @param {object} meta - { title, subtitle, ctaLabel, ctaUrl, order, isActive }
+     * @param {function} onProgress - Optional (0-100) progress callback
+     */
+    async addBanner(file, meta = {}, onProgress) {
+        const imageUrl = await uploadService.uploadProductImage(file, onProgress);
+
+        const bannerDoc = await addDoc(BANNERS_COL(), {
+            imageUrl,
+            title: meta.title || "",
+            subtitle: meta.subtitle || "",
+            ctaLabel: meta.ctaLabel || "",
+            ctaUrl: meta.ctaUrl || "",
+            order: meta.order ?? 99,
+            isActive: meta.isActive ?? true,
+            createdAt: serverTimestamp(),
+        });
+
+        // Keep root count in sync
+        const config = await this.getSiteConfig();
+        await this.saveSiteConfig({ bannersCount: (config.bannersCount || 0) + 1 });
+
+        return { bannerId: bannerDoc.id, imageUrl, ...meta };
+    },
+
+    /** Update banner metadata (no image change) */
+    async updateBanner(bannerId, data) {
+        await updateDoc(doc(BANNERS_COL(), bannerId), data);
+    },
+
+    /** Delete a banner — removes Firestore doc and Storage image */
+    async deleteBanner(bannerId, imageUrl) {
+        await deleteDoc(doc(BANNERS_COL(), bannerId));
+        if (imageUrl) {
+            try {
+                await uploadService.deleteProductImage(imageUrl);
+            } catch (e) {
+                console.warn("Could not delete banner image from storage:", e);
+            }
+        }
+        const config = await this.getSiteConfig();
+        await this.saveSiteConfig({ bannersCount: Math.max(0, (config.bannersCount || 1) - 1) });
+    },
+
+    /** Batch-update the `order` field for all banners (for drag-to-reorder) */
+    async updateBannerOrders(banners) {
+        const batch = writeBatch(fireDB);
+        banners.forEach((b, i) => {
+            batch.update(doc(BANNERS_COL(), b.bannerId), { order: i });
+        });
+        await batch.commit();
+    },
+
+    // ─── Home Collections Sub-collection ────────────────────────────────────
+
+    /** Fetch all home-page collections ordered by display order */
+    async getCollections() {
+        const snap = await getDocs(query(COLLECTIONS_COL(), orderBy("order", "asc")));
+        return snap.docs.map((d) => ({ collectionId: d.id, ...d.data() }));
+    },
+
+    /** Create a new home-page product collection section */
+    async addCollection(data) {
+        const docRef = await addDoc(COLLECTIONS_COL(), {
+            title: data.title || "New Collection",
+            subtitle: data.subtitle || "",
+            productIds: data.productIds || [],
+            layout: data.layout || "grid",
+            order: data.order ?? 99,
+            isActive: data.isActive ?? true,
+            createdAt: serverTimestamp(),
+        });
+        const config = await this.getSiteConfig();
+        await this.saveSiteConfig({ collectionsCount: (config.collectionsCount || 0) + 1 });
+        return { collectionId: docRef.id, ...data };
+    },
+
+    /** Update a home-page collection */
+    async updateCollection(collectionId, data) {
+        await updateDoc(doc(COLLECTIONS_COL(), collectionId), {
+            ...data,
+            updatedAt: serverTimestamp(),
+        });
+    },
+
+    /** Delete a home-page collection */
+    async deleteCollection(collectionId) {
+        await deleteDoc(doc(COLLECTIONS_COL(), collectionId));
+        const config = await this.getSiteConfig();
+        await this.saveSiteConfig({ collectionsCount: Math.max(0, (config.collectionsCount || 1) - 1) });
+    },
+};

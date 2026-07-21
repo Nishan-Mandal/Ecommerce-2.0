@@ -1,23 +1,23 @@
-import React, { useContext, useEffect } from 'react'
-import myContext from '../../context/data/myContext'
+import React from 'react'
+import { useTheme } from '../../context/ThemeContext'
+import useOrders from '../../hooks/order/useOrders'
 import Layout from '../../components/layout/Layout'
 import Loader from '../../components/loader/Loader'
 import { Link } from 'react-router-dom'
 
 function Order() {
-  const userid = JSON.parse(localStorage.getItem('user')).user.uid
-  const context = useContext(myContext)
-  const { mode, loading, order } = context
+  const { orders, loading } = useOrders();
+  const { mode } = useTheme();
 
   return (
-    <Layout>
+    <div>
       {loading && <Loader />}
-      {order.length > 0 ?
+      {orders.length > 0 ?
         (<>
           <div className="h-full pt-10 flex flex-col items-center sm:px-4">
             <h1 className="mb-10 text-center text-2xl font-bold" style={{ backgroundColor: mode === 'dark' ? '#282c34' : '', color: mode === 'dark' ? 'white' : '' }}>Your Orders</h1>
             {
-              order.map((order) => {
+              orders.map((order) => {
                 if (order.isCustom === true) {
                   return (
                     <div key={`${order.date}`} className="justify-between mb-6 rounded-lg border  drop-shadow-xl bg-white   sm:flex  sm:justify-start md:w-2/3 mb-4  overflow-y-auto max-h-[85vh]">
@@ -51,7 +51,7 @@ function Order() {
                 } else {
                   return (
                     order.items.map((item) => (
-                      <div key={`${order.paymentId}-${item.id}-${order.date}`} onClick={(e) => window.location.href = `/productinfo/${item.id}`} className="justify-between mb-6 rounded-lg border  drop-shadow-xl bg-white   sm:flex  sm:justify-start md:w-2/3 mb-4  overflow-y-auto max-h-[85vh]">
+                      <div key={`${order.paymentId}-${item.id}-${order.date}`} onClick={(e) => window.location.href = `/productdetails/${item.id}`} className="justify-between mb-6 rounded-lg border  drop-shadow-xl bg-white   sm:flex  sm:justify-start md:w-2/3 mb-4  overflow-y-auto max-h-[85vh]">
                         <div className="justify-between rounded-lg bg-white p-6 sm:flex sm:justify-start w-full" style={{ backgroundColor: mode === 'dark' ? '#282c34' : '', color: mode === 'dark' ? 'white' : '' }}>
                           <img src={item.imageUrl} alt="product-image" className="w-full rounded-lg sm:w-40" style={{ aspectRatio: '1/1', objectFit: 'contain' }} />
                           <div className="sm:ml-4 sm:flex sm:w-full sm:justify-between">
@@ -97,7 +97,7 @@ function Order() {
         )
 
       }
-    </Layout>
+    </div>
   )
 }
 
