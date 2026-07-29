@@ -82,6 +82,7 @@ function CouponScope({
                 </div>
 
                 {/* Applicable Products Selection list */}
+                {/* Applicable Products Selection list */}
                 {coupon.appliesTo === "PRODUCT" && (
                     <div>
                         <label className="block font-semibold mb-1.5">
@@ -89,27 +90,31 @@ function CouponScope({
                         </label>
                         <div className="max-h-48 overflow-y-auto border border-border-base rounded-lg bg-bg-surface">
                             {products.length === 0 && (
-                                <div className="p-3 text-[10px] text-text-muted text-center">
+                                <div className="p-3 text-[10px] text-text-muted text-center font-medium">
                                     No Products Found
                                 </div>
                             )}
 
-                            {products.map((product) => (
-                                <label
-                                    key={product.productId}
-                                    className="flex items-center justify-between px-3 py-1.5 border-b border-border-base last:border-0 hover:bg-bg-base cursor-pointer"
-                                >
-                                    <span className="text-[11px] truncate mr-2">
-                                        {product.title}
-                                    </span>
-                                    <input
-                                        type="checkbox"
-                                        checked={(coupon.applicableProducts || []).includes(product.productId)}
-                                        onChange={() => toggleProduct(product.productId)}
-                                        className="w-3.5 h-3.5 accent-primary"
-                                    />
-                                </label>
-                            ))}
+                            {products.map((product) => {
+                                const pId = product.id || product.productId;
+                                const isChecked = (coupon.applicableProducts || []).includes(pId);
+                                return (
+                                    <label
+                                        key={pId}
+                                        className="flex items-center justify-between px-3 py-1.5 border-b border-border-base last:border-0 hover:bg-bg-base cursor-pointer"
+                                    >
+                                        <span className="text-[11px] truncate mr-2 font-medium">
+                                            {product.title}
+                                        </span>
+                                        <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={() => toggleProduct(pId)}
+                                            className="w-3.5 h-3.5 accent-primary cursor-pointer"
+                                        />
+                                    </label>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -122,27 +127,32 @@ function CouponScope({
                         </label>
                         <div className="max-h-48 overflow-y-auto border border-border-base rounded-lg bg-bg-surface">
                             {categories.length === 0 && (
-                                <div className="p-3 text-[10px] text-text-muted text-center">
+                                <div className="p-3 text-[10px] text-text-muted text-center font-medium">
                                     No Categories Found
                                 </div>
                             )}
 
-                            {categories.map((category) => (
-                                <label
-                                    key={category.categoryId}
-                                    className="flex items-center justify-between px-3 py-1.5 border-b border-border-base last:border-0 hover:bg-bg-base cursor-pointer"
-                                >
-                                    <span className="text-[11px] truncate mr-2">
-                                        {category.name}
-                                    </span>
-                                    <input
-                                        type="checkbox"
-                                        checked={(coupon.applicableCategories || []).includes(category.categoryId)}
-                                        onChange={() => toggleCategory(category.categoryId)}
-                                        className="w-3.5 h-3.5 accent-primary"
-                                    />
-                                </label>
-                            ))}
+                            {categories.map((catItem) => {
+                                const cId = typeof catItem === "string" ? catItem : (catItem.categoryId || catItem.name);
+                                const cName = typeof catItem === "string" ? catItem : catItem.name;
+                                const isChecked = (coupon.applicableCategories || []).includes(cId);
+                                return (
+                                    <label
+                                        key={cId}
+                                        className="flex items-center justify-between px-3 py-1.5 border-b border-border-base last:border-0 hover:bg-bg-base cursor-pointer"
+                                    >
+                                        <span className="text-[11px] truncate mr-2 font-medium">
+                                            {cName}
+                                        </span>
+                                        <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={() => toggleCategory(cId)}
+                                            className="w-3.5 h-3.5 accent-primary cursor-pointer"
+                                        />
+                                    </label>
+                                );
+                            })}
                         </div>
                     </div>
                 )}

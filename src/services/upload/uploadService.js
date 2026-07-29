@@ -1,6 +1,8 @@
 import { storage } from '../../firebase/FirebaseConfig.js';
 import { ref, uploadBytes, getDownloadURL, uploadBytesResumable, deleteObject } from 'firebase/storage';
 
+import { compressImage } from '../../utils/imageCompression.js';
+
 export const uploadService = {
   /**
    * Helper to fetch authentication parameters for ImageKit
@@ -158,10 +160,11 @@ export const uploadService = {
   /**
    * Uploads a file to Firebase Storage and returns its download URL (fallback / generic helper)
    */
-  async uploadFile(file, path = 'uploads') {
+  async uploadFile(rawFile, path = 'uploads') {
+    const file = await compressImage(rawFile);
     const provider = (import.meta.env.VITE_IMAGE_UPLOAD_PROVIDER || "firebase").toLowerCase();
     if (provider === "firebase") {
-      const storageRef = ref(storage, `${path}/${file.name}`);
+      const storageRef = ref(storage, `${path}/${Date.now()}_${file.name}`);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
       return downloadURL;
@@ -173,7 +176,8 @@ export const uploadService = {
   /**
    * Main entrypoint for product image uploads. Dispatches to the active provider.
    */
-  uploadProductImage(file, onProgress) {
+  async uploadProductImage(rawFile, onProgress) {
+    const file = await compressImage(rawFile);
     const provider = (import.meta.env.VITE_IMAGE_UPLOAD_PROVIDER || "firebase").toLowerCase();
     switch (provider) {
       case "cloudinary":

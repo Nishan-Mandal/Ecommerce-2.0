@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import ReviewCard from './Reviews/ReviewCard';
 import ReviewsTab from './Reviews/Reviews';
 import DescriptionTab from './DescriptionTab';
 
@@ -7,7 +6,7 @@ import DescriptionTab from './DescriptionTab';
 // ── Main Tabbed Component ─────────────────────────────────────────
 const TABS = ['Details', 'Reviews',];
 
-export default function ProductTabSection({ description, specifications, reviews }) {
+export default function ProductTabSection({ productId, description, specifications, reviews, onReviewAdded }) {
   const [activeTab, setActiveTab] = useState('Details');
 
   return (
@@ -36,7 +35,7 @@ export default function ProductTabSection({ description, specifications, reviews
       {/* Tab Content */}
       <div>
         {activeTab === 'Details'  && <DescriptionTab  description={description} specifications={specifications} />}
-        {activeTab === 'Reviews'  && <ReviewsTab  reviews={reviews} />}
+        {activeTab === 'Reviews'  && <ReviewsTab  productId={productId} reviews={reviews} onSubmitted={onReviewAdded} />}
       </div>
     </div>
   );

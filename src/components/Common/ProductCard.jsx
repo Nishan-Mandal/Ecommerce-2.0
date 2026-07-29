@@ -10,6 +10,10 @@ function ProductCard({ item, index, addCart }) {
     const navigate = useNavigate();
     const { title, price, description, imageUrl, category, averageRating } = item;
 
+    const descText = typeof description === "object"
+        ? (description?.short || "")
+        : (typeof description === "string" ? description : "");
+
     return (
         <div
             onClick={() => navigate(`/productdetails/${item.id}`)}
@@ -53,7 +57,7 @@ function ProductCard({ item, index, addCart }) {
 
                 {/* Description */}
                 <p className="text-[10px] sm:text-[11px] text-text-muted line-clamp-2 leading-relaxed">
-                    {description || "Experience premium build quality and exceptional cooling performance designed for modern homes."}
+                    {descText || "Experience premium build quality and exceptional cooling performance designed for modern homes."}
                 </p>
 
                 {/* Price and Cart Action */}

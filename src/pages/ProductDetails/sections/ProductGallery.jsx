@@ -49,16 +49,17 @@ export default function ProductGallery({
         </div>
       )}
 
-      {/* Main Display Image */}
-      <div className="relative flex-1 bg-bg-base/30 border border-border-base/40 rounded-2xl overflow-hidden h-[250px] sm:h-[320px] lg:h-[400px] xl:h-[450px] flex items-center justify-center">
+      {/* Main Display Image — fixed height so it never shifts with different images */}
+      <div className="relative flex-1 bg-bg-base/30 border border-border-base/40 rounded-2xl overflow-hidden flex items-center justify-center"
+           style={{ height: 'clamp(240px, 45vw, 480px)', minHeight: '240px', maxHeight: '480px' }}>
         <img
           src={displaySrc}
           alt={title}
-          className="w-full h-full object-contain p-3 sm:p-4 lg:p-6 transition-all duration-500 ease-out"
+          className="absolute inset-0 w-full h-full object-contain p-3 sm:p-4 lg:p-6 transition-all duration-500 ease-out"
         />
 
         {allImages.length > 0 && (
-          <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 bg-bg-surface/85 backdrop-blur px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold shadow-xs border border-border-base/10 text-text-muted">
+          <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 bg-bg-surface/85 backdrop-blur px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold shadow-xs border border-border-base/10 text-text-muted z-10">
             {displayIndex}/{allImages.length}
           </div>
         )}

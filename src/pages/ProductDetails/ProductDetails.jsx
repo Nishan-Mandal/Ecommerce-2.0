@@ -17,6 +17,8 @@ export default function ProductDetails() {
     setSelectedImage,
     ratings,
     averageRating,
+    reviewCount,
+    refetchRatings,
     isFetching,
     error,
     addProductToCart,
@@ -45,10 +47,15 @@ export default function ProductDetails() {
   if (error) return <ErrorState message={error} />;
   if (!product) return null;
 
-  // Determine active images (switch to variant-specific images if available)
-  const activeImages = (selectedVariant?.images && selectedVariant.images.length > 0)
+  // Determine active images (combine variant-specific images with common product images, deduplicated)
+  const commonImages = (product.images && product.images.length > 0)
+    ? product.images
+    : (product.imageUrl ? [product.imageUrl] : []);
+  const variantImages = (selectedVariant?.images && selectedVariant.images.length > 0)
     ? selectedVariant.images
-    : (product.images || []);
+    : [];
+
+  const activeImages = Array.from(new Set([...variantImages, ...commonImages]));
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-12 sm:space-y-16">
@@ -71,6 +78,7 @@ export default function ProductDetails() {
           <ProductInfo
             product={product}
             rating={averageRating}
+            reviewCount={reviewCount}
             selectedVariant={selectedVariant}
             priceInfo={priceInfo}
             isComplete={isComplete}
@@ -92,9 +100,11 @@ export default function ProductDetails() {
 
       {/* ── Full-width Tab Section: Details / Reviews / Warranty ── */}
       <ProductTabSection
+        productId={product.id}
         description={product.description}
         specifications={product.specifications}
         reviews={ratings}
+        onReviewAdded={refetchRatings}
       />
 
       {/* ── Related Products ── */}

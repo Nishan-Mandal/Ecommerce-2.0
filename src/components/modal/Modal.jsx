@@ -4,21 +4,30 @@ import { Fragment, useState, useEffect } from 'react'
 import { toast } from 'react-toastify';
 import { Timestamp } from 'firebase/firestore';
 import { orderService } from '../../services/order/orderService';
+import { paymentService } from '../../services/payment/paymentService';
 import { clearCart } from '../../redux/cartSlice';
 import { useDispatch } from 'react-redux';
 import useAuth from '../../hooks/auth/useAuth';
 
-export default function Modal({ setGrandTotal, items }) {
+export default function Modal({ setGrandTotal, items, isOpen: externalIsOpen, closeModal: externalCloseModal, hideTriggerButton }) {
     const navigate = useNavigate();
     const { user, setIsLoginOpen } = useAuth();
-    let [isOpen, setIsOpen] = useState(false)
+    const [internalIsOpen, setInternalIsOpen] = useState(false);
+
+    const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
 
     function closeModal() {
-        setIsOpen(false)
+        if (externalCloseModal) {
+            externalCloseModal();
+        } else {
+            setInternalIsOpen(false);
+        }
     }
 
     function openModal() {
-        setIsOpen(true)
+        if (externalIsOpen === undefined) {
+            setInternalIsOpen(true);
+        }
     }
 
     function handleClick() {
@@ -47,8 +56,8 @@ export default function Modal({ setGrandTotal, items }) {
             if (address === "") emptyFields.push("Address");
             if (pincode === "") emptyFields.push("Pincode");
             if (phoneNumber === "") emptyFields.push("Phone Number");
-            if(paymentMode === "") emptyFields.push("Payment Mode");
-            if (emptyFields.length > 0){
+            if (paymentMode === "") emptyFields.push("Payment Mode");
+            if (emptyFields.length > 0) {
                 toast.error(`Please provide value for: ${emptyFields.join(", ")}`, {
                     position: "top-center",
                     autoClose: 5000,
@@ -59,22 +68,8 @@ export default function Modal({ setGrandTotal, items }) {
                     progress: undefined,
                     theme: "colored",
                 });
-                return; 
+                return;
             }
-
-            if (name === "" || address == "" || pincode == "" || phoneNumber == "") {
-                return toast.error("All fields are required", {
-                    position: "top-center",
-                    autoClose: 1000,
-                    hideProgressBar: false,
-                    closeOnClick: true,
-                    pauseOnHover: true,
-                    draggable: true,
-                    progress: undefined,
-                    theme: "colored",
-                })
-            }
-
 
             const addressInfo = {
                 name,
@@ -92,7 +87,7 @@ export default function Modal({ setGrandTotal, items }) {
                 email: user?.user?.email,
                 userid: user?.user?.uid,
                 status: 'Order Placed',
-                totalAmount: parseInt(setGrandTotal),
+                totalAmount: Number(setGrandTotal),
                 paymentMode: paymentMode,
                 isCustom: false,
                 paymentId: null
@@ -100,35 +95,102 @@ export default function Modal({ setGrandTotal, items }) {
 
 
             if (paymentMode === 'Online Payment') {
-                var options = {
-                    key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_u15YWDispUV9NK",
-                    amount: parseInt(setGrandTotal * 100),
-                    currency: "INR",
-                    order_receipt: 'order_rcptid_' + name,
-                    name: "HN Enterprise",
-                    description: "for testing purpose",
-                    handler: async function (response) {
-                        orderInfo.paymentId = response.razorpay_payment_id;
-                        toast.success('Payment Successful');
-                        await orderService.createOrder(orderInfo);
-                        toast.success('Order Placed Successfully')
-                    },
+                let initiatedViaCloud = false;
+                try {
+                    const itemsPayload = (items || []).map(item => ({
+                        productId: item.id || item.productId || "unknown",
+                        variantId: item.selectedVariant ? (item.selectedVariant.variantId || item.selectedVariant.sku || null) : null,
+                        quantity: item.quantity || 1
+                    }));
 
-                    theme: {
-                        color: "#3399cc"
+                    const shippingAddressPayload = {
+                        fullName: name,
+                        phone: phoneNumber,
+                        pincode: pincode,
+                        street: address,
+                        houseNo: address,
+                    };
+
+                    const payOrder = await paymentService.createPaymentOrder({
+                        items: itemsPayload,
+                        couponCode: "",
+                        shippingAddress: shippingAddressPayload
+                    });
+
+                    initiatedViaCloud = true;
+
+                    await paymentService.openRazorpayCheckout({
+                        paymentId: payOrder.paymentId,
+                        gatewayOrderId: payOrder.gatewayOrderId,
+                        amount: payOrder.amount,
+                        currency: payOrder.currency,
+                        keyId: payOrder.keyId,
+                        userProfile: { name, phone: phoneNumber, email: user?.user?.email },
+                        onSuccess: async (response) => {
+                            try {
+                                await paymentService.verifyPayment({
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                    orderId: payOrder.orderId,
+                                });
+                            } catch (vErr) {
+                                console.warn("Client verify error:", vErr);
+                            }
+                            toast.success('Payment Received! Order placed successfully.');
+                            dispatch(clearCart());
+                            closeModal();
+                            navigate('/profile?tab=orders');
+                        },
+                        onFailure: (errMsg) => {
+                            toast.error(errMsg || 'Payment cancelled or failed.');
+                        }
+                    });
+                } catch (payErr) {
+                    console.error("Cloud Function payment error:", payErr);
+
+                    if (initiatedViaCloud) {
+                        // Razorpay popup was opened; user cancelled or failed. Do not bypass!
+                        return;
                     }
-                };
-                var pay = new window.Razorpay(options);
-                pay.open();
+
+                    // Client-Side Razorpay Gateway Fallback (Strictly opens Razorpay popup!)
+                    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_SUKZpvg7nte0jc";
+                    const calculatedAmount = Math.round(Number(setGrandTotal) * 100);
+
+                    await paymentService.openRazorpayCheckout({
+                        paymentId: "pay_client_" + Date.now(),
+                        gatewayOrderId: "",
+                        amount: calculatedAmount,
+                        currency: "INR",
+                        keyId: razorpayKey,
+                        userProfile: { name, phone: phoneNumber, email: user?.user?.email },
+                        onSuccess: async (response) => {
+                            try {
+                                orderInfo.paymentId = response.razorpay_payment_id || response.paymentId;
+                                await orderService.createOrder(orderInfo);
+                                toast.success('Payment Successful! Order Placed.');
+                                dispatch(clearCart());
+                                closeModal();
+                                navigate('/order');
+                            } catch (err) {
+                                console.error("Error creating order:", err);
+                                toast.error("Failed to record order.");
+                            }
+                        },
+                        onFailure: (errMsg) => {
+                            toast.error(errMsg || 'Payment cancelled or failed.');
+                        }
+                    });
+                }
             } else {
                 orderInfo.totalAmount += 40;
                 await orderService.createOrder(orderInfo);
-                toast.success('Order Placed Successfully')
+                toast.success('Order Placed Successfully');
+                dispatch(clearCart());
+                closeModal();
+                navigate('/order');
             }
-
-            //Clearing the cart
-            dispatch(clearCart());
-            closeModal();
         } catch (error) {
             console.log(error);
             closeModal();
@@ -141,15 +203,17 @@ export default function Modal({ setGrandTotal, items }) {
 
     return (
         <>
-            <div className="  text-center rounded-lg text-black font-bold">
-                <button
-                    type="button"
-                    onClick={handleClick}
-                    className="w-full  bg-black hover:bg-violet-700 py-2 text-center rounded-lg text-white font-bold"
-                >
-                    Buy Now
-                </button>
-            </div>
+            {!hideTriggerButton && (
+                <div className="text-center rounded-lg text-black font-bold">
+                    <button
+                        type="button"
+                        onClick={handleClick}
+                        className="w-full bg-black hover:bg-violet-700 py-2 text-center rounded-lg text-white font-bold"
+                    >
+                        Buy Now
+                    </button>
+                </div>
+            )}
 
             <Transition appear show={isOpen} as={Fragment}>
                 <Dialog as="div" className="relative z-10" onClose={closeModal}>

@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { getFunctions } from "firebase/functions";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -19,5 +19,14 @@ export const auth = getAuth(app);
 export const fireDB = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app, "us-central1");
+
+// Connect to emulator only if explicitly requested in environment variables
+if (
+  import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true" &&
+  typeof window !== "undefined" &&
+  window.location.hostname === "localhost"
+) {
+  connectFunctionsEmulator(functions, "localhost", 5001);
+}
 
 export default app;

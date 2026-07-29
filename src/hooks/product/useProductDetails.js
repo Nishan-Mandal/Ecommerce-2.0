@@ -89,12 +89,28 @@ export default function useProductDetails() {
     toast.success('Added to cart!');
   };
 
+  const refetchRatings = async () => {
+    if (!id) return;
+    try {
+      const ratingsData = await productService.getProductRatings(id);
+      setRatings(ratingsData);
+      if (ratingsData.length > 0) {
+        const total = ratingsData.reduce((acc, curr) => acc + curr.rating, 0);
+        setAverageRating(Number((total / ratingsData.length).toFixed(1)));
+      }
+    } catch (err) {
+      console.warn("Failed to refetch ratings:", err);
+    }
+  };
+
   return {
     product,
     selectedImage,
     setSelectedImage,
     ratings,
     averageRating,
+    reviewCount: ratings.length,
+    refetchRatings,
     isFetching,
     error,
     cartItems,

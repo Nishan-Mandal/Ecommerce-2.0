@@ -9,6 +9,7 @@ import ProductVariants from './ProductPurchase/ProductVariants';
 export default function ProductInfo({
   product,
   rating = 4.8,
+  reviewCount = 0,
   selectedVariant = null,
   priceInfo = null,
   isComplete = false,
@@ -26,23 +27,31 @@ export default function ProductInfo({
   };
 
   // Determine pricing display conditions
-  const showVariantPrice = isComplete && selectedVariant;
-  const activePrice = showVariantPrice ? selectedVariant.price : null;
-  const activeOriginalPrice = showVariantPrice ? (selectedVariant.originalPrice || selectedVariant.price) : null;
-  const discountPct = showVariantPrice ? calculateDiscount(activeOriginalPrice, activePrice) : null;
+  const hasVariants = product.hasVariants ?? (product.variantTypes && product.variantTypes.length > 0);
+  const showVariantPrice = hasVariants && isComplete && selectedVariant;
+  const activePrice = showVariantPrice ? selectedVariant.price : product.price;
+  const activeOriginalPrice = showVariantPrice 
+    ? (selectedVariant.originalPrice || selectedVariant.price) 
+    : (product.originalPrice || product.price);
+  const discountPct = (showVariantPrice || !hasVariants) ? calculateDiscount(activeOriginalPrice, activePrice) : null;
 
   // Determine availability and stock states for helper message
-  const hasVariants = product.variantTypes && product.variantTypes.length > 0;
-  const isOutOfStock = isComplete && selectedVariant && (selectedVariant.inStock <= 0 || selectedVariant.isActive === false || selectedVariant.isAvailable === false);
+  const isOutOfStock = hasVariants
+    ? (isComplete && selectedVariant && (selectedVariant.inStock <= 0 || selectedVariant.isActive === false || selectedVariant.isAvailable === false))
+    : (Number(product.inStock ?? 1) <= 0);
 
   let actionMessage = '';
   if (hasVariants && !isComplete) {
     actionMessage = 'Please select all options';
   } else if (isOutOfStock) {
     actionMessage = 'Currently unavailable';
-  } else if (selectedVariant) {
+  } else if (hasVariants && selectedVariant) {
     actionMessage = selectedVariant.inStock <= 5 
       ? `Only ${selectedVariant.inStock} left in stock!` 
+      : 'In Stock';
+  } else if (!hasVariants) {
+    actionMessage = (Number(product.inStock) || 0) <= 5 && (Number(product.inStock) || 0) > 0
+      ? `Only ${product.inStock} left in stock!`
       : 'In Stock';
   }
 
@@ -72,20 +81,22 @@ export default function ProductInfo({
             </span>
             <span className="font-bold text-white text-sm">{rating}</span>
           </div>
-          <p className="text-sm">483 Reviews</p>
+          <p className="text-sm text-text-muted font-medium">
+            {reviewCount} {reviewCount === 1 ? 'Review' : 'Reviews'}
+          </p>
         </div>
 
         {/* Price Row */}
         <div className="flex items-baseline gap-4 pt-1">
-          {showVariantPrice ? (
+          {showVariantPrice || !hasVariants ? (
             <>
               <span className="text-3xl font-bold text-text-base">
-                ₹{Number(activePrice).toLocaleString('en-IN')}
+                ₹{Number(activePrice || 0).toLocaleString('en-IN')}
               </span>
               {discountPct && (
                 <>
                   <span className="text-text-muted line-through text-sm">
-                    ₹{Number(activeOriginalPrice).toLocaleString('en-IN')}
+                    ₹{Number(activeOriginalPrice || 0).toLocaleString('en-IN')}
                   </span>
                   <span className="bg-green-200 text-green-800 font-bold px-3 py-1 rounded-full text-xs">
                     {discountPct}% OFF
@@ -109,14 +120,16 @@ export default function ProductInfo({
       </div>
 
       {/* Dynamic Product Variant Options */}
-      <div className="pt-2">
-        <ProductVariants
-          product={product}
-          selectedOptions={selectedOptions}
-          isOptionEnabled={isOptionEnabled}
-          selectOption={selectOption}
-        />
-      </div>
+      {hasVariants && (
+        <div className="pt-2">
+          <ProductVariants
+            product={product}
+            selectedOptions={selectedOptions}
+            isOptionEnabled={isOptionEnabled}
+            selectOption={selectOption}
+          />
+        </div>
+      )}
 
       {/* Helper Status Message */}
       {actionMessage && (

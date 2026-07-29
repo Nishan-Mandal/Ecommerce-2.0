@@ -1,47 +1,313 @@
-const LEGAL_SECTIONS = [
-    { key: "aboutUs",            label: "About Us" },
-    { key: "privacyPolicy",      label: "Privacy Policy" },
-    { key: "returnPolicy",       label: "Return Policy" },
-    { key: "termsAndConditions", label: "Terms & Conditions" },
+import { useState } from "react";
+import { uploadService } from "../../../services/upload/uploadService";
+import { FaFilePdf, FaPlus, FaTrash, FaCheck, FaTimes, FaGlobe, FaFileUpload } from "react-icons/fa";
+import { toast } from "react-toastify";
+
+const FIXED_LEGAL_PAGES = [
+  { key: "aboutUs", label: "About Us", path: "/aboutus" },
+  { key: "privacyPolicy", label: "Privacy Policy", path: "/privacypolicy" },
+  { key: "termsAndConditions", label: "Terms & Conditions", path: "/termsconditions" },
+  { key: "returnPolicy", label: "Return Policy", path: "/returnpolicy" },
+  { key: "shippingPolicy", label: "Shipping Policy", path: "/shippingpolicy" },
+  { key: "refundPolicy", label: "Refund Policy", path: "/refundpolicy" },
 ];
 
 export default function LegalTab({ draft, updateDraft }) {
-    const legal = draft.legal || {};
+  const [uploadingKey, setUploadingKey] = useState(null);
 
-    const setLegal = (key, value) =>
-        updateDraft({ legal: { ...legal, [key]: value } });
+  // Normalize legacy string formats to object structure
+  const rawLegal = draft.legal || {};
+  const fixedPages = rawLegal.fixedPages || {};
+  const customPages = Array.isArray(rawLegal.customPages) ? rawLegal.customPages : [];
 
-    return (
-        <div className="max-w-9xl space-y-6">
-            <div className="p-4 bg-bg-surface border border-border-base/60 rounded-xl space-y-1.5 text-xs text-text-muted font-medium">
-                <p>
-                    Write content in <strong className="text-text-base">Markdown</strong> format. It will be rendered on the corresponding customer-facing pages.
-                </p>
-                <div className="flex flex-wrap gap-2 pt-1">
-                    <code className="bg-white border border-border-base px-1.5 py-0.5 rounded text-[10px]"># Heading</code>
-                    <code className="bg-white border border-border-base px-1.5 py-0.5 rounded text-[10px]">**bold**</code>
-                    <code className="bg-white border border-border-base px-1.5 py-0.5 rounded text-[10px]">- list item</code>
+  const updateFixedPdf = (key, pdfUrl) => {
+    updateDraft({
+      legal: {
+        ...rawLegal,
+        fixedPages: {
+          ...fixedPages,
+          [key]: {
+            pdfUrl,
+            isActive: fixedPages[key]?.isActive ?? true,
+          },
+        },
+      },
+    });
+  };
+
+  const toggleFixedActive = (key) => {
+    updateDraft({
+      legal: {
+        ...rawLegal,
+        fixedPages: {
+          ...fixedPages,
+          [key]: {
+            pdfUrl: fixedPages[key]?.pdfUrl || (typeof rawLegal[key] === 'string' ? '' : ''),
+            isActive: !(fixedPages[key]?.isActive ?? true),
+          },
+        },
+      },
+    });
+  };
+
+  const handleFileUpload = async (key, file) => {
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Please select a valid PDF file (.pdf)");
+      return;
+    }
+
+    setUploadingKey(key);
+    try {
+      const url = await uploadService.uploadFile(file, "legal");
+      updateFixedPdf(key, url);
+      toast.success("PDF uploaded successfully");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to upload PDF");
+    } finally {
+      setUploadingKey(null);
+    }
+  };
+
+  // ── Extra Custom Pages Handlers ──────────────────────────────────────────────
+  const addCustomPage = () => {
+    const newPage = {
+      id: Date.now().toString(),
+      name: "New Policy Page",
+      slug: `custom-page-${customPages.length + 1}`,
+      pdfUrl: "",
+      isActive: true,
+    };
+    updateDraft({
+      legal: {
+        ...rawLegal,
+        customPages: [...customPages, newPage],
+      },
+    });
+  };
+
+  const updateCustomPage = (id, field, value) => {
+    const updated = customPages.map((page) => {
+      if (page.id !== id) return page;
+      if (field === "name" && !page.slugEdited) {
+        const autoSlug = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        return { ...page, name: value, slug: autoSlug };
+      }
+      return { ...page, [field]: value };
+    });
+    updateDraft({
+      legal: {
+        ...rawLegal,
+        customPages: updated,
+      },
+    });
+  };
+
+  const uploadCustomPdf = async (id, file) => {
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Please select a valid PDF file (.pdf)");
+      return;
+    }
+
+    setUploadingKey(id);
+    try {
+      const url = await uploadService.uploadFile(file, "legal");
+      updateCustomPage(id, "pdfUrl", url);
+      toast.success("Custom PDF uploaded");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to upload custom PDF");
+    } finally {
+      setUploadingKey(null);
+    }
+  };
+
+  const deleteCustomPage = (id) => {
+    const filtered = customPages.filter((p) => p.id !== id);
+    updateDraft({
+      legal: {
+        ...rawLegal,
+        customPages: filtered,
+      },
+    });
+  };
+
+  return (
+    <div className="max-w-4xl space-y-8 text-xs">
+      {/* Overview Banner */}
+      <div className="p-4 bg-bg-surface border border-border-base/60 rounded-2xl space-y-1 text-text-muted">
+        <h3 className="text-sm font-bold text-text-base flex items-center gap-2">
+          <FaFilePdf className="text-red-500" /> Legal & Policy Documents
+        </h3>
+        <p className="text-xs">
+          Upload PDF documents for your store policy pages. Customer panel will render these PDFs directly.
+        </p>
+      </div>
+
+      {/* Standard Legal Pages */}
+      <div className="space-y-4">
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-text-base">Standard Legal Pages</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {FIXED_LEGAL_PAGES.map(({ key, label, path }) => {
+            const pageData = fixedPages[key] || {};
+            const pdfUrl = pageData.pdfUrl || (typeof rawLegal[key] === "string" ? "" : "");
+            const isActive = pageData.isActive ?? true;
+            const isUploading = uploadingKey === key;
+
+            return (
+              <div key={key} className="bg-bg-surface border border-border-base/60 rounded-2xl p-4 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-sm text-text-base">{label}</h4>
+                    <p className="text-[10px] text-text-muted font-mono">{path}</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleFixedActive(key)}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition ${
+                      isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {isActive ? "Active" : "Inactive"}
+                  </button>
                 </div>
-            </div>
 
-            {LEGAL_SECTIONS.map(({ key, label }) => (
-                <div key={key} className="space-y-2">
-                    <label className="block text-xs font-bold text-text-base uppercase tracking-wider pl-0.5">
-                        {label}
-                    </label>
-                    <textarea
-                        value={legal[key] || ""}
-                        onChange={(e) => setLegal(key, e.target.value)}
-                        placeholder={`Write the ${label} content in Markdown...`}
-                        rows={8}
-                        className="w-full p-4 rounded-xl border border-border-base bg-white focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary text-sm font-mono leading-relaxed resize-y min-h-[160px]"
-                    />
-                    <div className="flex justify-between items-center text-[10px] text-text-muted px-0.5 font-bold">
-                        <span>Markdown Supported</span>
-                        <span>{(legal[key] || "").length} characters</span>
+                {pdfUrl ? (
+                  <div className="flex items-center justify-between gap-2 p-2 bg-bg-base border border-border-base/60 rounded-xl">
+                    <div className="flex items-center gap-2 truncate">
+                      <FaFilePdf className="text-red-500 shrink-0" size={14} />
+                      <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="truncate font-semibold text-primary hover:underline text-[11px]">
+                        View PDF Document
+                      </a>
                     </div>
-                </div>
-            ))}
+                    <label className="text-[10px] font-bold text-text-muted hover:text-text-base cursor-pointer underline shrink-0">
+                      Replace
+                      <input type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFileUpload(key, e.target.files[0])} />
+                    </label>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-border-base hover:border-primary/50 bg-white rounded-xl cursor-pointer text-text-muted hover:text-primary transition">
+                    <FaFileUpload size={14} />
+                    <span className="font-semibold text-[11px]">{isUploading ? "Uploading PDF..." : "Upload PDF File"}</span>
+                    <input type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFileUpload(key, e.target.files[0])} disabled={isUploading} />
+                  </label>
+                )}
+              </div>
+            );
+          })}
         </div>
-    );
+      </div>
+
+      {/* Extra Custom Pages */}
+      <div className="space-y-4 pt-4 border-t border-border-base/60">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-text-base">Extra Legal & Custom Pages</h3>
+            <p className="text-[11px] text-text-muted mt-0.5">Add custom policy pages (e.g. Warranty Policy, Affiliate Policy, Careers)</p>
+          </div>
+          <button
+            type="button"
+            onClick={addCustomPage}
+            className="px-3 py-2 rounded-xl bg-primary text-compli text-xs font-bold hover:bg-primary-hover transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+          >
+            <FaPlus size={10} /> Add Custom Page
+          </button>
+        </div>
+
+        {customPages.length === 0 ? (
+          <div className="p-8 text-center border-2 border-dashed border-border-base/60 rounded-2xl text-text-muted">
+            No extra legal pages created yet. Click "Add Custom Page" above to add one.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {customPages.map((page) => {
+              const isUploading = uploadingKey === page.id;
+              return (
+                <div key={page.id} className="bg-bg-surface border border-border-base/60 rounded-2xl p-4 space-y-3 shadow-2xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-text-muted uppercase mb-1">Page Name</label>
+                      <input
+                        type="text"
+                        value={page.name}
+                        onChange={(e) => updateCustomPage(page.id, "name", e.target.value)}
+                        placeholder="e.g. Warranty Policy"
+                        className="w-full px-3 py-2 rounded-xl border border-border-base bg-white text-xs font-bold focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-text-muted uppercase mb-1">URL Slug</label>
+                      <div className="flex items-center gap-1 bg-white border border-border-base rounded-xl px-3 py-2">
+                        <span className="text-text-muted font-mono text-[10px]">/legal/</span>
+                        <input
+                          type="text"
+                          value={page.slug}
+                          onChange={(e) => {
+                            updateCustomPage(page.id, "slugEdited", true);
+                            updateCustomPage(page.id, "slug", e.target.value);
+                          }}
+                          placeholder="warranty-policy"
+                          className="w-full bg-transparent text-xs font-bold font-mono focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                    {/* PDF File Picker */}
+                    <div className="flex-1 min-w-[220px]">
+                      {page.pdfUrl ? (
+                        <div className="flex items-center justify-between gap-2 p-2 bg-bg-base border border-border-base/60 rounded-xl">
+                          <div className="flex items-center gap-2 truncate">
+                            <FaFilePdf className="text-red-500 shrink-0" size={14} />
+                            <a href={page.pdfUrl} target="_blank" rel="noopener noreferrer" className="truncate font-semibold text-primary hover:underline text-[11px]">
+                              {page.name} PDF
+                            </a>
+                          </div>
+                          <label className="text-[10px] font-bold text-text-muted hover:text-text-base cursor-pointer underline shrink-0">
+                            Replace
+                            <input type="file" accept="application/pdf" className="hidden" onChange={(e) => uploadCustomPdf(page.id, e.target.files[0])} />
+                          </label>
+                        </div>
+                      ) : (
+                        <label className="flex items-center justify-center gap-2 p-2.5 border-2 border-dashed border-border-base hover:border-primary/50 bg-white rounded-xl cursor-pointer text-text-muted hover:text-primary transition">
+                          <FaFileUpload size={12} />
+                          <span className="font-semibold text-[11px]">{isUploading ? "Uploading PDF..." : "Upload PDF File"}</span>
+                          <input type="file" accept="application/pdf" className="hidden" onChange={(e) => uploadCustomPdf(page.id, e.target.files[0])} disabled={isUploading} />
+                        </label>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateCustomPage(page.id, "isActive", !page.isActive)}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition cursor-pointer ${
+                          page.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {page.isActive ? "Active" : "Inactive"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteCustomPage(page.id)}
+                        className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition cursor-pointer"
+                        title="Delete Page"
+                      >
+                        <FaTrash size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

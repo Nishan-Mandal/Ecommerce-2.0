@@ -28,7 +28,7 @@ function CouponUsage({
                             Total Usage Limit
                         </label>
                         <input
-                            type="number"
+                            type="text"
                             min={1}
                             value={coupon.usageLimit}
                             onChange={(e) =>
@@ -51,7 +51,7 @@ function CouponUsage({
                             Usage Per User
                         </label>
                         <input
-                            type="number"
+                            type="text"
                             min={1}
                             value={coupon.usagePerUser}
                             onChange={(e) =>
