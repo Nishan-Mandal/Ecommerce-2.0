@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaPlus } from "react-icons/fa";
 import CouponStats from "./sections/CouponsStats";
@@ -7,6 +7,7 @@ import DeleteCoupon from "./sections/DeleteCoupon";
 import { toast } from "react-toastify";
 import Header from "../Components/Header";
 import FilterBar from "../Components/FilterBar";
+import { couponService } from "../../services/coupon/couponService";
 
 function Coupons() {
     const navigate = useNavigate();
@@ -14,22 +15,45 @@ function Coupons() {
     const [selectedCoupon, setSelectedCoupon] = useState(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [typeFilter, setTypeFilter] = useState("ALL");
 
-    // Static coupons placeholder for now
     const [coupons, setCoupons] = useState([]);
 
-    const handleDeleteConfirm = () => {
+    const loadCoupons = async () => {
+        setLoading(true);
+        try {
+            const data = await couponService.getCoupons();
+            setCoupons(data);
+        } catch (err) {
+            console.error("Error loading coupons:", err);
+            toast.error("Failed to load coupons");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadCoupons();
+    }, []);
+
+    const handleDeleteConfirm = async () => {
+        if (!selectedCoupon?.couponId) return;
         setDeleting(true);
-        setTimeout(() => {
-            setCoupons(prev => prev.filter(c => c.couponId !== selectedCoupon.couponId));
+        try {
+            await couponService.deleteCoupon(selectedCoupon.couponId);
+            setCoupons((prev) => prev.filter((c) => c.couponId !== selectedCoupon.couponId));
+            toast.success("Coupon deleted successfully");
+        } catch (err) {
+            console.error("Error deleting coupon:", err);
+            toast.error("Failed to delete coupon");
+        } finally {
             setDeleting(false);
             setIsDeleteModalOpen(false);
-            toast.success("Coupon deleted successfully");
-        }, 800);
+        }
     };
 
     // Filter coupons logic based on state
@@ -100,14 +124,18 @@ function Coupons() {
 
             {/* Table */}
             <div className="w-full">
-                <CouponTable
-                    coupons={filteredCoupons}
-                    onEdit={(coupon) => navigate("/coupons/edit", { state: { coupon } })}
-                    onDelete={(coupon) => {
-                        setSelectedCoupon(coupon);
-                        setIsDeleteModalOpen(true);
-                    }}
-                />
+                {loading ? (
+                    <div className="p-8 text-center text-text-muted text-xs font-bold">Loading promotional coupons...</div>
+                ) : (
+                    <CouponTable
+                        coupons={filteredCoupons}
+                        onEdit={(coupon) => navigate("/coupons/edit", { state: { coupon } })}
+                        onDelete={(coupon) => {
+                            setSelectedCoupon(coupon);
+                            setIsDeleteModalOpen(true);
+                        }}
+                    />
+                )}
             </div>
 
             {/* Delete Confirmation Dialog */}

@@ -20,7 +20,7 @@ function Footer() {
     const { mode } = useTheme();
     const { config } = useSiteConfig();
 
-    const { companyName, address, phones, emails, socialLinks } = config;
+    const { companyName, address, phones, emails, socialLinks, legal } = config;
 
     const activeSocials = (socialLinks || []).filter((s) => s.isActive && s.url);
 
@@ -31,6 +31,26 @@ function Footer() {
         address?.state,
         address?.pincode,
     ].filter(Boolean).join(", ");
+
+    // Build dynamic legal links
+    const fixedMap = [
+        { key: "termsAndConditions", title: "Terms & Conditions", path: "/termsconditions" },
+        { key: "privacyPolicy",     title: "Privacy Policy",     path: "/privacypolicy" },
+        { key: "returnPolicy",       title: "Return Policy",      path: "/returnpolicy" },
+        { key: "shippingPolicy",     title: "Shipping Policy",    path: "/shippingpolicy" },
+        { key: "refundPolicy",       title: "Refund Policy",      path: "/refundpolicy" },
+        { key: "aboutUs",           title: "About Us",           path: "/aboutus" },
+    ];
+
+    const fixedPages = legal?.fixedPages || {};
+    const activeFixedLinks = fixedMap.filter(item => fixedPages[item.key]?.isActive !== false);
+
+    const customPages = Array.isArray(legal?.customPages) ? legal.customPages : [];
+    const activeCustomLinks = customPages
+        .filter(p => p.isActive !== false)
+        .map(p => ({ title: p.name, path: `/legal/${p.slug}` }));
+
+    const legalLinks = [...activeFixedLinks, ...activeCustomLinks];
 
     return (
         <footer className="bg-bg-surface border-t border-border-base transition-colors duration-300">
@@ -92,11 +112,11 @@ function Footer() {
 
                     {/* Legal Links */}
                     <div className="flex flex-col items-center gap-3">
-                        <div className="flex flex-wrap justify-center gap-5">
-                            {FOOT_LINKS.map((link, i) => (
+                        <div className="flex flex-wrap justify-center gap-4 max-w-md">
+                            {legalLinks.map((link, i) => (
                                 <Link
                                     key={i}
-                                    className="underline hover:text-primary transition-colors text-xs font-bold"
+                                    className="underline hover:text-primary transition-colors text-xs font-bold whitespace-nowrap"
                                     to={link.path}
                                 >
                                     {link.title}

@@ -25,6 +25,12 @@ import Configure from '../admin/configure/Configure';
 import Layout from "../components/layout/Layout";
 import User from '../pages/user/User';
 
+import ShippingPolicy from '../pages/consumerservice/ShippingPolicy';
+import RefundPolicy from '../pages/consumerservice/RefundPolicy';
+import CustomLegalPage from '../pages/consumerservice/CustomLegalPage';
+import CheckoutPage from '../pages/checkout/CheckoutPage';
+import AdminOrderDetail from '../admin/orders/AdminOrderDetail';
+
 function LoginRedirect() {
   const navigate = useNavigate();
   const { setIsLoginOpen } = useAuth();
@@ -67,10 +73,13 @@ export default function AppRoutes() {
         <Route path="/privacypolicy" element={<PrivacyPolicy />} />
         <Route path="/returnpolicy" element={<ReturnPolicy />} />
         <Route path="/termsconditions" element={<TermsConditions />} />
+        <Route path="/shippingpolicy" element={<ShippingPolicy />} />
+        <Route path="/refundpolicy" element={<RefundPolicy />} />
+        <Route path="/legal/:slug" element={<CustomLegalPage />} />
         <Route path="/blog" element={<Blog />} />
-
         {/* User Protected Routes */}
         <Route element={<ProtectedRoute />}>
+          <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order" element={<Order />} />
           <Route path="/profile" element={<User />} />
         </Route>
@@ -91,6 +100,7 @@ export default function AppRoutes() {
           <Route path="/coupons/edit" element={<CouponFormPage />} />
           <Route path="/review" element={<Review />} />
           <Route path="/configure" element={<Configure />} />
+          <Route path="/admin/order/:id" element={<AdminOrderDetail />} />
         </Route>
       </Route>
 

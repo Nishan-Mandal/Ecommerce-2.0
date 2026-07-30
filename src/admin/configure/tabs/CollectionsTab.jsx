@@ -15,6 +15,7 @@ function CollectionEditor({ col, products, onSave, onCancel, saving }) {
         layout: col?.layout || "grid",
         isActive: col?.isActive ?? true,
     });
+    const [searchQuery, setSearchQuery] = useState("");
 
     const toggleProduct = (id) => {
         setForm((prev) => ({
@@ -24,6 +25,16 @@ function CollectionEditor({ col, products, onSave, onCancel, saving }) {
                 : [...prev.productIds, id],
         }));
     };
+
+    const filteredProducts = products.filter((p) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+            p.title?.toLowerCase().includes(q) ||
+            p.brand?.toLowerCase().includes(q) ||
+            p.category?.toLowerCase().includes(q)
+        );
+    });
 
     return (
         <div className="bg-bg-surface border border-border-base/60 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
@@ -64,11 +75,23 @@ function CollectionEditor({ col, products, onSave, onCancel, saving }) {
 
             {/* Product checklist picker */}
             <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider pl-0.5">
-                    Select Products ({form.productIds.length} selected)
-                </label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider pl-0.5">
+                        Select Products ({form.productIds.length} selected)
+                    </label>
+                </div>
+
+                {/* Search Bar */}
+                <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by product name, brand, or category..."
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-border-base bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+
                 <div className="max-h-56 overflow-y-auto border border-border-base/60 rounded-xl bg-white divide-y divide-border-base/40">
-                    {products.map((p) => (
+                    {filteredProducts.map((p) => (
                         <label key={p.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/40 cursor-pointer transition-colors">
                             <input
                                 type="checkbox"
@@ -76,12 +99,17 @@ function CollectionEditor({ col, products, onSave, onCancel, saving }) {
                                 onChange={() => toggleProduct(p.id)}
                                 className="w-4 h-4 accent-primary rounded cursor-pointer"
                             />
-                            <span className="text-xs font-bold text-text-base truncate flex-1">{p.title}</span>
-                            <span className="text-[10px] text-text-muted bg-bg-surface border border-border-base/50 px-2 py-0.5 rounded-full font-bold">{p.category}</span>
+                            <div className="flex-1 min-w-0">
+                                <span className="text-xs font-bold text-text-base truncate block">{p.title}</span>
+                                {p.brand && <span className="text-[10px] text-text-muted">{p.brand}</span>}
+                            </div>
+                            <span className="text-[10px] text-text-muted bg-bg-surface border border-border-base/50 px-2 py-0.5 rounded-full font-bold shrink-0">{p.category}</span>
                         </label>
                     ))}
-                    {products.length === 0 && (
-                        <p className="p-4 text-xs text-text-muted text-center font-semibold">No products catalogued yet.</p>
+                    {filteredProducts.length === 0 && (
+                        <p className="p-4 text-xs text-text-muted text-center font-semibold">
+                            {searchQuery ? "No matching products found." : "No products catalogued yet."}
+                        </p>
                     )}
                 </div>
             </div>

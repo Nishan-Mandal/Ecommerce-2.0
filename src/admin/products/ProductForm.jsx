@@ -43,13 +43,13 @@ function ProductForm(props) {
 
     return (
         <div className="w-full max-w-screen-2xl mx-auto py-2 space-y-6 lg:space-y-8">
-            {/* <ProductHeader
-                title={title}
-                description={description}
+            <ProductHeader
+                title={title || "Product Configuration"}
+                description={description || "Manage product info, images, structured description text/tables, and variant inventory."}
                 uploading={uploading}
                 handleCancel={handleCancel}
                 addProduct={addProduct}
-            /> */}
+            />
 
             <ProductImages
                 products={products}
@@ -60,33 +60,37 @@ function ProductForm(props) {
                 handleImageDelete={handleImageDelete}
             />
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 xl:gap-8">
+            <div className={`grid grid-cols-1 ${products.hasVariants ? "xl:grid-cols-2" : ""} gap-6 xl:gap-8`}>
                 <ProductBasicInfo
                     products={products}
                     setProducts={setProducts}
                     handleTagsChange={handleTagsChange}
                 />
 
-                <ProductVariants
-                    products={products}
-                    addVariantType={addVariantType}
-                    deleteVariantType={deleteVariantType}
-                    handleVariantTypeNameChange={handleVariantTypeNameChange}
-                    handleVariantTypeValuesChange={handleVariantTypeValuesChange}
-                    generateCombinations={generateCombinations}
-                    addManualVariant={addManualVariant}
-                />
+                {products.hasVariants && (
+                    <ProductVariants
+                        products={products}
+                        addVariantType={addVariantType}
+                        deleteVariantType={deleteVariantType}
+                        handleVariantTypeNameChange={handleVariantTypeNameChange}
+                        handleVariantTypeValuesChange={handleVariantTypeValuesChange}
+                        generateCombinations={generateCombinations}
+                        addManualVariant={addManualVariant}
+                    />
+                )}
             </div>
 
-            <VariantTable
-                products={products}
-                setProducts={setProducts}
-                deleteVariant={deleteVariant}
-                handleVariantChange={handleVariantChange}
-                handleVariantImageUpload={handleVariantImageUpload}
-                handleVariantImageDelete={handleVariantImageDelete}
-                variantUploadingIndex={variantUploadingIndex}
-            />
+            {products.hasVariants && (
+                <VariantTable
+                    products={products}
+                    setProducts={setProducts}
+                    deleteVariant={deleteVariant}
+                    handleVariantChange={handleVariantChange}
+                    handleVariantImageUpload={handleVariantImageUpload}
+                    handleVariantImageDelete={handleVariantImageDelete}
+                    variantUploadingIndex={variantUploadingIndex}
+                />
+            )}
 
             <ProductActions
                 uploading={uploading}

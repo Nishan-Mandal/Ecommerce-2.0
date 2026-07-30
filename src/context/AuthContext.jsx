@@ -113,10 +113,15 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const setupRecaptcha = (containerId, size) => authService.setupRecaptcha(containerId, size);
+  const sendOtp = async (phoneNumber, recaptchaVerifier) => authService.sendOtp(phoneNumber, recaptchaVerifier);
+  const verifyOtp = async (confirmationResult, otpCode) => authService.verifyOtp(confirmationResult, otpCode);
+
   return (
     <AuthContext.Provider value={{ 
       user, userName, loading, setLoading, 
       login, signup, logout,
+      setupRecaptcha, sendOtp, verifyOtp,
       isLoginOpen, setIsLoginOpen,
       isSignupOpen, setIsSignupOpen
     }}>
@@ -125,10 +130,28 @@ export function AuthProvider({ children }) {
   );
 }
 
+const defaultAuthContext = {
+  user: null,
+  userName: '',
+  loading: false,
+  setLoading: () => {},
+  login: async () => {},
+  signup: async () => {},
+  logout: async () => {},
+  setupRecaptcha: () => {},
+  sendOtp: async () => {},
+  verifyOtp: async () => {},
+  isLoginOpen: false,
+  setIsLoginOpen: () => {},
+  isSignupOpen: false,
+  setIsSignupOpen: () => {},
+};
+
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    console.warn('useAuth hook called outside AuthProvider; returning default context fallback.');
+    return defaultAuthContext;
   }
   return context;
 }

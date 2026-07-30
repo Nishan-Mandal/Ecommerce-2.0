@@ -9,6 +9,28 @@ const STATUS_STYLES = {
     Processing: "bg-purple-100 text-purple-700",
 };
 
+function formatDate(dateVal) {
+    if (!dateVal) return "N/A";
+    if (typeof dateVal === "string") return dateVal;
+    if (typeof dateVal === "number") return new Date(dateVal).toLocaleDateString("en-IN");
+    if (dateVal?.seconds !== undefined) {
+        return new Date(dateVal.seconds * 1000).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        });
+    }
+    if (dateVal?.toDate && typeof dateVal.toDate === "function") {
+        return dateVal.toDate().toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        });
+    }
+    if (dateVal instanceof Date) return dateVal.toLocaleDateString("en-IN");
+    return "N/A";
+}
+
 function getStatusStyle(status) {
     if (!status) return STATUS_STYLES["Paid"];
     const key = Object.keys(STATUS_STYLES).find(
@@ -31,35 +53,67 @@ function EmptyOrders() {
     );
 }
 
+function getOrderItems(o) {
+    if (Array.isArray(o.products) && o.products.length > 0) return o.products;
+    if (Array.isArray(o.items) && o.items.length > 0) return o.items;
+    if (Array.isArray(o.cart) && o.cart.length > 0) return o.cart;
+    return [];
+}
+
 function OrderCard({ o }) {
+    const items = getOrderItems(o);
     return (
-        <div className="rounded-xl border border-border-base bg-bg-base overflow-hidden">
+        <div className="rounded-xl border border-border-base bg-bg-base overflow-hidden shadow-sm">
             {/* Card Header */}
             <div className="flex items-center justify-between px-3.5 py-2.5 bg-bg-surface border-b border-border-base/50">
                 <span className="font-mono text-[10px] font-bold text-primary truncate max-w-[160px]">
-                    {o.paymentId || "COD-ORDER"}
+                    {o.orderId || o.paymentId || "COD-ORDER"}
                 </span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${getStatusStyle(o.status || "Paid")}`}>
-                    {o.status || "Paid"}
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${getStatusStyle(o.status || o.orderStatus || "Paid")}`}>
+                    {o.status || o.orderStatus || "Paid"}
                 </span>
             </div>
 
-            {/* Card Body */}
-            <div className="px-3.5 py-3 space-y-2.5">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            {/* Products List */}
+            <div className="px-3.5 py-3 space-y-3">
+                {items.length > 0 ? (
+                    items.map((item, i) => {
+                        const img = item.productImage || item.imageUrl || item.images?.[0] || "https://via.placeholder.com/100";
+                        const title = item.productName || item.title || item.name || "Product Item";
+                        const price = Number(item.sellingPrice || item.price || item.totalPrice || 0);
+                        const qty = item.quantity || 1;
+                        const variant = item.variantName || (item.options ? Object.values(item.options).filter(Boolean).join(" / ") : "");
+
+                        return (
+                            <div key={i} className="flex items-center gap-3">
+                                <img src={img} alt={title} className="w-12 h-12 rounded-lg object-cover border border-border-base/60 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-bold text-text-base truncate">{title}</p>
+                                    {variant && <p className="text-[10px] text-text-muted">{variant}</p>}
+                                    <p className="text-[10px] text-text-muted">Qty: {qty}</p>
+                                </div>
+                                <p className="text-xs font-bold text-text-base shrink-0">₹{price.toLocaleString("en-IN")}</p>
+                            </div>
+                        );
+                    })
+                ) : (
+                    <p className="text-xs text-text-muted">No item details available</p>
+                )}
+
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 border-t border-border-base/40">
                     <div>
                         <p className="text-[9px] text-text-muted uppercase font-semibold tracking-wide mb-0.5">Date</p>
-                        <p className="text-[11px] font-semibold text-text-base">{o.date || "N/A"}</p>
+                        <p className="text-[11px] font-semibold text-text-base">{formatDate(o.date || o.createdAt)}</p>
                     </div>
                     <div>
                         <p className="text-[9px] text-text-muted uppercase font-semibold tracking-wide mb-0.5">Payment</p>
-                        <p className="text-[11px] font-semibold text-text-base uppercase">{o.paymentInfo?.method || "COD"}</p>
+                        <p className="text-[11px] font-semibold text-text-base uppercase">{o.paymentMode || o.paymentInfo?.method || o.payment?.gateway || "COD"}</p>
                     </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-border-base/40">
                     <p className="text-[10px] text-text-muted font-semibold">Total Amount</p>
-                    <p className="text-sm font-bold text-text-base">₹{Number(o.totalAmount || 0).toLocaleString("en-IN")}</p>
+                    <p className="text-sm font-bold text-text-base">₹{Number(o.totalAmount || o.pricing?.grandTotal || 0).toLocaleString("en-IN")}</p>
                 </div>
             </div>
         </div>
@@ -86,7 +140,7 @@ export default function OrdersTab({ orders }) {
                     {/* Mobile View — Card Stack */}
                     <div className="space-y-3 md:hidden">
                         {orders.map((o, idx) => (
-                            <OrderCard key={o.orderId || idx} o={o} />
+                            <OrderCard key={o.orderId || o.paymentId || idx} o={o} />
                         ))}
                     </div>
 
@@ -96,6 +150,7 @@ export default function OrdersTab({ orders }) {
                             <thead>
                                 <tr className="bg-bg-base border-b border-border-base">
                                     <th className="px-4 py-3 text-[10px] text-text-muted uppercase font-bold tracking-wider">Order ID</th>
+                                    <th className="px-4 py-3 text-[10px] text-text-muted uppercase font-bold tracking-wider">Items</th>
                                     <th className="px-4 py-3 text-[10px] text-text-muted uppercase font-bold tracking-wider">Date</th>
                                     <th className="px-4 py-3 text-[10px] text-text-muted uppercase font-bold tracking-wider">Amount</th>
                                     <th className="px-4 py-3 text-[10px] text-text-muted uppercase font-bold tracking-wider">Payment</th>
@@ -103,25 +158,49 @@ export default function OrdersTab({ orders }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border-base/50">
-                                {orders.map((o, idx) => (
-                                    <tr key={o.orderId || idx} className="hover:bg-bg-base/50 transition-colors">
-                                        <td className="px-4 py-3 font-mono font-bold text-[10px] text-primary max-w-[140px] truncate">
-                                            {o.paymentId || "COD-ORDER"}
-                                        </td>
-                                        <td className="px-4 py-3 text-text-muted">{o.date || "N/A"}</td>
-                                        <td className="px-4 py-3 font-bold text-text-base">
-                                            ₹{Number(o.totalAmount || 0).toLocaleString("en-IN")}
-                                        </td>
-                                        <td className="px-4 py-3 uppercase font-bold text-text-muted text-[10px]">
-                                            {o.paymentInfo?.method || "COD"}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${getStatusStyle(o.status || "Paid")}`}>
-                                                {o.status || "Paid"}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {orders.map((o, idx) => {
+                                    const items = getOrderItems(o);
+                                    return (
+                                        <tr key={o.orderId || o.paymentId || idx} className="hover:bg-bg-base/50 transition-colors">
+                                            <td className="px-4 py-3 font-mono font-bold text-[10px] text-primary max-w-[140px] truncate">
+                                                {o.orderId || o.paymentId || "COD-ORDER"}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="space-y-2 max-w-[260px]">
+                                                    {items.map((item, i) => {
+                                                        const img = item.productImage || item.imageUrl || item.images?.[0] || "https://via.placeholder.com/100";
+                                                        const title = item.productName || item.title || item.name || "Product Item";
+                                                        const qty = item.quantity || 1;
+                                                        const variant = item.variantName || (item.options ? Object.values(item.options).filter(Boolean).join(" / ") : "");
+                                                        return (
+                                                            <div key={i} className="flex items-center gap-2">
+                                                                <img src={img} alt={title} className="w-8 h-8 rounded-md object-cover border border-border-base/60 shrink-0" />
+                                                                <div className="min-w-0">
+                                                                    <p className="text-[11px] font-semibold text-text-base truncate">{title}</p>
+                                                                    <p className="text-[9px] text-text-muted">
+                                                                        Qty: {qty} {variant && `• ${variant}`}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-text-muted">{formatDate(o.date || o.createdAt)}</td>
+                                            <td className="px-4 py-3 font-bold text-text-base">
+                                                ₹{Number(o.totalAmount || o.pricing?.grandTotal || 0).toLocaleString("en-IN")}
+                                            </td>
+                                            <td className="px-4 py-3 uppercase font-bold text-text-muted text-[10px]">
+                                                {o.paymentMode || o.paymentInfo?.method || o.payment?.gateway || "COD"}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${getStatusStyle(o.status || o.orderStatus || "Paid")}`}>
+                                                    {o.status || o.orderStatus || "Paid"}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

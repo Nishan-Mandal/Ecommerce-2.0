@@ -32,7 +32,7 @@ function CouponConditions({
                                 ₹
                             </span>
                             <input
-                                type="number"
+                                type="text"
                                 min={0}
                                 value={coupon.minimumOrderAmount}
                                 onChange={(e) =>
@@ -58,7 +58,7 @@ function CouponConditions({
                                     ₹
                                 </span>
                                 <input
-                                    type="number"
+                                    type="text"
                                     min={0}
                                     value={coupon.maximumDiscountAmount ?? ""}
                                     onChange={(e) =>

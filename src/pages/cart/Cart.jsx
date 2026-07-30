@@ -8,11 +8,13 @@ import { deleteFromCart, updateCartQuantity, addToCart } from '../../redux/cartS
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import useProducts from '../../hooks/product/useProducts';
+import useAuth from '../../hooks/auth/useAuth';
 
 function Cart() {
   const navigate = useNavigate();
   const { mode } = useTheme();
   const { products } = useProducts();
+  const { user, setIsLoginOpen } = useAuth();
 
   const dispatch = useDispatch()
   const cart = useSelector((state) => state.cart)
@@ -62,6 +64,19 @@ function Cart() {
   // Derived calculations
   const totalItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const subtotal = cart.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0);
+  const grandTotal = subtotal + (subtotal * 0.05);
+
+  const handleInitiateCheckout = () => {
+    if (cart.length === 0) {
+      toast.error('Your shopping cart is empty!');
+      return;
+    }
+    if (!user) {
+      setIsLoginOpen(true);
+    } else {
+      navigate('/checkout');
+    }
+  };
 
   // Filter suggested cross-sell items (products in DB not already in cart)
   const SUGGESTED_ITEMS = products
@@ -108,7 +123,7 @@ function Cart() {
             shippingFee="Free" 
             taxRate={0.05} 
             cartItems={cart}
-            onCheckout={() => navigate('/order')}
+            onCheckout={handleInitiateCheckout}
           />
           
         </div>

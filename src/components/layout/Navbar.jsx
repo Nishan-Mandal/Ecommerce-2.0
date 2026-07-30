@@ -29,7 +29,7 @@ export default function Navbar() {
   const navlinks = [
     { title: "Home", path: "/" },
     { title: "Products", path: "/allproducts" },
-    { title: "Order", path: "/orders" },
+    { title: "Order", path: "/profile?tab=orders" },
   ]
 
   const isAdmin = user?.user?.email?.toLowerCase() === adminEmail.toLowerCase() || user?.user?.role === 'ADMIN';

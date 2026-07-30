@@ -1,0 +1,47 @@
+import React from "react";
+import { useParams } from "react-router-dom";
+import { useSiteConfig } from "../../context/SiteConfigContext";
+import LegalPdfViewer from "../../components/Common/LegalPdfViewer";
+
+/**
+ * CustomLegalPage
+ * Dynamic page renderer for custom legal pages configured in the Admin Panel.
+ * Route: /legal/:slug
+ */
+export default function CustomLegalPage() {
+  const { slug } = useParams();
+  const { config, loading } = useSiteConfig();
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center text-text-muted text-sm font-medium">
+        Loading document...
+      </div>
+    );
+  }
+
+  const customPages = Array.isArray(config?.legal?.customPages) ? config.legal.customPages : [];
+  const currentPage = customPages.find(
+    (p) => p.slug === slug || p.slug === slug?.toLowerCase()
+  );
+
+  if (!currentPage) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-text-muted gap-2">
+        <h2 className="text-2xl font-bold text-text-base">Page Not Found</h2>
+        <p className="text-sm">The legal page you are looking for does not exist or has been removed.</p>
+      </div>
+    );
+  }
+
+  if (currentPage.isActive === false) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-text-muted gap-2">
+        <h2 className="text-2xl font-bold text-text-base">{currentPage.name}</h2>
+        <p className="text-sm">This policy page is currently inactive.</p>
+      </div>
+    );
+  }
+
+  return <LegalPdfViewer pdfUrl={currentPage.pdfUrl} title={currentPage.name} />;
+}

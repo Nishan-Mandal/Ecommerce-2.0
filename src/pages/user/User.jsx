@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import useAuth from "../../hooks/auth/useAuth";
 import { userService } from "../../services/user/userService";
@@ -18,7 +19,17 @@ const TABS = [
 
 function User() {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState("profile");
+    const location = useLocation();
+    const queryTab = new URLSearchParams(location.search).get("tab");
+    const initialTab = location.state?.tab || queryTab || "profile";
+    const [activeTab, setActiveTab] = useState(initialTab);
+
+    useEffect(() => {
+        const tab = location.state?.tab || new URLSearchParams(location.search).get("tab");
+        if (tab && (tab === "profile" || tab === "address" || tab === "orders")) {
+            setActiveTab(tab);
+        }
+    }, [location]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [orders, setOrders] = useState([]);
@@ -51,8 +62,8 @@ function User() {
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
 
-    const uid = user?.user?.uid;
-    const email = user?.user?.email;
+    const uid = user?.user?.uid || user?.uid;
+    const email = user?.user?.email || user?.email;
 
     useEffect(() => {
         if (!uid) return;
@@ -73,7 +84,7 @@ function User() {
                 } else {
                     setProfile((prev) => ({
                         ...prev,
-                        name: user?.user?.displayName || "",
+                        name: user?.user?.displayName || user?.displayName || "",
                         email: email || "",
                     }));
                 }
@@ -89,7 +100,7 @@ function User() {
         };
 
         loadUserData();
-    }, [uid, email]);
+    }, [uid, email, activeTab]);
 
     const handleAvatarChange = (e) => {
         const file = e.target.files?.[0];
@@ -155,7 +166,17 @@ function User() {
         }));
     };
 
-    const totalSpent = orders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+    const totalSpent = orders.reduce((sum, o) => {
+        if (o.orderStatus === "CANCELLED" || o.orderStatus === "PAYMENT_FAILED") return sum;
+        const amt = Number(
+            o.pricing?.grandTotal ??
+            o.grandTotal ??
+            o.totalAmount ??
+            o.amount ??
+            0
+        );
+        return sum + (isNaN(amt) ? 0 : amt);
+    }, 0);
 
     if (loading) {
         return (

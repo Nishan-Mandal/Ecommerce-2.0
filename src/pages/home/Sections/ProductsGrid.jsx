@@ -17,6 +17,37 @@ function ProductsGrid() {
     const [collections, setCollections] = useState([]);
     const [collectionsLoading, setCollectionsLoading] = useState(true);
 
+    const handleCopyProducts = () => {
+        if (!products || products.length === 0) {
+            toast.info("No products loaded yet.");
+            return;
+        }
+        const jsonStr = JSON.stringify(products, null, 2);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(jsonStr)
+                .then(() => toast.success(`Copied ${products.length} products to clipboard!`))
+                .catch(() => fallbackCopy(jsonStr));
+        } else {
+            fallbackCopy(jsonStr);
+        }
+    };
+
+    const fallbackCopy = (text) => {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        toast.success(`Copied ${products.length} products to clipboard!`);
+    };
+
+    useEffect(() => {
+        window.copyProductsData = handleCopyProducts;
+    }, [products]);
+
     useEffect(() => {
         setFilterType('');
         setFilterPrice('');

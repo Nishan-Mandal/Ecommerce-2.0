@@ -97,7 +97,7 @@ function CouponBasicInfo({
                                 {coupon.type === "PERCENTAGE" ? "%" : "₹"}
                             </span>
                             <input
-                                type="number"
+                                type="text"
                                 value={coupon.discountValue}
                                 onChange={(e) =>
                                     setCoupon((prev) => ({

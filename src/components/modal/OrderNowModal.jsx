@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { Timestamp } from 'firebase/firestore';
 import { orderService } from '../../services/order/orderService';
 import { uploadService } from '../../services/upload/uploadService';
+import { paymentService } from '../../services/payment/paymentService';
 import { deleteFromCart } from '../../redux/cartSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import Loader from '../../components/loader/Loader'
@@ -45,12 +46,7 @@ function OrderNowModal() {
     const [totalAmount, setTotalAmount] = useState(0);
     const [sliderValue, setSliderValue] = useState(1);
 
-
-
-    // Function to handle changes in selected options
     const handleSelectionChange = (drawingType, sheetType) => {
-
-        // Calculate total amount based on criteria
         let calculatedAmount = 0;
         if (drawingType === 'Pencil Sketch' && sheetType === 'A4') {
             calculatedAmount = 549;
@@ -62,13 +58,8 @@ function OrderNowModal() {
         else if (drawingType === 'Colour Painting' && sheetType === 'A3') {
             calculatedAmount = 999;
         }
-        // Update the total amount in the state
         setTotalAmount(calculatedAmount);
     };
-
-
-    /************************************************** PAYMENT INTEGRATION **************************************************
-     ******************************************************** RAZORPAY *******************************************************/
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -77,7 +68,6 @@ function OrderNowModal() {
 
     const buyNow = async () => {
         try {
-            // validation 
             const emptyFields = [];
             if (name === "") emptyFields.push("Name");
             if (address === "") emptyFields.push("Address");
@@ -103,14 +93,14 @@ function OrderNowModal() {
 
             setLoading(true);
 
-            // Uploading Image via service
             const downloadURL = await uploadService.uploadFile(selectedImage, 'orders');
 
             const addressInfo = {
-                name,
-                address,
+                fullName: name,
+                street: address,
+                houseNo: address,
                 pincode,
-                phoneNumber,
+                phone: phoneNumber,
             }
 
             const itemInfo = {
@@ -118,7 +108,6 @@ function OrderNowModal() {
                 selectedSheetType
             }
 
-            // Store in firebase 
             const orderInfo = {
                 itemInfo,
                 addressInfo,
@@ -127,7 +116,7 @@ function OrderNowModal() {
                 email: user?.user?.email,
                 userid: user?.user?.uid,
                 image: downloadURL,
-                totalAmount: totalAmount+(sliderValue*50-50),
+                totalAmount: totalAmount + (sliderValue * 50 - 50),
                 status: 'Order Placed',
                 isCustom: true,
                 paymentMode: paymentMode,
@@ -135,33 +124,79 @@ function OrderNowModal() {
             }
 
             if (paymentMode === 'Online Payment') {
-                var options = {
-                    key: "rzp_test_S3JAxtwNxS58jp",
-                    key_secret: "00V0ESXswyhvC5jpifMX5Jqy",
-                    amount: parseInt((totalAmount+(sliderValue*50-50)) * 100),
-                    currency: "INR",
-                    order_receipt: 'order_rcptid_' + name,
-                    name: "HN Enterprise",
-                    description: selectedDrawingType + '_' + selectedSheetType,
-                    handler: async function (response) {
-                        toast.success('Payment Successful')
-                        orderInfo.paymentId = response.razorpay_payment_id;
-                        await orderService.createOrder(orderInfo);
-                        toast.success('Order Placed Successfully');
-                    },
-                    theme: {
-                        color: "#3399cc"
+                let initiatedViaCloud = false;
+                try {
+                    const payOrder = await paymentService.createPaymentOrder({
+                        items: [
+                            {
+                                productId: "custom_drawing",
+                                variantId: `${selectedDrawingType}_${selectedSheetType}`,
+                                quantity: 1
+                            }
+                        ],
+                        couponCode: "",
+                        shippingAddress: addressInfo
+                    });
+
+                    initiatedViaCloud = true;
+
+                    await paymentService.openRazorpayCheckout({
+                        paymentId: payOrder.paymentId,
+                        gatewayOrderId: payOrder.gatewayOrderId,
+                        amount: payOrder.amount,
+                        currency: payOrder.currency,
+                        keyId: payOrder.keyId,
+                        userProfile: { name, phone: phoneNumber, email: user?.user?.email },
+                        onSuccess: () => {
+                            toast.success('Payment Received! Order placed successfully.');
+                            closeModal();
+                            navigate('/profile?tab=orders');
+                        },
+                        onFailure: (errMsg) => {
+                            toast.error(errMsg || 'Payment cancelled or failed.');
+                        }
+                    });
+                } catch (payErr) {
+                    console.error("Cloud Function payment error:", payErr);
+
+                    if (initiatedViaCloud) {
+                        return;
                     }
-                };
-                var pay = new window.Razorpay(options);
-                pay.open();
+
+                    // Client-Side Razorpay Gateway Fallback (Strictly opens Razorpay popup!)
+                    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_SUKZpvg7nte0jc";
+                    const calculatedAmount = Math.round((totalAmount + (sliderValue * 50 - 50)) * 100);
+
+                    await paymentService.openRazorpayCheckout({
+                        paymentId: "pay_custom_" + Date.now(),
+                        gatewayOrderId: "",
+                        amount: calculatedAmount,
+                        currency: "INR",
+                        keyId: razorpayKey,
+                        userProfile: { name, phone: phoneNumber, email: user?.user?.email },
+                        onSuccess: async (response) => {
+                            try {
+                                orderInfo.paymentId = response.razorpay_payment_id || response.paymentId;
+                                await orderService.createOrder(orderInfo);
+                                toast.success('Payment Successful! Custom Order Placed.');
+                                closeModal();
+                            } catch (err) {
+                                console.error("Error creating order:", err);
+                                toast.error("Failed to record order.");
+                            }
+                        },
+                        onFailure: (errMsg) => {
+                            toast.error(errMsg || 'Payment cancelled or failed.');
+                        }
+                    });
+                }
             }
             else {
                 orderInfo.totalAmount += 40;
                 await orderService.createOrder(orderInfo);
                 toast.success('Order Placed Successfully');
+                closeModal();
             }
-            closeModal();
             setLoading(false);
         } catch (error) {
             console.log(error);

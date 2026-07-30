@@ -106,5 +106,35 @@ export const productService = {
   async deleteProduct(id) {
     const productRef = doc(fireDB, 'products', id);
     await deleteDoc(productRef);
-  }
+  },
+
+  /**
+   * Submits a user review for a product.
+   * Schema matches ratings.model.js:
+   *   { productId, userId, userName, rating, review, createdAt, updatedAt }
+   */
+  async submitRating({ productId, userId, userName, rating, review }) {
+    const { addDoc, serverTimestamp } = await import('firebase/firestore');
+    const ratingRef = collection(fireDB, 'ratings');
+    const now = serverTimestamp();
+    const docRef = await addDoc(ratingRef, {
+      productId,
+      userId,
+      userName,
+      rating: Number(rating),
+      review: review.trim(),
+      createdAt: now,
+      updatedAt: now,
+    });
+    return {
+      id: docRef.id,
+      productId,
+      userId,
+      userName,
+      rating: Number(rating),
+      review: review.trim(),
+      createdAt: { seconds: Date.now() / 1000 },
+      updatedAt: { seconds: Date.now() / 1000 },
+    };
+  },
 };

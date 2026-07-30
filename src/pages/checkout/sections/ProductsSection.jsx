@@ -1,0 +1,113 @@
+import React from "react";
+import { useNavigate } from "react-router-dom";
+
+const fmt = (n) => Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+export default function ProductsSection({ cart }) {
+  const navigate = useNavigate();
+
+  return (
+    <section className="bg-bg-surface rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-border-base overflow-hidden">
+      {/* Section Header */}
+      <div className=" px-3 py-2 border-b border-border-base flex items-center justify-between bg-bg-surface/50">
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="font-bold text-sm text-text-base">Order Items ({cart.length})</h2>
+          </div>
+        </div>
+        <button
+          onClick={() => navigate("/cart")}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-primary font-bold text-xs hover:underline"
+        >
+          <span className="material-symbols-outlined text-[18px]">shopping_cart</span>
+          Edit Cart
+        </button>
+      </div>
+
+      {/* Items List */}
+      <div className="p-6 divide-y divide-border-base/50 space-y-6">
+        {cart.map((item, idx) => {
+          const originalPrice = Number(item.originalPrice || item.price || 0);
+          const sellingPrice = Number(item.price || 0);
+          const discount = originalPrice - sellingPrice;
+          const hasDiscount = discount > 0;
+          const discountPercent = hasDiscount && originalPrice > 0 ? Math.round((discount / originalPrice) * 100) : 0;
+
+          const variantEntries = item.selectedVariant
+            ? Object.entries(item.selectedVariant).filter(
+                ([k]) => !["variantId", "sku", "id", "price", "stock", "images", "isActive", "originalPrice"].includes(k)
+              )
+            : [];
+
+          return (
+            <div key={`${item.id}-${idx}`} className=" flex flex-col md:flex-row gap-6 items-start md:items-center">
+              {/* Product Thumbnail */}
+              <div className="  relative w-20 h-21 rounded-xl overflow-hidden bg-bg-base shrink-0 border border-border-base">
+                {(item.imageUrl || item.images?.[0]) ? (
+                  <img
+                    src={item.imageUrl || item.images?.[0]}
+                    alt={item.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-text-muted">
+                    <span className="material-symbols-outlined text-[32px]">image</span>
+                  </div>
+                )}
+                {/* {discountPercent > 0 && (
+                  <div className="absolute top-2 left-2 bg-green-600 text-white px-2 py-0.5 rounded font-bold text-[10px] uppercase">
+                    {discountPercent}% OFF
+                  </div>
+                )} */}
+              </div>
+
+              {/* Product Details */}
+              <div className=" flex flex-col md:flex-row justify-between w-full ">
+                <div className="flex flex-col gap-1">
+                 <div>
+                   <h3 className="font-bold text-xs text-text-muted">{item.brand}</h3>
+                  <h3 className="font-bold text-base text-text-base">{item.title}</h3>
+                 </div>
+                  
+                  {/* Variant & Qty Pills */}
+                  <div className="flex flex-wrap gap-2.5">
+                    {variantEntries.map(([k, v]) => (
+                      <span key={k} className="flex items-center gap-1 text-xs text-text-muted bg-bg-base border border-border-base px-3 py-1 rounded-lg">
+                        {k}: <span className="text-text-base font-bold">{v}</span>
+                      </span>
+                    ))}
+                    <span className="flex items-center gap-1 text-xs text-text-muted bg-bg-base border border-border-base px-3 py-1 rounded-lg">
+                      Qty: <span className="text-text-base font-bold">{item.quantity}</span>
+                    </span>
+                  </div>
+
+                  {/* Price Row */}
+                  <div className="flex items-baseline gap-3 flex-wrap">
+                    <span className="font-extrabold text-2xl text-text-base">₹{fmt(sellingPrice * item.quantity)}</span>
+                    {hasDiscount && (
+                      <>
+                        <span className="text-xs text-text-muted line-through opacity-60">₹{fmt(originalPrice * item.quantity)}</span>
+                        <span className="text-green-600 dark:text-green-400 font-bold text-xs bg-green-600/10 px-2 py-0.5 rounded">
+                          Save ₹{fmt(discount * item.quantity)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Unit Price (Desktop)
+                <div className="mt-4 md:mt-0 md:text-right flex flex-col justify-center shrink-0">
+                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Unit Price</span>
+                  <span className="font-bold text-base text-text-base">₹{fmt(sellingPrice)}</span>
+                  <span className="text-[10px] text-text-muted opacity-60">incl. of all taxes</span>
+                </div> */}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+

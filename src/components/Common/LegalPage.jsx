@@ -1,40 +1,38 @@
-import ReactMarkdown from "react-markdown";
+import React from "react";
 import { useSiteConfig } from "../../context/SiteConfigContext";
+import LegalPdfViewer from "./LegalPdfViewer";
 
 /**
- * LegalPage — shared renderer for all legal/policy pages.
- * Reads Markdown content from the SiteConfigContext and renders it.
- * @param {string} configKey - Key in config.legal (e.g. "aboutUs", "privacyPolicy")
- * @param {string} title - Page heading to display if no Markdown content
+ * LegalPage — shared renderer for standard legal/policy pages.
+ * Reads PDF URL from SiteConfigContext and renders via LegalPdfViewer.
+ * @param {string} configKey - Key in config.legal.fixedPages (e.g. "aboutUs", "privacyPolicy")
+ * @param {string} title - Fallback page heading
  */
 function LegalPage({ configKey, title }) {
     const { config, loading } = useSiteConfig();
-    const content = config?.legal?.[configKey] || "";
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center text-text-muted text-sm">
-                Loading...
+            <div className="min-h-[60vh] flex items-center justify-center text-text-muted text-sm">
+                Loading policy document...
             </div>
         );
     }
 
-    if (!content) {
+    const legalData = config?.legal || {};
+    const pageObj = legalData.fixedPages?.[configKey] || {};
+    const pdfUrl = pageObj.pdfUrl || (typeof legalData[configKey] === "string" && legalData[configKey].startsWith("http") ? legalData[configKey] : "");
+
+    if (pageObj.isActive === false) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center text-text-muted gap-2">
+            <div className="min-h-[60vh] flex flex-col items-center justify-center text-text-muted gap-2">
                 <p className="text-xl font-bold">{title}</p>
-                <p className="text-sm">Content not configured yet. Visit the admin Configure page.</p>
+                <p className="text-sm">This policy page is currently inactive.</p>
             </div>
         );
     }
 
-    return (
-        <div className="max-w-3xl mx-auto px-6 py-12">
-            <article className="prose prose-neutral dark:prose-invert max-w-none text-text-base text-sm leading-relaxed">
-                <ReactMarkdown>{content}</ReactMarkdown>
-            </article>
-        </div>
-    );
+    return <LegalPdfViewer pdfUrl={pdfUrl} title={title} />;
 }
 
 export default LegalPage;

@@ -18,8 +18,12 @@ export default function ProductPurchase({
   const navigate = useNavigate();
 
   // Determine availability and stock states
-  const isOutOfStock = isComplete && selectedVariant && (selectedVariant.inStock <= 0 || selectedVariant.isActive === false || selectedVariant.isAvailable === false);
-  const isButtonDisabled = !isComplete || isOutOfStock;
+  const hasVariants = product.hasVariants ?? (product.variantTypes && product.variantTypes.length > 0);
+  const isOutOfStock = hasVariants
+    ? (isComplete && selectedVariant && (selectedVariant.inStock <= 0 || selectedVariant.isActive === false || selectedVariant.isAvailable === false))
+    : (Number(product.inStock ?? 1) <= 0);
+
+  const isButtonDisabled = hasVariants ? (!isComplete || isOutOfStock) : isOutOfStock;
 
   const handleAddToCart = () => {
     if (isButtonDisabled) return;

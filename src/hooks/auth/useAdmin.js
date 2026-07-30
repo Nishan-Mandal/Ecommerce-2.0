@@ -22,7 +22,10 @@ export default function useAdmin() {
     id: '',
     brand: '',
     title: '',
+    hasVariants: false,
     price: '',
+    originalPrice: '',
+    inStock: '',
     imageUrl: '',
     category: '',
     description: '',
@@ -37,7 +40,10 @@ export default function useAdmin() {
       id: item.id || '',
       brand: item.brand || '',
       title: item.title || '',
-      price: item.price || '',
+      hasVariants: item.hasVariants ?? (Array.isArray(item.variants) && item.variants.length > 0),
+      price: item.price ?? '',
+      originalPrice: item.originalPrice ?? '',
+      inStock: item.inStock ?? '',
       imageUrl: item.imageUrl || '',
       category: item.category || '',
       description: item.description || '',
@@ -48,15 +54,36 @@ export default function useAdmin() {
     });
   };
 
+  const isDescriptionValid = (desc) => {
+    if (!desc) return false;
+    if (typeof desc === 'string') return desc.trim() !== '';
+    if (typeof desc === 'object') {
+      return Boolean(desc.short || (desc.sections && desc.sections.length > 0));
+    }
+    return false;
+  };
+
   const addProduct = async () => {
     if (
       !productForm.title ||
       !productForm.brand ||
-      !productForm.price ||
       !productForm.category ||
-      !productForm.description
+      !isDescriptionValid(productForm.description)
     ) {
-      return toast.error('Please fill all required fields');
+      return toast.error('Please fill all required basic fields (Title, Brand, Category, Description)');
+    }
+
+    if (!productForm.hasVariants) {
+      if (!productForm.price || Number(productForm.price) <= 0) {
+        return toast.error('Please enter a valid base price for products without variants');
+      }
+      if (productForm.inStock === '' || productForm.inStock === undefined || Number(productForm.inStock) < 0) {
+        return toast.error('Please enter in-stock quantity');
+      }
+    } else {
+      if (!productForm.variants || productForm.variants.length === 0) {
+        return toast.error('Please generate or add at least one product variant');
+      }
     }
 
     if (!productForm.imageUrl && (!productForm.images || productForm.images.length === 0)) {
@@ -67,6 +94,12 @@ export default function useAdmin() {
     try {
       const docData = {
         ...productForm,
+        hasVariants: Boolean(productForm.hasVariants),
+        price: productForm.hasVariants ? null : Number(productForm.price) || 0,
+        originalPrice: productForm.hasVariants ? null : (productForm.originalPrice ? Number(productForm.originalPrice) : null),
+        inStock: productForm.hasVariants ? null : Number(productForm.inStock) || 0,
+        variantTypes: productForm.hasVariants ? (productForm.variantTypes || []) : [],
+        variants: productForm.hasVariants ? (productForm.variants || []) : [],
         time: Timestamp.now(),
         date: new Date().toLocaleString("en-US", {
           month: "short",
@@ -92,11 +125,23 @@ export default function useAdmin() {
     if (
       !productForm.title ||
       !productForm.brand ||
-      !productForm.price ||
       !productForm.category ||
-      !productForm.description
+      !isDescriptionValid(productForm.description)
     ) {
-      return toast.error('Please fill all required fields');
+      return toast.error('Please fill all required basic fields (Title, Brand, Category, Description)');
+    }
+
+    if (!productForm.hasVariants) {
+      if (!productForm.price || Number(productForm.price) <= 0) {
+        return toast.error('Please enter a valid base price for products without variants');
+      }
+      if (productForm.inStock === '' || productForm.inStock === undefined || Number(productForm.inStock) < 0) {
+        return toast.error('Please enter in-stock quantity');
+      }
+    } else {
+      if (!productForm.variants || productForm.variants.length === 0) {
+        return toast.error('Please generate or add at least one product variant');
+      }
     }
 
     if (!productForm.imageUrl && (!productForm.images || productForm.images.length === 0)) {
@@ -105,7 +150,16 @@ export default function useAdmin() {
 
     setLoading(true);
     try {
-      await productService.updateProduct(productForm.id, productForm);
+      const updateData = {
+        ...productForm,
+        hasVariants: Boolean(productForm.hasVariants),
+        price: productForm.hasVariants ? null : Number(productForm.price) || 0,
+        originalPrice: productForm.hasVariants ? null : (productForm.originalPrice ? Number(productForm.originalPrice) : null),
+        inStock: productForm.hasVariants ? null : Number(productForm.inStock) || 0,
+        variantTypes: productForm.hasVariants ? (productForm.variantTypes || []) : [],
+        variants: productForm.hasVariants ? (productForm.variants || []) : [],
+      };
+      await productService.updateProduct(productForm.id, updateData);
       toast.success("Product Updated successfully");
       setTimeout(() => {
         navigate('/dashboard');
@@ -136,7 +190,10 @@ export default function useAdmin() {
       id: '',
       brand: '',
       title: '',
+      hasVariants: false,
       price: '',
+      originalPrice: '',
+      inStock: '',
       imageUrl: '',
       category: '',
       description: '',
