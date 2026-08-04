@@ -4,7 +4,70 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { Timestamp } from 'firebase/firestore';
 import { uploadService } from '../../services/upload/uploadService.js';
+import { mediaService } from '../../services/media/mediaService.js';
 import { generateVariantCombinations } from '../../utils/variantUtils.js';
+
+/**
+ * Helper to flatten and sanitize arrays before sending to Firestore
+ * Prevents "FirebaseError: Nested arrays are not supported"
+ */
+const sanitizeProductForFirestore = (data) => {
+  if (!data || typeof data !== 'object') return data;
+  const clean = { ...data };
+
+  // Flatten images array and filter out non-strings
+  if (Array.isArray(clean.images)) {
+    clean.images = clean.images.flat(Infinity).filter(img => typeof img === 'string' && img.trim() !== '');
+  } else {
+    clean.images = typeof clean.imageUrl === 'string' && clean.imageUrl ? [clean.imageUrl] : [];
+  }
+
+  // Ensure imageUrl is a string
+  if (typeof clean.imageUrl !== 'string') {
+    clean.imageUrl = clean.images[0] || '';
+  }
+
+  // Flatten tags array
+  if (Array.isArray(clean.tags)) {
+    clean.tags = clean.tags.flat(Infinity).filter(t => typeof t === 'string' && t.trim() !== '');
+  } else {
+    clean.tags = [];
+  }
+
+  // Flatten variants and variant images
+  if (Array.isArray(clean.variants)) {
+    clean.variants = clean.variants.map(v => {
+      if (!v || typeof v !== 'object') return v;
+      const vClean = { ...v };
+      if (Array.isArray(vClean.images)) {
+        vClean.images = vClean.images.flat(Infinity).filter(img => typeof img === 'string' && img.trim() !== '');
+      } else {
+        vClean.images = [];
+      }
+      return vClean;
+    });
+  } else {
+    clean.variants = [];
+  }
+
+  // Flatten variantTypes values
+  if (Array.isArray(clean.variantTypes)) {
+    clean.variantTypes = clean.variantTypes.map(vt => {
+      if (!vt || typeof vt !== 'object') return vt;
+      const vtClean = { ...vt };
+      if (Array.isArray(vtClean.values)) {
+        vtClean.values = vtClean.values.flat(Infinity).filter(val => typeof val === 'string' && val.trim() !== '');
+      } else {
+        vtClean.values = [];
+      }
+      return vtClean;
+    });
+  } else {
+    clean.variantTypes = [];
+  }
+
+  return clean;
+};
 
 /**
  * useAdmin Hook
@@ -22,6 +85,7 @@ export default function useAdmin() {
     id: '',
     brand: '',
     title: '',
+    isActive: true,
     hasVariants: false,
     price: '',
     originalPrice: '',
@@ -40,6 +104,7 @@ export default function useAdmin() {
       id: item.id || '',
       brand: item.brand || '',
       title: item.title || '',
+      isActive: item.isActive !== false,
       hasVariants: item.hasVariants ?? (Array.isArray(item.variants) && item.variants.length > 0),
       price: item.price ?? '',
       originalPrice: item.originalPrice ?? '',
@@ -92,8 +157,9 @@ export default function useAdmin() {
 
     setLoading(true);
     try {
-      const docData = {
+      const rawData = {
         ...productForm,
+        isActive: productForm.isActive !== false,
         hasVariants: Boolean(productForm.hasVariants),
         price: productForm.hasVariants ? null : Number(productForm.price) || 0,
         originalPrice: productForm.hasVariants ? null : (productForm.originalPrice ? Number(productForm.originalPrice) : null),
@@ -107,6 +173,8 @@ export default function useAdmin() {
           year: "numeric",
         })
       };
+
+      const docData = sanitizeProductForFirestore(rawData);
       await productService.createProduct(docData);
       toast.success("Product Added successfully");
       setTimeout(() => {
@@ -114,7 +182,7 @@ export default function useAdmin() {
       }, 1000);
     } catch (error) {
       console.error("Error adding product: ", error);
-      toast.error("Failed to add product");
+      toast.error("Failed to add product: " + (error.message || "Invalid data structure"));
     } finally {
       setLoading(false);
       resetForm();
@@ -150,8 +218,9 @@ export default function useAdmin() {
 
     setLoading(true);
     try {
-      const updateData = {
+      const rawData = {
         ...productForm,
+        isActive: productForm.isActive !== false,
         hasVariants: Boolean(productForm.hasVariants),
         price: productForm.hasVariants ? null : Number(productForm.price) || 0,
         originalPrice: productForm.hasVariants ? null : (productForm.originalPrice ? Number(productForm.originalPrice) : null),
@@ -159,6 +228,8 @@ export default function useAdmin() {
         variantTypes: productForm.hasVariants ? (productForm.variantTypes || []) : [],
         variants: productForm.hasVariants ? (productForm.variants || []) : [],
       };
+
+      const updateData = sanitizeProductForFirestore(rawData);
       await productService.updateProduct(productForm.id, updateData);
       toast.success("Product Updated successfully");
       setTimeout(() => {
@@ -166,7 +237,22 @@ export default function useAdmin() {
       }, 800);
     } catch (error) {
       console.error("Error updating product: ", error);
-      toast.error("Failed to update product");
+      toast.error("Failed to update product: " + (error.message || "Invalid data structure"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleProductActiveStatus = async (item) => {
+    if (!item || !item.id) return;
+    const newStatus = !(item.isActive !== false);
+    setLoading(true);
+    try {
+      await productService.updateProduct(item.id, { isActive: newStatus });
+      toast.success(`Product "${item.title || 'Item'}" marked as ${newStatus ? 'Live' : 'Draft'}!`);
+    } catch (error) {
+      console.error("Error toggling active status: ", error);
+      toast.error("Failed to update product status");
     } finally {
       setLoading(false);
     }
@@ -190,6 +276,7 @@ export default function useAdmin() {
       id: '',
       brand: '',
       title: '',
+      isActive: true,
       hasVariants: false,
       price: '',
       originalPrice: '',
@@ -216,6 +303,7 @@ export default function useAdmin() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const downloadURL = await uploadService.uploadProductImage(file, setUploadProgress);
+        await mediaService.saveMedia(downloadURL, file.name);
         setProductForm((prev) => {
           const newImages = [...(prev.images || []), downloadURL];
           return {
@@ -271,6 +359,7 @@ export default function useAdmin() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const downloadURL = await uploadService.uploadProductImage(file, setUploadProgress);
+        await mediaService.saveMedia(downloadURL, file.name);
         uploadedUrls.push(downloadURL);
       }
 
@@ -449,6 +538,7 @@ export default function useAdmin() {
     addProduct,
     updateProduct,
     deleteProduct,
+    toggleProductActiveStatus,
     resetForm,
     handleImageUpload,
     handleImageDelete,

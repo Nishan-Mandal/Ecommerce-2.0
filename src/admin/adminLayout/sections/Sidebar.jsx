@@ -15,7 +15,7 @@ export default function Sidebar({
     return (
         <aside
             className={`
-                hidden md:flex flex-col fixed inset-y-0 left-0 z-40 bg-bg-surface border-r border-border-base transition-all duration-200
+                hidden md:flex flex-col fixed inset-y-0 left-0 z-40 bg-bg-surface border-r border-border-base transition-all duration-200 print:hidden
                 ${sidebarCollapsed ? 'md:w-20 lg:w-[260px]' : 'md:w-[260px] lg:w-[260px]'}
             `}
         >

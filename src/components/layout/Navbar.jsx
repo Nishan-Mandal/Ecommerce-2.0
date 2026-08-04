@@ -1,13 +1,25 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import { useTheme } from '../../context/ThemeContext'
 import useAuth from '../../hooks/auth/useAuth'
 import { useFilter } from '../../context/FilterContext'
 import companyLogo from '../../assets/companyLogo.png'
 import OrderNowModal from '../modal/OrderNowModal'
 import SearchBar from '../Common/SearchBar'
+import WarningModal from '../modal/WarningModal'
 import { useSiteConfig } from '../../context/SiteConfigContext'
 import { FaBoxes } from 'react-icons/fa'
+
+function getInitials(name, email) {
+  const target = (name && name.trim()) || email || "";
+  if (!target) return "U";
+  const parts = target.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return target.slice(0, 2).toUpperCase();
+}
 
 export default function Navbar() {
   const navigate = useNavigate()
@@ -17,6 +29,7 @@ export default function Navbar() {
   const { searchkey, setSearchkey } = useFilter()
   const { config } = useSiteConfig()
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
 
   const handleSearchChange = (val) => {
     setSearchkey(val)
@@ -42,11 +55,14 @@ export default function Navbar() {
     { label: user ? "Profile" : "Login", path: user ? "/profile" : null, onClick: user ? null : () => setIsLoginOpen(true), icon: user ? "person" : "login" }
   ]
 
+  // Subscribe to Redux store state for real-time cart updates
+  const cartItems = useSelector((state) => state.cart) || [];
+  const cartLength = cartItems.length;
 
-  const pass = 1
-
-  // Get cart items from localStorage without using useSelector
-  const cartLength = JSON.parse(localStorage.getItem('cart') || '[]').length;
+  const handleConfirmLogout = () => {
+    setIsLogoutModalOpen(false);
+    authLogout();
+  };
 
   return (
     <>
@@ -131,16 +147,16 @@ export default function Navbar() {
                 <div className="flex items-center gap-2 sm:gap-3">
                   <Link
                     to="/profile"
-                    className="w-8 h-8 sm:w-9 h-9 rounded-full bg-primary flex items-center justify-center shadow-sm"
+                    className="w-8 h-8 sm:w-9 h-9 rounded-full bg-primary/10 text-primary border border-primary/30 flex items-center justify-center font-bold text-xs sm:text-sm shadow-xs hover:bg-primary/20 transition-all"
+                    title={userName || user?.user?.email || "Profile"}
                   >
-                    <span className="material-symbols-outlined text-compli text-sm sm:text-base">
-                      person
-                    </span>
+                    {getInitials(userName, user?.user?.email)}
                   </Link>
 
                   <button
-                    onClick={authLogout}
+                    onClick={() => setIsLogoutModalOpen(true)}
                     className="text-gray-700 hover:text-red-500 cursor-pointer"
+                    title="Log Out"
                   >
                     <span className="material-symbols-outlined icon-xl">
                       logout
@@ -221,6 +237,15 @@ export default function Navbar() {
 
       </div>
 
+      {/* Logout Confirmation Warning Modal */}
+      <WarningModal
+        isOpen={isLogoutModalOpen}
+        message="Are you sure you want to log out of your account?"
+        onConfirm={handleConfirmLogout}
+        onCancel={() => setIsLogoutModalOpen(false)}
+        confirmText="Log Out"
+        cancelText="Cancel"
+      />
     </>
   )
 }

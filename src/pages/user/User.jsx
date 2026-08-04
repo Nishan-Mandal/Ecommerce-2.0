@@ -17,6 +17,16 @@ const TABS = [
     { id: "orders", label: "Orders", icon: <FaShoppingBag size={11} /> },
 ];
 
+function getInitials(name, email) {
+    const target = (name && name.trim()) || email || "";
+    if (!target) return "U";
+    const parts = target.trim().split(/\s+/);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return target.slice(0, 2).toUpperCase();
+}
+
 function User() {
     const { user } = useAuth();
     const location = useLocation();
@@ -39,118 +49,76 @@ function User() {
         name: "",
         email: "",
         phone: "",
-        profileImage: "",
         role: "USER",
         emailVerified: false,
         phoneVerified: false,
         address: {
-            fullName: "",
-            phone: "",
-            houseNo: "",
-            buildingName: "",
             street: "",
             city: "",
-            district: "",
             state: "",
             pincode: "",
-            landmark: "",
-            type: "HOME",
-        }
+            country: "India",
+        },
     });
 
-    // Storage Upload State
-    const [uploading, setUploading] = useState(false);
-    const [progress, setProgress] = useState(0);
-
-    const uid = user?.user?.uid || user?.uid;
-    const email = user?.user?.email || user?.email;
+    const uid = user?.user?.uid;
 
     useEffect(() => {
-        if (!uid) return;
+        if (!uid) {
+            setLoading(false);
+            return;
+        }
 
-        const loadUserData = async () => {
-            setLoading(true);
+        const fetchUserData = async () => {
             try {
-                const userProfile = await userService.getUserProfile(uid);
-                if (userProfile) {
-                    setProfile((prev) => ({
-                        ...prev,
-                        ...userProfile,
+                const userData = await userService.getUserProfile(uid);
+                if (userData) {
+                    setProfile({
+                        name: userData.name || user?.user?.displayName || "",
+                        email: userData.email || user?.user?.email || "",
+                        phone: userData.phone || user?.user?.phoneNumber || "",
+                        role: userData.role || "USER",
+                        emailVerified: user?.user?.emailVerified || false,
+                        phoneVerified: userData.phoneVerified || false,
                         address: {
-                            ...prev.address,
-                            ...(userProfile.address || {})
-                        }
-                    }));
+                            street: userData.address?.street || "",
+                            city: userData.address?.city || "",
+                            state: userData.address?.state || "",
+                            pincode: userData.address?.pincode || "",
+                            country: userData.address?.country || "India",
+                        },
+                    });
                 } else {
                     setProfile((prev) => ({
                         ...prev,
-                        name: user?.user?.displayName || user?.displayName || "",
-                        email: email || "",
+                        name: user?.user?.displayName || "",
+                        email: user?.user?.email || "",
+                        phone: user?.user?.phoneNumber || "",
+                        emailVerified: user?.user?.emailVerified || false,
                     }));
                 }
-
-                const userOrders = await orderService.getOrders(uid, email);
-                setOrders(userOrders);
+                const userOrders = await orderService.getOrdersByUser(uid, user?.user?.email);
+                setOrders(userOrders || []);
             } catch (err) {
-                console.error(err);
-                toast.error("Failed to load user profile");
+                console.error("Failed to load user profile/orders", err);
+                toast.error("Failed to load profile details");
             } finally {
                 setLoading(false);
             }
         };
 
-        loadUserData();
-    }, [uid, email, activeTab]);
-
-    const handleAvatarChange = (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setUploading(true);
-        const storageRef = ref(storage, `users/avatars/${uid}_${Date.now()}_${file.name}`);
-        const task = uploadBytesResumable(storageRef, file);
-
-        task.on(
-            "state_changed",
-            (snap) => {
-                setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
-            },
-            (err) => {
-                toast.error("Image upload failed");
-                console.error(err);
-                setUploading(false);
-            },
-            async () => {
-                const url = await getDownloadURL(task.snapshot.ref);
-                setProfile((prev) => ({ ...prev, profileImage: url }));
-                setUploading(false);
-                toast.success("Profile image uploaded. Don't forget to save changes!");
-            }
-        );
-    };
+        fetchUserData();
+    }, [uid, user]);
 
     const handleSaveProfile = async () => {
+        if (!uid) return;
         setSaving(true);
         try {
-            const dataToSave = { ...profile };
-            delete dataToSave.docId;
-            delete dataToSave.role;
-
-            if (profile.docId) {
-                await userService.updateUserProfile(profile.docId, dataToSave);
-            } else {
-                dataToSave.uid = uid;
-                dataToSave.role = "USER";
-                const { doc, setDoc } = await import("firebase/firestore");
-                const { fireDB } = await import("../../firebase/FirebaseConfig");
-                const userDocRef = doc(fireDB, "users", uid);
-                await setDoc(userDocRef, dataToSave, { merge: true });
-                setProfile((prev) => ({ ...prev, docId: uid }));
-            }
-            toast.success("Profile updated successfully");
+            await userService.updateUserProfile(uid, profile);
+            toast.success("Profile updated successfully!");
         } catch (err) {
-            console.error(err);
-            toast.error("Failed to save changes");
+            console.error("Failed to update profile", err);
+            toast.error("Failed to update profile");
         } finally {
             setSaving(false);
         }
@@ -161,21 +129,14 @@ function User() {
             ...prev,
             address: {
                 ...prev.address,
-                [field]: value
-            }
+                [field]: value,
+            },
         }));
     };
 
-    const totalSpent = orders.reduce((sum, o) => {
-        if (o.orderStatus === "CANCELLED" || o.orderStatus === "PAYMENT_FAILED") return sum;
-        const amt = Number(
-            o.pricing?.grandTotal ??
-            o.grandTotal ??
-            o.totalAmount ??
-            o.amount ??
-            0
-        );
-        return sum + (isNaN(amt) ? 0 : amt);
+    const totalSpent = orders.reduce((acc, o) => {
+        const amt = Number(o.totalAmount || o.pricing?.grandTotal || 0);
+        return acc + amt;
     }, 0);
 
     if (loading) {
@@ -195,24 +156,9 @@ function User() {
             {/* ── Mobile Profile Header Strip ── */}
             <div className="lg:hidden bg-bg-surface border-b border-border-base px-4 py-4">
                 <div className="flex items-center gap-3">
-                    {/* Avatar */}
-                    <div className="relative shrink-0">
-                        <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-primary/30 bg-bg-base flex items-center justify-center">
-                            {profile.profileImage ? (
-                                <img src={profile.profileImage} alt={profile.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <FaUser className="text-2xl text-text-muted" />
-                            )}
-                        </div>
-                        <label className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-primary text-compli flex items-center justify-center cursor-pointer shadow-md active:scale-95 transition">
-                            <FaCamera size={9} />
-                            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} disabled={uploading} />
-                        </label>
-                        {uploading && (
-                            <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center text-white text-[9px] font-bold">
-                                {progress}%
-                            </div>
-                        )}
+                    {/* Avatar Initials Badge */}
+                    <div className="w-14 h-14 rounded-full border-2 border-primary/30 bg-primary/10 text-primary font-black text-xl flex items-center justify-center shrink-0 shadow-xs">
+                        {getInitials(profile.name, profile.email)}
                     </div>
 
                     {/* Name / Email / Role */}
@@ -221,16 +167,8 @@ function User() {
                         <p className="text-text-muted truncate mt-0.5">{profile.email}</p>
                         <div className="flex items-center gap-2 mt-1.5">
                             <span className="inline-block px-2 py-0.5 rounded bg-primary/10 text-primary font-bold text-[9px] uppercase">
-                                {profile.role == "ADMIN" ? "Admin" : ""}
+                                {profile.role == "ADMIN" ? "Admin" : "Customer"}
                             </span>
-                            {/* <span className={`flex items-center gap-0.5 text-[9px] font-semibold ${profile.emailVerified ? "text-green-600" : "text-text-muted/60"}`}>
-                                {profile.emailVerified ? <FaCheckCircle size={8} /> : <FaExclamationCircle size={8} />}
-                                Email
-                            </span>
-                            <span className={`flex items-center gap-0.5 text-[9px] font-semibold ${profile.phoneVerified ? "text-green-600" : "text-text-muted/60"}`}>
-                                {profile.phoneVerified ? <FaCheckCircle size={8} /> : <FaExclamationCircle size={8} />}
-                                Phone
-                            </span> */}
                         </div>
                     </div>
 
@@ -254,24 +192,9 @@ function User() {
                 {/* ── Left Sidebar: Desktop only ── */}
                 <div className="hidden lg:block lg:col-span-1 space-y-4">
                     <div className="bg-bg-surface border border-border-base rounded-2xl p-5 shadow-xs flex flex-col items-center text-center space-y-4">
-                        {/* Avatar */}
-                        <div className="relative group">
-                            <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primary/20 bg-bg-base flex items-center justify-center">
-                                {profile.profileImage ? (
-                                    <img src={profile.profileImage} alt={profile.name} className="w-full h-full object-cover" />
-                                ) : (
-                                    <FaUser className="text-4xl text-text-muted" />
-                                )}
-                            </div>
-                            <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary hover:bg-primary-hover text-compli flex items-center justify-center cursor-pointer shadow transition active:scale-95">
-                                <FaCamera size={12} />
-                                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} disabled={uploading} />
-                            </label>
-                            {uploading && (
-                                <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
-                                    {progress}%
-                                </div>
-                            )}
+                        {/* Avatar Initials Badge */}
+                        <div className="w-24 h-24 rounded-full border-2 border-primary/30 bg-primary/10 text-primary font-black text-3xl flex items-center justify-center shrink-0 shadow-sm">
+                            {getInitials(profile.name, profile.email)}
                         </div>
 
                         <div>
@@ -281,16 +204,11 @@ function User() {
                                 {profile.role == "ADMIN" ? "ADMIN" : "USER"}
                             </span>
                         </div>
-
                         <div className="flex gap-2 w-full justify-center pt-2 border-t border-border-base/50">
-                            {/* <div className={`flex items-center gap-1 text-[10px] font-semibold ${profile.emailVerified ? "text-green-600" : "text-text-muted/60"}`}>
-                                {profile.emailVerified ? <FaCheckCircle /> : <FaExclamationCircle />}
-                                <span>Email</span>
-                            </div>
                             <div className={`flex items-center gap-1 text-[10px] font-semibold ${profile.phoneVerified ? "text-green-600" : "text-text-muted/60"}`}>
                                 {profile.phoneVerified ? <FaCheckCircle /> : <FaExclamationCircle />}
                                 <span>Phone</span>
-                            </div> */}
+                            </div>
                         </div>
                     </div>
 

@@ -115,7 +115,7 @@ export function AuthProvider({ children }) {
 
   const setupRecaptcha = (containerId, size) => authService.setupRecaptcha(containerId, size);
   const sendOtp = async (phoneNumber, recaptchaVerifier) => authService.sendOtp(phoneNumber, recaptchaVerifier);
-  const verifyOtp = async (confirmationResult, otpCode) => authService.verifyOtp(confirmationResult, otpCode);
+  const verifyOtp = async (confirmationResult, otpCode, customName) => authService.verifyOtp(confirmationResult, otpCode, customName);
 
   return (
     <AuthContext.Provider value={{ 

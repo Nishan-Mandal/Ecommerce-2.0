@@ -45,8 +45,8 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
       title: "Specifications",
       columns: ["Feature", "Value"],
       rows: [
-        ["Feature 1", "Value 1"],
-        ["Feature 2", "Value 2"]
+        { cells: ["Feature 1", "Value 1"] },
+        { cells: ["Feature 2", "Value 2"] }
       ]
     };
     updateSections([...descriptionState.sections, newSection]);
@@ -74,13 +74,23 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
     updateSections(sections);
   };
 
+  // Helper to extract cell array from a row (array or object)
+  const getRowCells = (row) => {
+    if (Array.isArray(row)) return row;
+    if (row && typeof row === 'object' && Array.isArray(row.cells)) return row.cells;
+    return [];
+  };
+
   // Table Helpers
   const addColumn = (sectionIndex) => {
     const sections = [...descriptionState.sections];
     const sec = sections[sectionIndex];
     const colName = `Column ${sec.columns.length + 1}`;
     const newCols = [...sec.columns, colName];
-    const newRows = sec.rows.map((row) => [...row, ""]);
+    const newRows = (sec.rows || []).map((row) => {
+      const cells = getRowCells(row);
+      return { cells: [...cells, ""] };
+    });
     sections[sectionIndex] = { ...sec, columns: newCols, rows: newRows };
     updateSections(sections);
   };
@@ -91,7 +101,10 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
     if (sec.columns.length <= 1) return; // Keep at least 1 column
 
     const newCols = sec.columns.filter((_, i) => i !== colIndex);
-    const newRows = sec.rows.map((row) => row.filter((_, i) => i !== colIndex));
+    const newRows = (sec.rows || []).map((row) => {
+      const cells = getRowCells(row);
+      return { cells: cells.filter((_, i) => i !== colIndex) };
+    });
     sections[sectionIndex] = { ...sec, columns: newCols, rows: newRows };
     updateSections(sections);
   };
@@ -108,15 +121,16 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
   const addRow = (sectionIndex) => {
     const sections = [...descriptionState.sections];
     const sec = sections[sectionIndex];
-    const emptyRow = new Array(sec.columns.length).fill("");
-    sections[sectionIndex] = { ...sec, rows: [...sec.rows, emptyRow] };
+    const emptyCells = new Array(sec.columns.length).fill("");
+    const newRows = [...(sec.rows || []), { cells: emptyCells }];
+    sections[sectionIndex] = { ...sec, rows: newRows };
     updateSections(sections);
   };
 
   const removeRow = (sectionIndex, rowIndex) => {
     const sections = [...descriptionState.sections];
     const sec = sections[sectionIndex];
-    const newRows = sec.rows.filter((_, i) => i !== rowIndex);
+    const newRows = (sec.rows || []).filter((_, i) => i !== rowIndex);
     sections[sectionIndex] = { ...sec, rows: newRows };
     updateSections(sections);
   };
@@ -124,11 +138,12 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
   const updateCell = (sectionIndex, rowIndex, colIndex, val) => {
     const sections = [...descriptionState.sections];
     const sec = sections[sectionIndex];
-    const newRows = sec.rows.map((r, rIdx) => {
+    const newRows = (sec.rows || []).map((r, rIdx) => {
       if (rIdx !== rowIndex) return r;
-      const updatedRow = [...r];
-      updatedRow[colIndex] = val;
-      return updatedRow;
+      const currentCells = getRowCells(r);
+      const updatedCells = [...currentCells];
+      updatedCells[colIndex] = val;
+      return { cells: updatedCells };
     });
     sections[sectionIndex] = { ...sec, rows: newRows };
     updateSections(sections);
@@ -272,31 +287,34 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {(section.rows || []).map((row, rIdx) => (
-                          <tr key={rIdx} className="border-b border-border-base/50 last:border-0 hover:bg-white/40">
-                            {(section.columns || []).map((_, cIdx) => (
-                              <td key={cIdx} className="p-1.5 border-r border-border-base/50">
-                                <input
-                                  type="text"
-                                  value={row[cIdx] || ""}
-                                  onChange={(e) => updateCell(idx, rIdx, cIdx, e.target.value)}
-                                  placeholder="Cell value..."
-                                  className="w-full bg-white border border-border-base/70 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                                />
+                        {(section.rows || []).map((row, rIdx) => {
+                          const cells = getRowCells(row);
+                          return (
+                            <tr key={rIdx} className="border-b border-border-base/50 last:border-0 hover:bg-white/40">
+                              {(section.columns || []).map((_, cIdx) => (
+                                <td key={cIdx} className="p-1.5 border-r border-border-base/50">
+                                  <input
+                                    type="text"
+                                    value={cells[cIdx] || ""}
+                                    onChange={(e) => updateCell(idx, rIdx, cIdx, e.target.value)}
+                                    placeholder="Cell value..."
+                                    className="w-full bg-white border border-border-base/70 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                                  />
+                                </td>
+                              ))}
+                              <td className="p-1.5 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => removeRow(idx, rIdx)}
+                                  className="text-red-500 hover:text-red-700 font-bold px-1"
+                                  title="Delete row"
+                                >
+                                  ×
+                                </button>
                               </td>
-                            ))}
-                            <td className="p-1.5 text-center">
-                              <button
-                                type="button"
-                                onClick={() => removeRow(idx, rIdx)}
-                                className="text-red-500 hover:text-red-700 font-bold px-1"
-                                title="Delete row"
-                              >
-                                ×
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

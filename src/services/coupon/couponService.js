@@ -81,6 +81,15 @@ export const couponService = {
     return { couponId, id: couponId, ...updateData };
   },
 
+  /** Toggle coupon active/inactive status */
+  async toggleCouponStatus(couponId, isActive) {
+    const docRef = doc(fireDB, "coupons", couponId);
+    await updateDoc(docRef, {
+      isActive: Boolean(isActive),
+      updatedAt: serverTimestamp(),
+    });
+  },
+
   /** Delete a coupon */
   async deleteCoupon(couponId) {
     await deleteDoc(doc(fireDB, "coupons", couponId));

@@ -6,7 +6,7 @@ import React from 'react';
  */
 export default function MainContent({ children }) {
     return (
-        <div className="w-full max-w-[1600px] mx-auto p-4 pb-24 md:p-6 lg:p-8">
+        <div className="w-full max-w-[1600px] mx-auto p-2 pb-24 md:p-4 lg:p-6">
             {children}
         </div>
     );

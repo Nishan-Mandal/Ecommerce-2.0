@@ -218,11 +218,14 @@ export function useCheckout() {
         productImage: item.imageUrl || item.image || item.productImage || (Array.isArray(item.images) ? item.images[0] : null) || "",
       }));
 
+      const userEmail = user?.user?.email || user?.email || user?.userProfile?.email || selectedAddress?.email || "";
+
       if (paymentMethod === "ONLINE") {
         const payOrder = await paymentService.createPaymentOrder({
           items: itemsPayload,
           shippingAddress: selectedAddress,
           couponCode: appliedCoupon?.code || "",
+          userEmail: userEmail,
         });
         setStage("payment_modal");
         const result = await paymentService.openRazorpayCheckout({
@@ -231,7 +234,8 @@ export function useCheckout() {
           amount: payOrder.amount,
           currency: payOrder.currency,
           keyId: payOrder.keyId,
-          userProfile: { name: selectedAddress.fullName, phone: selectedAddress.phone, email: user?.user?.email },
+          userProfile: { name: selectedAddress.fullName, phone: selectedAddress.phone, email: userEmail },
+
           onSuccess: async (razorpayResponse) => {
             setStage("processing");
             try {

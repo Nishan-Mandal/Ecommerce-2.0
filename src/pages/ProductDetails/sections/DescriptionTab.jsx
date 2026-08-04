@@ -74,23 +74,26 @@ export default function DescriptionTab({ description, specifications }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {(section.rows || []).map((row, rIdx) => (
-                                        <tr
-                                            key={rIdx}
-                                            className="border-b border-border-base/40 last:border-0 hover:bg-bg-base/40 transition-colors"
-                                        >
-                                            {(row || []).map((cell, cIdx) => (
-                                                <td
-                                                    key={cIdx}
-                                                    className={`px-4 py-3 border-r border-border-base/30 last:border-0 ${
-                                                        cIdx === 0 ? "font-bold text-text-base" : "text-text-muted"
-                                                    }`}
-                                                >
-                                                    {cell}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))}
+                                    {(section.rows || []).map((row, rIdx) => {
+                                        const cells = Array.isArray(row) ? row : (row && typeof row === 'object' && Array.isArray(row.cells) ? row.cells : []);
+                                        return (
+                                            <tr
+                                                key={rIdx}
+                                                className="border-b border-border-base/40 last:border-0 hover:bg-bg-base/40 transition-colors"
+                                            >
+                                                {cells.map((cell, cIdx) => (
+                                                    <td
+                                                        key={cIdx}
+                                                        className={`px-4 py-3 border-r border-border-base/30 last:border-0 ${
+                                                            cIdx === 0 ? "font-bold text-text-base" : "text-text-muted"
+                                                        }`}
+                                                    >
+                                                        {cell}
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

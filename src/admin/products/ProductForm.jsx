@@ -1,12 +1,17 @@
+import React from "react";
 import ProductHeader from "./Sections/ProductHeader";
 import ProductImages from "./Sections/ProductImage";
-import ProductBasicInfo from "./Sections/ProductInfo";
+import { 
+    ProductBasicInfo, 
+    ProductModeSection, 
+    ProductPricingSection, 
+    ProductContentSection 
+} from "./Sections/ProductInfo";
 import ProductVariants from "./Sections/ProductVariants";
 import VariantTable from "./Sections/VariantTable";
 import ProductActions from "./Sections/ProductAction";
 
 function ProductForm(props) {
-
     const {
         title,
         description,
@@ -43,28 +48,43 @@ function ProductForm(props) {
 
     return (
         <div className="w-full max-w-screen-2xl mx-auto py-2 space-y-6 lg:space-y-8">
+            {/* Top Header Action Bar & Live/Draft Status Switch */}
             <ProductHeader
                 title={title || "Product Configuration"}
-                description={description || "Manage product info, images, structured description text/tables, and variant inventory."}
+                description={description || "Manage product info, media, pricing, variants, and structured description content."}
                 uploading={uploading}
                 handleCancel={handleCancel}
                 addProduct={addProduct}
-            />
-
-            <ProductImages
                 products={products}
                 setProducts={setProducts}
-                uploading={uploading}
-                uploadProgress={uploadProgress}
-                handleImageUpload={handleImageUpload}
-                handleImageDelete={handleImageDelete}
             />
 
-            <div className={`grid grid-cols-1 ${products.hasVariants ? "xl:grid-cols-2" : ""} gap-6 xl:gap-8`}>
+            {/* SECTION 1: Product Media */}
+            <div id="section-media">
+                <ProductImages
+                    products={products}
+                    setProducts={setProducts}
+                    uploading={uploading}
+                    uploadProgress={uploadProgress}
+                    handleImageUpload={handleImageUpload}
+                    handleImageDelete={handleImageDelete}
+                />
+            </div>
+
+            {/* SECTION 2: Basic Information */}
+            <div id="section-basic-info">
                 <ProductBasicInfo
                     products={products}
                     setProducts={setProducts}
                     handleTagsChange={handleTagsChange}
+                />
+            </div>
+
+            {/* SECTION 3: Variants or Single Product */}
+            <div id="section-variants-mode" className="space-y-6">
+                <ProductModeSection
+                    products={products}
+                    setProducts={setProducts}
                 />
 
                 {products.hasVariants && (
@@ -80,25 +100,41 @@ function ProductForm(props) {
                 )}
             </div>
 
-            {products.hasVariants && (
-                <VariantTable
+            {/* SECTION 4: Pricing and Inventory */}
+            <div id="section-pricing-inventory" className="space-y-6">
+                <ProductPricingSection
                     products={products}
                     setProducts={setProducts}
-                    deleteVariant={deleteVariant}
-                    handleVariantChange={handleVariantChange}
-                    handleVariantImageUpload={handleVariantImageUpload}
-                    handleVariantImageDelete={handleVariantImageDelete}
-                    variantUploadingIndex={variantUploadingIndex}
                 />
-            )}
 
+                {products.hasVariants && (
+                    <VariantTable
+                        products={products}
+                        setProducts={setProducts}
+                        deleteVariant={deleteVariant}
+                        handleVariantChange={handleVariantChange}
+                        handleVariantImageUpload={handleVariantImageUpload}
+                        handleVariantImageDelete={handleVariantImageDelete}
+                        variantUploadingIndex={variantUploadingIndex}
+                    />
+                )}
+            </div>
+
+            {/* SECTION 5: Description / Content */}
+            <div id="section-description-content">
+                <ProductContentSection
+                    products={products}
+                    setProducts={setProducts}
+                />
+            </div>
+
+            {/* Sticky Save Footer Actions */}
             <ProductActions
                 uploading={uploading}
                 addProduct={addProduct}
                 handleCancel={handleCancel}
             />
         </div>
-
     );
 }
 

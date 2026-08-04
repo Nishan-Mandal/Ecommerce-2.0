@@ -30,6 +30,7 @@ import RefundPolicy from '../pages/consumerservice/RefundPolicy';
 import CustomLegalPage from '../pages/consumerservice/CustomLegalPage';
 import CheckoutPage from '../pages/checkout/CheckoutPage';
 import AdminOrderDetail from '../admin/orders/AdminOrderDetail';
+import OrderInvoice from '../admin/orders/OrderInvoice';
 
 function LoginRedirect() {
   const navigate = useNavigate();
@@ -101,6 +102,7 @@ export default function AppRoutes() {
           <Route path="/review" element={<Review />} />
           <Route path="/configure" element={<Configure />} />
           <Route path="/admin/order/:id" element={<AdminOrderDetail />} />
+          <Route path="/admin/order/:id/invoice" element={<OrderInvoice />} />
         </Route>
       </Route>
 

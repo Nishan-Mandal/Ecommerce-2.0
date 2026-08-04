@@ -1,5 +1,6 @@
-import React from "react";
-import { FaCloudUploadAlt, FaTrash, FaCheck } from "react-icons/fa";
+import React, { useState } from "react";
+import { FaCloudUploadAlt, FaTrash, FaCheck, FaImages } from "react-icons/fa";
+import MediaLibraryModal from "../../../components/modal/MediaLibraryModal.jsx";
 
 function ProductImages({
     products,
@@ -9,25 +10,62 @@ function ProductImages({
     handleImageUpload,
     handleImageDelete
 }) {
+    const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+
+    const handleSelectFromLibrary = (selectedUrls) => {
+        if (!selectedUrls) return;
+        const urls = (Array.isArray(selectedUrls) ? selectedUrls : [selectedUrls])
+            .flat(Infinity)
+            .filter(u => typeof u === 'string' && u.trim() !== '');
+        if (urls.length === 0) return;
+
+        const currentImages = (Array.isArray(products.images) ? products.images : [])
+            .flat(Infinity)
+            .filter(u => typeof u === 'string' && u.trim() !== '');
+
+        const newImages = Array.from(new Set([...currentImages, ...urls]));
+        setProducts({
+            ...products,
+            imageUrl: products.imageUrl || newImages[0] || '',
+            images: newImages
+        });
+    };
+
     return (
         <div className="bg-bg-surface border border-border-base rounded-xl shadow-xs overflow-hidden text-xs">
 
-            {/* Header */}
-            <div className="px-4 py-2.5 border-b border-border-base flex items-center justify-between">
-                <div>
-                    <h2 className="text-sm font-bold text-text-base">
-                        Product Images
-                    </h2>
-                    <p className="text-[10px] text-text-muted mt-0.5">
-                        Upload high quality images for your product.
-                    </p>
+            {/* Section 1 Header */}
+            <div className="px-5 py-3.5 border-b border-border-base flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-bg-base/30">
+                <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-primary text-white font-black text-xs flex items-center justify-center shadow-xs shrink-0">
+                        1
+                    </div>
+                    <div>
+                        <h2 className="text-sm font-black text-text-base">
+                            Product Media
+                        </h2>
+                        <p className="text-[10px] text-text-muted mt-0.5">
+                            Upload high resolution product gallery images or choose from previously uploaded media.
+                        </p>
+                    </div>
                 </div>
 
-                {products.images?.length > 0 && (
-                    <div className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-semibold">
-                        {products.images.length} Images
-                    </div>
-                )}
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setIsMediaModalOpen(true)}
+                        className="flex items-center gap-1.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 px-3 py-1 rounded-lg text-[10.5px] font-extrabold transition cursor-pointer active:scale-95"
+                    >
+                        <FaImages size={12} />
+                        Select from Media Library
+                    </button>
+
+                    {products.images?.length > 0 && (
+                        <div className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-semibold">
+                            {products.images.length} Images
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="p-4 flex flex-col md:flex-row gap-6">
@@ -40,7 +78,7 @@ function ProductImages({
                         accept="image/*"
                         disabled={uploading}
                         onChange={handleImageUpload}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
 
                     <div className="flex flex-col items-center justify-center text-center">
@@ -52,11 +90,23 @@ function ProductImages({
                             Drag & Drop Images
                         </h3>
                         <p className="text-[10px] text-text-muted mt-0.5">
-                            or click anywhere to browse files
+                            or click anywhere to browse local files
                         </p>
-                        <span className="mt-2.5 px-3 py-1 rounded bg-primary text-compli text-[10px] font-semibold">
-                            Browse
-                        </span>
+                        <div className="mt-3 flex items-center gap-2 z-20">
+                            <span className="px-3 py-1 rounded bg-primary text-compli text-[10px] font-semibold">
+                                Browse Disk
+                            </span>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsMediaModalOpen(true);
+                                }}
+                                className="px-3 py-1 rounded bg-bg-surface border border-border-base hover:border-primary text-text-base text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                                <FaImages size={10} /> Library
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -137,12 +187,18 @@ function ProductImages({
                                 </div>
                             </div>
                         )}
-
                     </div>
 
                 </div>
 
             </div>
+
+            <MediaLibraryModal
+                isOpen={isMediaModalOpen}
+                onClose={() => setIsMediaModalOpen(false)}
+                onSelectImages={handleSelectFromLibrary}
+                multiple={true}
+            />
         </div>
     );
 }

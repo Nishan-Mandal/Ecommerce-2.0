@@ -1,5 +1,5 @@
-import React from "react";
-import { FaUser, FaCopy } from "react-icons/fa";
+import React, { useState } from "react";
+import { FaUser, FaCopy, FaCheck, FaPhoneAlt, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
 
 export default function OrderCustomerInfoSection({
   customerName,
@@ -12,54 +12,98 @@ export default function OrderCustomerInfoSection({
   pincode,
   copyToClipboard
 }) {
+  const [phoneCopied, setPhoneCopied] = useState(false);
+  const [addrCopied, setAddrCopied] = useState(false);
+
+  const handleCopyPhone = () => {
+    copyToClipboard(customerPhone, "Phone number copied!");
+    setPhoneCopied(true);
+    setTimeout(() => setPhoneCopied(false), 2000);
+  };
+
+  const handleCopyAddr = () => {
+    const fullAddrStr = `${fullStreet}, ${city}, ${state} - ${pincode}`;
+    copyToClipboard(fullAddrStr, "Full address copied!");
+    setAddrCopied(true);
+    setTimeout(() => setAddrCopied(false), 2000);
+  };
+
   return (
-    <div className="bg-bg-surface px-3 py-4 rounded-2xl border border-border-base shadow-xs space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-text-base flex items-center gap-2">
+    <div className="bg-bg-surface p-5 rounded-2xl border border-border-base shadow-xs space-y-4 text-xs">
+      <div className="flex items-center justify-between pb-3 border-b border-border-base/70">
+        <h2 className="text-sm font-black text-text-base flex items-center gap-2">
           <FaUser className="text-primary" /> Customer Details
         </h2>
-        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase bg-primary/10 text-primary">
+        <span className="px-2.5 py-0.5 rounded-full text-[9.5px] font-black uppercase bg-primary/10 text-primary border border-primary/20">
           {addressType}
         </span>
       </div>
-      <div className="space-y-3 text-xs">
+
+      <div className="space-y-3.5">
+        {/* Customer Name */}
         <div>
-          <label className="text-[9.5px] font-bold text-text-muted uppercase tracking-wider block mb-0.5">Name</label>
-          <p className="font-bold text-text-base">{customerName}</p>
+          <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+            Customer Name
+          </label>
+          <p className="font-black text-text-base text-sm">{customerName}</p>
         </div>
 
-     <div className="grid grid-cols-2 gap-10">
-         <div>
-          <label className="text-[9.5px] font-bold text-text-muted uppercase tracking-wider block mb-0.5">Contact Phone</label>
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-text-base">{customerPhone}</p>
-            {customerPhone !== "N/A" && (
-              <button
-                onClick={() => copyToClipboard(customerPhone, "Phone number copied!")}
-                className="text-text-muted hover:text-primary transition p-1 cursor-pointer"
-              >
-                <FaCopy size={11} />
-              </button>
-            )}
+        {/* Contact Info Grid */}
+        <div className="grid grid-cols-1 gap-3">
+          <div>
+            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+              Contact Phone
+            </label>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-bg-base/60 border border-border-base/70">
+              <span className="font-extrabold text-text-base flex items-center gap-1.5">
+                <FaPhoneAlt size={10} className="text-primary" />
+                {customerPhone}
+              </span>
+              {customerPhone !== "N/A" && (
+                <button
+                  type="button"
+                  onClick={handleCopyPhone}
+                  className="text-text-muted hover:text-primary transition p-1 cursor-pointer"
+                  title="Copy Phone"
+                >
+                  {phoneCopied ? <FaCheck className="text-emerald-500" size={11} /> : <FaCopy size={11} />}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+              Email Address
+            </label>
+            <div className="p-2.5 rounded-xl bg-bg-base/60 border border-border-base/70 font-semibold text-text-base truncate flex items-center gap-1.5">
+              <FaEnvelope size={10} className="text-primary shrink-0" />
+              <span className="truncate">{customerEmail}</span>
+            </div>
           </div>
         </div>
 
+        {/* Shipping Address */}
         <div>
-          <label className="text-[9.5px] font-bold text-text-muted uppercase tracking-wider block mb-0.5">Email</label>
-          <p className="font-semibold text-text-base truncate">{customerEmail}</p>
-        </div>
+          <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">
+            Shipping Address
+          </label>
+          <div className="p-3.5 rounded-xl bg-bg-base/60 border border-border-base/70 space-y-1.5 text-[11.5px] leading-relaxed">
+            <p className="font-extrabold text-text-base flex items-start gap-1.5">
+              <FaMapMarkerAlt size={12} className="text-primary mt-0.5 shrink-0" />
+              <span>{fullStreet}</span>
+            </p>
+            <p className="text-text-muted pl-4">
+              {city}, {state} - <strong className="text-text-base font-mono">{pincode}</strong>
+            </p>
 
-     </div>
-        <div>
-          <label className="text-[9.5px] font-bold text-text-muted uppercase tracking-wider block mb-0.5">Shipping Address</label>
-          <div className="p-3 rounded-xl bg-bg-base border border-border-base space-y-1 text-[11px] leading-relaxed">
-            <p className="font-semibold text-text-base">{fullStreet}</p>
-            <p className="text-text-muted">{city}, {state} - <strong className="text-text-base">{pincode}</strong></p>
             <button
-              onClick={() => copyToClipboard(`${fullStreet}, ${city}, ${state} - ${pincode}`, "Full address copied!")}
-              className="flex items-center gap-1 text-[10px] font-bold text-primary hover:underline pt-1 cursor-pointer"
+              type="button"
+              onClick={handleCopyAddr}
+              className="flex items-center gap-1 text-[10.5px] font-bold text-primary hover:underline pt-1.5 pl-4 cursor-pointer"
             >
-              <FaCopy size={9} /> Copy Address
+              {addrCopied ? <FaCheck size={10} className="text-emerald-500" /> : <FaCopy size={10} />}
+              <span>{addrCopied ? "Copied!" : "Copy Full Address"}</span>
             </button>
           </div>
         </div>

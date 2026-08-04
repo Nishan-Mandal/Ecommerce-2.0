@@ -11,7 +11,7 @@ export default function Header({
     title
 }) {
     return (
-        <header className="sticky top-0 z-30 bg-bg-surface/85 backdrop-blur-md border-b border-border-base/60 flex items-center justify-between px-4 md:px-6 lg:px-8 h-16 shrink-0">
+        <header className="sticky top-0 z-30 bg-bg-surface/85 backdrop-blur-md border-b border-border-base/60 flex items-center justify-between px-4 md:px-6 lg:px-8 h-16 shrink-0 print:hidden">
             <div className="flex items-center gap-4">
                 {/* Mobile Menu Toggle */}
                 <button

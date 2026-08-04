@@ -126,6 +126,7 @@ function Products({ mode, formatDate }) {
                 product={filteredProducts}
                 onEditClick={handleEditClick}
                 deleteProduct={adminHook.deleteProduct}
+                toggleActiveStatus={adminHook.toggleProductActiveStatus}
                 formatDate={formatDate}
             />
         </div>

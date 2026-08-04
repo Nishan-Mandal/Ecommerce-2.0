@@ -76,9 +76,9 @@ export const authService = {
   },
 
   /**
-   * Verifies OTP code and signs in user
+   * Verifies OTP code and signs in/registers user
    */
-  async verifyOtp(confirmationResult, otpCode) {
+  async verifyOtp(confirmationResult, otpCode, customName = "") {
     if (!confirmationResult) throw new Error("No active OTP request found");
     if (!otpCode) throw new Error("OTP code is required");
     
@@ -89,15 +89,24 @@ export const authService = {
     const q = query(collection(fireDB, "users"), where("uid", "==", user.uid));
     const snap = await getDocs(q);
 
+    const displayName = customName.trim() || user.displayName || `User_${user.phoneNumber?.slice(-4)}` || "User";
+
     if (snap.empty) {
       const userRef = doc(fireDB, "users", user.uid);
       await setDoc(userRef, {
         uid: user.uid,
-        name: user.displayName || `User_${user.phoneNumber?.slice(-4)}` || "User",
+        name: displayName,
         phone: user.phoneNumber || "",
         phoneVerified: true,
         role: "USER",
         time: Timestamp.now()
+      }, { merge: true });
+    } else if (customName.trim()) {
+      const userRef = doc(fireDB, "users", user.uid);
+      await setDoc(userRef, {
+        name: customName.trim(),
+        phone: user.phoneNumber || "",
+        phoneVerified: true,
       }, { merge: true });
     }
 
