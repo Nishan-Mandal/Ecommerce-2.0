@@ -10,7 +10,7 @@ import { userService } from '../../services/user/userService';
 
 import DashboardCard from './DashboardCard';
 import Products from '../products/Products';
-import OrderDetailTable from '../orders/OrderDetailTable';
+import Orders from '../orders/Orders';
 import UserDetailTable from '../User/UserDetailTable';
 
 /**
@@ -135,7 +135,7 @@ function Dashboard() {
             )}
 
             {activeView === "orders" && (
-                <OrderDetailTable
+                <Orders
                     mode={mode}
                     order={orders}
                     formatDate={formatDate}

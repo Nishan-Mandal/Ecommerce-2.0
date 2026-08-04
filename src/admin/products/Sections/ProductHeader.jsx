@@ -1,8 +1,9 @@
 import React from "react";
 import {
-    FaArrowLeft,
     FaBoxOpen,
-    FaSave
+    FaSave,
+    FaCheckCircle,
+    FaEyeSlash
 } from "react-icons/fa";
 
 function ProductHeader({
@@ -10,55 +11,79 @@ function ProductHeader({
     description = "Create a new product for your catalog with images, pricing and variants.",
     uploading,
     handleCancel,
-    addProduct
+    addProduct,
+    products,
+    setProducts
 }) {
-    return (
-        <div className="">
+    const isLive = products ? products.isActive !== false : true;
 
-            <div className="px-1 py-1 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+    return (
+        <div className="bg-bg-surface border border-border-base rounded-2xl p-4 shadow-xs">
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
                 {/* Left */}
-
-                <div className="flex items-center gap-5">
-
-                    <div className="  bg-primary/10 flex items-center justify-center">
-
+                <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
                         <FaBoxOpen
-                            size={30}
+                            size={24}
                             className="text-primary"
                         />
-
                     </div>
 
                     <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="text-base font-black text-text-base">
+                                {title}
+                            </h1>
 
-                        <h1 className="text-lg font-black text-text-base">
-                            {title}
-                        </h1>
+                            {/* Live / Draft Badge Indicator */}
+                            {products && (
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border inline-flex items-center gap-1.5 ${
+                                    isLive
+                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                                }`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${isLive ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                                    {isLive ? "Live" : "Draft"}
+                                </span>
+                            )}
+                        </div>
 
-                        <p className="text-text-muted text-xs  ">
+                        <p className="text-text-muted text-xs mt-0.5">
                             {description}
                         </p>
-
                     </div>
-
                 </div>
 
-                {/* Right */}
+                {/* Right Actions */}
+                <div className="flex items-center gap-2.5 shrink-0">
+                    {/* Top Status Switch Button */}
+                    {products && setProducts && (
+                        <button
+                            type="button"
+                            onClick={() => setProducts({ ...products, isActive: products.isActive === false ? true : false })}
+                            className={`px-3 py-1.5 text-xs font-black rounded-xl transition-all duration-200 cursor-pointer flex items-center gap-2 border shadow-xs active:scale-95 ${
+                                isLive
+                                    ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-emerald-600/20"
+                                    : "bg-slate-800 hover:bg-slate-900 text-white border-slate-800 dark:bg-slate-200 dark:text-slate-900 shadow-slate-800/20"
+                            }`}
+                            title={isLive ? "Click to set Draft mode" : "Click to set Live (Published)"}
+                        >
+                            <span className={`w-2 h-2 rounded-full ${isLive ? "bg-white animate-pulse" : "bg-slate-400"}`} />
+                            <span>{isLive ? "Status: Live" : "Status: Draft"}</span>
+                        </button>
+                    )}
 
-                <div className="flex gap-2 text-sm">
+                    {/* Save Button */}
                     <button
                         disabled={uploading}
                         onClick={addProduct}
-                        className="px-3 py-1  text-sm rounded-lg bg-primary hover:bg-primary-hover text-compli font-semibold shadow-lg disabled:opacity-50 flex items-center gap-2 transition"
+                        className="px-4 py-2 text-xs rounded-xl bg-primary hover:bg-primary-hover text-compli font-extrabold shadow-md disabled:opacity-50 flex items-center gap-2 transition active:scale-95 cursor-pointer"
                     >
-                        <FaSave className="text-xs" />
-
-                        {uploading
-                            ? "Uploading..."
-                            : "Save Product"}
+                        <FaSave size={12} />
+                        <span>{uploading ? "Uploading..." : "Save Product"}</span>
                     </button>
-
                 </div>
 
             </div>

@@ -56,5 +56,24 @@ export const orderService = {
   async createOrder(orderInfo) {
     const docRef = await addDoc(collection(fireDB, "orders"), orderInfo);
     return docRef;
+  },
+
+  /**
+   * Fetches orders matching user ID and executes callback if provided
+   */
+  async getOrdersByUser(userId, callbackOrEmail, callback) {
+    let email = null;
+    let cb = null;
+    if (typeof callbackOrEmail === 'function') {
+      cb = callbackOrEmail;
+    } else {
+      email = callbackOrEmail;
+      cb = callback;
+    }
+    const orders = await this.getOrders(userId, email);
+    if (typeof cb === 'function') {
+      cb(orders);
+    }
+    return orders;
   }
 };

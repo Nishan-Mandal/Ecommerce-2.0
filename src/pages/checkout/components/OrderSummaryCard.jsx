@@ -152,7 +152,7 @@ export default function OrderSummaryCard({
                   radio_button_checked
                 </span>
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-text-base">Online Payment (Razorpay)</span>
+                  <span className="text-xs font-bold text-text-base">Online Payment</span>
                   <span className="text-[10px] text-text-muted">UPI, Credit/Debit Cards, NetBanking</span>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { FaShoppingBag } from "react-icons/fa";
 
 const STATUS_STYLES = {
@@ -80,21 +81,55 @@ function OrderCard({ o }) {
                     items.map((item, i) => {
                         const img = item.productImage || item.imageUrl || item.images?.[0] || "https://via.placeholder.com/100";
                         const title = item.productName || item.title || item.name || "Product Item";
-                        const price = Number(item.sellingPrice || item.price || item.totalPrice || 0);
-                        const qty = item.quantity || 1;
-                        const variant = item.variantName || (item.options ? Object.values(item.options).filter(Boolean).join(" / ") : "");
+                        const qty = Number(item.quantity || item.qty || 1) || 1;
+                        let price = Number(
+                          item.price ??
+                          item.sellingPrice ??
+                          item.unitPrice ??
+                          item.offerPrice ??
+                          item.discountPrice ??
+                          item.salePrice ??
+                          item.finalPrice ??
+                          item.productPrice ??
+                          item.priceAtPurchase ??
+                          item.selectedVariant?.price ??
+                          0
+                        );
+                        let itemTotal = Number(item.totalPrice ?? item.total ?? item.amount ?? (price * qty));
 
-                        return (
-                            <div key={i} className="flex items-center gap-3">
-                                <img src={img} alt={title} className="w-12 h-12 rounded-lg object-cover border border-border-base/60 shrink-0" />
+                        if (!price && itemTotal) {
+                          price = itemTotal / qty;
+                        } else if (!price && (item.originalPrice || item.mrp)) {
+                          price = Number(item.originalPrice || item.mrp);
+                          itemTotal = price * qty;
+                        } else if (!itemTotal && price) {
+                          itemTotal = price * qty;
+                        }
+
+                        const variant = item.variantName || (item.options ? Object.values(item.options).filter(Boolean).join(" / ") : "");
+                        const pid = item.productId || item.id || "";
+
+                        const itemContent = (
+                            <div className="flex items-center gap-3 group/item cursor-pointer hover:bg-bg-surface p-1.5 rounded-lg transition-colors">
+                                <img src={img} alt={title} className="w-12 h-12 rounded-lg object-cover border border-border-base/60 shrink-0 group-hover/item:border-primary/40 transition-colors" />
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold text-text-base truncate">{title}</p>
+                                    <p className="text-xs font-bold text-text-base truncate group-hover/item:text-primary transition-colors">{title}</p>
                                     {variant && <p className="text-[10px] text-text-muted">{variant}</p>}
                                     <p className="text-[10px] text-text-muted">Qty: {qty}</p>
                                 </div>
                                 <p className="text-xs font-bold text-text-base shrink-0">₹{price.toLocaleString("en-IN")}</p>
                             </div>
                         );
+
+                        if (pid) {
+                            return (
+                                <Link key={i} to={`/productdetails/${pid}`} title="View Product Details">
+                                    {itemContent}
+                                </Link>
+                            );
+                        }
+
+                        return <div key={i}>{itemContent}</div>;
                     })
                 ) : (
                     <p className="text-xs text-text-muted">No item details available</p>
@@ -172,17 +207,29 @@ export default function OrdersTab({ orders }) {
                                                         const title = item.productName || item.title || item.name || "Product Item";
                                                         const qty = item.quantity || 1;
                                                         const variant = item.variantName || (item.options ? Object.values(item.options).filter(Boolean).join(" / ") : "");
-                                                        return (
-                                                            <div key={i} className="flex items-center gap-2">
-                                                                <img src={img} alt={title} className="w-8 h-8 rounded-md object-cover border border-border-base/60 shrink-0" />
+                                                        const pid = item.productId || item.id || "";
+
+                                                        const itemContent = (
+                                                            <div className="flex items-center gap-2 group/item cursor-pointer hover:bg-bg-base/70 p-1 rounded-md transition-colors">
+                                                                <img src={img} alt={title} className="w-8 h-8 rounded-md object-cover border border-border-base/60 shrink-0 group-hover/item:border-primary/40 transition-colors" />
                                                                 <div className="min-w-0">
-                                                                    <p className="text-[11px] font-semibold text-text-base truncate">{title}</p>
+                                                                    <p className="text-[11px] font-semibold text-text-base truncate group-hover/item:text-primary transition-colors">{title}</p>
                                                                     <p className="text-[9px] text-text-muted">
                                                                         Qty: {qty} {variant && `• ${variant}`}
                                                                     </p>
                                                                 </div>
                                                             </div>
                                                         );
+
+                                                        if (pid) {
+                                                            return (
+                                                                <Link key={i} to={`/productdetails/${pid}`} title="View Product Details">
+                                                                    {itemContent}
+                                                                </Link>
+                                                            );
+                                                        }
+
+                                                        return <div key={i}>{itemContent}</div>;
                                                     })}
                                                 </div>
                                             </td>

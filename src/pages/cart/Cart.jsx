@@ -105,8 +105,22 @@ function Cart() {
                   />
                 ))
               ) : (
-                <div className="text-center py-20 bg-bg-surface text-text-muted text-sm font-semibold rounded-[24px] border border-dashed border-border-base">
-                  Your shopping cart is empty.
+                <div className="text-center py-16 px-6 bg-bg-surface text-text-muted text-sm font-semibold rounded-[24px] border border-dashed border-border-base/70 flex flex-col items-center justify-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-3xl">shopping_bag</span>
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-extrabold text-text-base">Your shopping cart is empty</h3>
+                    <p className="text-xs text-text-muted">Looks like you haven't added anything to your cart yet.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/allproducts')}
+                    className="mt-2 px-6 py-2.5 rounded-xl bg-primary text-compli text-xs font-bold shadow-md hover:opacity-90 transition-all cursor-pointer flex items-center gap-2 active:scale-95"
+                  >
+                    <span className="material-symbols-outlined text-base">storefront</span>
+                    Explore Products
+                  </button>
                 </div>
               )}
             </div>

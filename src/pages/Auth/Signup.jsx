@@ -1,51 +1,129 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { useLocation, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/auth/useAuth';
 import Loader from '../../components/loader/Loader';
+import { FaUser, FaEnvelope, FaPhoneAlt, FaLock, FaKey, FaArrowLeft } from 'react-icons/fa';
 
 /**
  * Signup Component (Adaptive Modal or Page)
  * Renders centered registration form over a blurred backdrop overlay if modal,
  * or as a styled standalone container if page.
+ * Supports Email & Password registration AND Phone OTP registration with reCAPTCHA verification.
  */
 function Signup() {
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [authMode, setAuthMode] = useState('email'); // 'email' | 'phone'
 
-    const { loading, signup, setIsLoginOpen, setIsSignupOpen } = useAuth();
+    // Email Signup State
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+
+    // Phone Signup State
+    const [phoneName, setPhoneName] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [phoneStep, setPhoneStep] = useState(1); // 1: Info input, 2: OTP verification
+    const [otp, setOtp] = useState('');
+    const [confirmationResult, setConfirmationResult] = useState(null);
+    const [otpSending, setOtpSending] = useState(false);
+    const [otpVerifying, setOtpVerifying] = useState(false);
+    const [timer, setTimer] = useState(0);
+
+    const { loading, signup, setupRecaptcha, sendOtp, verifyOtp, setIsLoginOpen, setIsSignupOpen } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
 
     const isPage = location.pathname === '/signup';
 
-    const handleSignup = async (e) => {
+    // Countdown Timer for Resend OTP
+    useEffect(() => {
+        let interval = null;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
+
+    // Handle Email & Password Signup
+    const handleEmailSignup = async (e) => {
         if (e) e.preventDefault();
-        if (name === "" || email === "" || password === "") {
-            return toast.error("All fields are required")
+        if (!name.trim() || !email.trim() || !password.trim()) {
+            return toast.error("All fields are required.");
         }
 
         try {
-            await signup(name, email, password);
-            toast.success("Signup Successfully");
+            await signup(name.trim(), email.trim(), password);
+            toast.success("Account created successfully!");
             setName("");
             setEmail("");
             setPassword("");
+            setIsSignupOpen(false);
             if (isPage) {
                 const from = location.state?.from?.pathname || '/';
                 navigate(from, { replace: true });
             }
         } catch (error) {
-            console.error(error);
-            toast.error(error.message || "Signup failed");
+            console.error("Email signup error:", error);
+            toast.error(error.message || "Registration failed.");
         }
-    }
+    };
+
+    // Handle Sending OTP for Phone Signup
+    const handleSendOtp = async (e) => {
+        if (e) e.preventDefault();
+        if (!phoneName.trim()) {
+            return toast.error("Please enter your Full Name.");
+        }
+        const cleanPhone = phoneNumber.replace(/\D/g, "");
+        if (!cleanPhone || cleanPhone.length < 10) {
+            return toast.error("Please enter a valid 10-digit mobile number.");
+        }
+
+        setOtpSending(true);
+        try {
+            const verifier = setupRecaptcha("recaptcha-signup-container", "invisible");
+            const result = await sendOtp(cleanPhone, verifier);
+            setConfirmationResult(result);
+            setPhoneStep(2);
+            setTimer(30);
+            toast.success(`OTP sent to +91 ${cleanPhone}`);
+        } catch (error) {
+            console.error("Send OTP signup error:", error);
+            toast.error(error.message || "Failed to send OTP code.");
+        } finally {
+            setOtpSending(false);
+        }
+    };
+
+    // Handle OTP Verification & Account Creation
+    const handleVerifyOtpSignup = async (e) => {
+        if (e) e.preventDefault();
+        if (!otp.trim() || otp.trim().length < 6) {
+            return toast.error("Please enter valid 6-digit OTP code.");
+        }
+
+        setOtpVerifying(true);
+        try {
+            await verifyOtp(confirmationResult, otp.trim(), phoneName.trim());
+            toast.success("Phone Registration Successful!");
+            setIsSignupOpen(false);
+            if (isPage) {
+                const from = location.state?.from?.pathname || '/';
+                navigate(from, { replace: true });
+            }
+        } catch (error) {
+            console.error("Verify OTP signup error:", error);
+            toast.error(error.message || "Invalid OTP code.");
+        } finally {
+            setOtpVerifying(false);
+        }
+    };
 
     const formContent = (
-        <form 
-            onSubmit={handleSignup} 
-            className={`relative z-10 w-full max-w-sm mx-auto bg-transparent border border-slate-200 p-8 rounded-2xl shadow-xl ${isPage ? 'my-8 sm:my-16' : ''}`}
+        <div 
+            className={`relative z-10 w-full max-w-sm mx-auto bg-white border border-slate-200 p-6 sm:p-8 rounded-2xl shadow-xl ${isPage ? 'my-8 sm:my-16' : ''}`}
             onClick={(e) => e.stopPropagation()}
         >
             {/* Cross Button (Only for modal) */}
@@ -63,60 +141,212 @@ function Signup() {
             )}
 
             {/* Header */}
-            <div className="mb-6 mt-2">
-                <h1 className="text-center text-slate-800 text-2xl font-bold tracking-tight">Create Account</h1>
-                <p className="text-center text-xs text-slate-500 mt-1.5 font-medium">Join HN Enterprise today</p>
+            <div className="mb-5 mt-1 text-center">
+                <h1 className="text-slate-800 text-2xl font-bold tracking-tight">Create Account</h1>
+                <p className="text-xs text-slate-500 mt-1 font-medium">Join HN Enterprise today</p>
             </div>
 
-            {/* Full Name Field */}
-            <div className="mb-4">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Full Name</label>
-                <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    name="name"
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 px-3.5 py-2.5 text-sm rounded-xl focus:outline-none focus:border-slate-400 transition-all duration-200"
-                    placeholder="John Doe"
-                    required
-                />
-            </div>
-
-            {/* Email Field */}
-            <div className="mb-4">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Email Address</label>
-                <input
-                    type="email"
-                    name="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 px-3.5 py-2.5 text-sm rounded-xl focus:outline-none focus:border-slate-400 transition-all duration-200"
-                    placeholder="name@example.com"
-                    required
-                />
-            </div>
-
-            {/* Password Field */}
-            <div className="mb-6">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Password</label>
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 px-3.5 py-2.5 text-sm rounded-xl focus:outline-none focus:border-slate-400 transition-all duration-200"
-                    placeholder="••••••••"
-                    required
-                />
-            </div>
-
-            {/* Submit Button */}
-            <div className="mb-5">
+            {/* Mode Switcher Tabs */}
+            <div className="flex bg-slate-100 p-1 rounded-xl mb-6 border border-slate-200">
                 <button
-                    type="submit"
-                    className="w-full py-2.5 bg-primary text-compli text-sm font-semibold rounded-xl hover:opacity-95 active:scale-[0.98] transition-all shadow-sm cursor-pointer">
-                    Create Account
+                    type="button"
+                    onClick={() => { setAuthMode('email'); setPhoneStep(1); }}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        authMode === 'email' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                >
+                    <FaEnvelope size={11} /> Email Signup
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { setAuthMode('phone'); setPhoneStep(1); }}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        authMode === 'phone' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                >
+                    <FaPhoneAlt size={10} /> Phone OTP
                 </button>
             </div>
+
+            {/* Mode A: Email Registration */}
+            {authMode === 'email' && (
+                <form onSubmit={handleEmailSignup}>
+                    {/* Full Name Field */}
+                    <div className="mb-4">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Full Name</label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 pl-9 pr-3.5 py-2.5 text-sm rounded-xl focus:outline-none focus:border-slate-400 transition-all duration-200"
+                                placeholder="John Doe"
+                                required
+                            />
+                            <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+                        </div>
+                    </div>
+
+                    {/* Email Address Field */}
+                    <div className="mb-4">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Email Address</label>
+                        <div className="relative">
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 pl-9 pr-3.5 py-2.5 text-sm rounded-xl focus:outline-none focus:border-slate-400 transition-all duration-200"
+                                placeholder="name@example.com"
+                                required
+                            />
+                            <FaEnvelope className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+                        </div>
+                    </div>
+
+                    {/* Password Field */}
+                    <div className="mb-6">
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Password</label>
+                        <div className="relative">
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 pl-9 pr-3.5 py-2.5 text-sm rounded-xl focus:outline-none focus:border-slate-400 transition-all duration-200"
+                                placeholder="••••••••"
+                                required
+                            />
+                            <FaLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+                        </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="mb-5">
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-2.5 bg-primary text-compli text-sm font-semibold rounded-xl hover:opacity-95 active:scale-[0.98] transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                        >
+                            Create Account
+                        </button>
+                    </div>
+                </form>
+            )}
+
+            {/* Mode B: Phone OTP Registration */}
+            {authMode === 'phone' && (
+                <div>
+                    {/* Recaptcha Container */}
+                    <div id="recaptcha-signup-container"></div>
+
+                    {phoneStep === 1 ? (
+                        <form onSubmit={handleSendOtp}>
+                            {/* Full Name Field */}
+                            <div className="mb-4">
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Full Name</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={phoneName}
+                                        onChange={(e) => setPhoneName(e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 pl-9 pr-3.5 py-2.5 text-sm rounded-xl focus:outline-none focus:border-slate-400 transition-all duration-200"
+                                        placeholder="John Doe"
+                                        required
+                                    />
+                                    <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+                                </div>
+                            </div>
+
+                            {/* Mobile Number Field */}
+                            <div className="mb-5">
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Mobile Number</label>
+                                <div className="flex rounded-xl border border-slate-200 bg-slate-50 overflow-hidden focus-within:border-slate-400 transition-all">
+                                    <span className="px-3 py-2.5 bg-slate-200/60 text-slate-600 text-xs font-bold flex items-center border-r border-slate-200">
+                                        +91
+                                    </span>
+                                    <input
+                                        type="tel"
+                                        maxLength={10}
+                                        value={phoneNumber}
+                                        onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                                        className="w-full bg-transparent text-slate-800 placeholder:text-slate-400 px-3 py-2.5 text-sm focus:outline-none font-semibold tracking-wider"
+                                        placeholder="9876543210"
+                                        required
+                                    />
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-1.5">We will send a 6-digit OTP verification code via SMS.</p>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={otpSending || !phoneName.trim() || phoneNumber.length < 10}
+                                className="w-full py-2.5 bg-primary text-compli text-sm font-semibold rounded-xl hover:opacity-95 active:scale-[0.98] transition-all shadow-sm cursor-pointer disabled:opacity-50 mb-5"
+                            >
+                                {otpSending ? "Sending OTP..." : "Get OTP Verification Code"}
+                            </button>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleVerifyOtpSignup}>
+                            <div className="mb-5">
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Enter 6-Digit OTP</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPhoneStep(1)}
+                                        className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                                    >
+                                        <FaArrowLeft size={8} /> Change Details
+                                    </button>
+                                </div>
+
+                                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-center mb-3 space-y-0.5">
+                                    <p className="text-xs font-bold text-slate-800">{phoneName}</p>
+                                    <p className="text-[10.5px] text-slate-500">
+                                        Sent to <strong className="text-slate-900 font-mono">+91 {phoneNumber}</strong>
+                                    </p>
+                                </div>
+
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        maxLength={6}
+                                        value={otp}
+                                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 tracking-[0.5em] text-center font-mono font-bold text-lg px-3 py-2 rounded-xl focus:outline-none focus:border-slate-400 transition-all"
+                                        placeholder="••••••"
+                                        required
+                                        autoFocus
+                                    />
+                                    <FaKey className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+                                </div>
+
+                                {/* Resend Timer */}
+                                <div className="flex items-center justify-between mt-2.5 text-xs">
+                                    {timer > 0 ? (
+                                        <span className="text-[10.5px] text-slate-400">Resend code in <strong className="text-slate-700">{timer}s</strong></span>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={handleSendOtp}
+                                            disabled={otpSending}
+                                            className="text-[10.5px] font-bold text-primary hover:underline cursor-pointer"
+                                        >
+                                            Resend OTP Code
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={otpVerifying || otp.length < 6}
+                                className="w-full py-2.5 bg-primary text-compli text-sm font-semibold rounded-xl hover:opacity-95 active:scale-[0.98] transition-all shadow-sm cursor-pointer disabled:opacity-50 mb-5"
+                            >
+                                {otpVerifying ? "Verifying..." : "Verify & Register Account"}
+                            </button>
+                        </form>
+                    )}
+                </div>
+            )}
 
             {/* Footer Link */}
             <p className="text-center text-xs text-slate-500">
@@ -142,7 +372,7 @@ function Signup() {
                     </button>
                 )}
             </p>
-        </form>
+        </div>
     );
 
     if (isPage) {
@@ -162,7 +392,7 @@ function Signup() {
             {loading && <Loader />}
             {formContent}
         </div>
-    )
+    );
 }
 
 export default Signup;

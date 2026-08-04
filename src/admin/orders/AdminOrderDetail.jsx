@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc, arrayUnion, Timestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, Timestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { fireDB } from "../../firebase/FirebaseConfig";
 import { toast } from "react-toastify";
 import { FaExclamationTriangle } from "react-icons/fa";
@@ -27,14 +27,16 @@ const STATUS_STEPS = [
 ];
 
 const STATUS_BADGE_STYLES = {
-  PAYMENT_PENDING: "bg-amber-100 text-amber-800 border-amber-200",
-  PLACED: "bg-blue-100 text-blue-800 border-blue-200",
-  CONFIRMED: "bg-indigo-100 text-indigo-800 border-indigo-200",
-  PACKED: "bg-purple-100 text-purple-800 border-purple-200",
-  SHIPPED: "bg-cyan-100 text-cyan-800 border-cyan-200",
-  OUT_FOR_DELIVERY: "bg-orange-100 text-orange-800 border-orange-200",
-  DELIVERED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  CANCELLED: "bg-rose-100 text-rose-800 border-rose-200",
+  PAYMENT_PENDING: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300",
+  PLACED: "bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300",
+  CONFIRMED: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300",
+  PACKED: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300",
+  SHIPPED: "bg-cyan-100 text-cyan-800 border-cyan-300 dark:bg-cyan-950/40 dark:text-cyan-300",
+  IN_TRANSIT: "bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-950/40 dark:text-teal-300",
+  OUT_FOR_DELIVERY: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950/40 dark:text-orange-300",
+  DELIVERED: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300",
+  CANCELLED: "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300",
+  REFUNDED: "bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300",
 };
 
 const PAYMENT_BADGE_STYLES = {
@@ -90,12 +92,47 @@ export default function AdminOrderDetail() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = { id: docSnap.id, ...docSnap.data() };
+
+        // Fallback: If email is missing on order, lookup user profile by userId / userid
+        let orderEmail =
+          data.email ||
+          data.userEmail ||
+          data.customerEmail ||
+          data.userProfile?.email ||
+          data.shippingAddress?.email ||
+          data.addressInfo?.email;
+
+        const uid = data.userId || data.userid || data.userProfile?.uid;
+
+        if (!orderEmail && uid) {
+          try {
+            const userDocRef = doc(fireDB, "users", uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists() && userDocSnap.data().email) {
+              orderEmail = userDocSnap.data().email;
+            } else {
+              const qUsers = query(collection(fireDB, "users"), where("uid", "==", uid));
+              const userQuerySnap = await getDocs(qUsers);
+              if (!userQuerySnap.empty) {
+                orderEmail = userQuerySnap.docs[0].data().email;
+              }
+            }
+          } catch (userErr) {
+            console.warn("Could not fetch user email fallback:", userErr);
+          }
+        }
+
+        if (orderEmail) {
+          data.email = orderEmail;
+        }
+
         setOrder(data);
         setTrackingForm({
           courier: data.tracking?.courier || "",
           trackingId: data.tracking?.trackingId || "",
           trackingUrl: data.tracking?.trackingUrl || "",
         });
+
       } else {
         toast.error("Order not found in database.");
         setOrder(null);
@@ -186,7 +223,7 @@ export default function AdminOrderDetail() {
   };
 
   const handlePrintInvoice = () => {
-    window.print();
+    navigate(`/admin/order/${id}/invoice`);
   };
 
   if (loading) {
@@ -231,7 +268,16 @@ export default function AdminOrderDetail() {
 
   const customerName = sAddr.fullName || sAddr.name || order.userProfile?.name || "N/A";
   const customerPhone = sAddr.phone || sAddr.phoneNumber || order.userProfile?.phone || "N/A";
-  const customerEmail = order.email || order.userEmail || order.userProfile?.email || "N/A";
+  const customerEmail =
+    order.email ||
+    order.userEmail ||
+    order.customerEmail ||
+    order.userProfile?.email ||
+    sAddr.email ||
+    sAddr.userEmail ||
+    order.user?.email ||
+    order.userInfo?.email ||
+    "N/A";
   const addressType = sAddr.addressType || sAddr.type || "HOME";
 
   const fullStreet = [sAddr.houseNo, sAddr.buildingName, sAddr.street, sAddr.landmark].filter(Boolean).join(", ") || sAddr.address || "N/A";
@@ -248,7 +294,7 @@ export default function AdminOrderDetail() {
 
   const paymentStatus = order.payment?.status || (currentStatus === "DELIVERED" ? "Success" : "Paid");
   const paymentGateway = order.payment?.gateway || order.paymentMode || order.paymentInfo?.method || "ONLINE";
-  const paymentMethod = order.payment?.method || order.paymentMode || "Razorpay / UPI";
+  const paymentMethod = order.payment?.method || order.paymentMode || "Online Payment";
   const paymentId = order.payment?.paymentId || order.paymentId || order.id || "N/A";
 
   const tracking = order.tracking || null;
@@ -256,7 +302,7 @@ export default function AdminOrderDetail() {
   const currentStepIndex = STATUS_STEPS.indexOf(currentStatus);
 
   return (
-    <div className="p-4 sm:p-6 max-w-8xl mx-auto space-y-6 text-text-base">
+    <div className="p-4 sm:p-3 max-w-8xl mx-auto space-y-6 text-text-base">
       {/* Header Section */}
       <OrderDetailHeaderSection
         orderId={orderId}

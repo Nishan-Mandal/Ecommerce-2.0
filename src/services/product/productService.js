@@ -97,7 +97,7 @@ export const productService = {
    */
   async updateProduct(id, productData) {
     const productRef = doc(fireDB, 'products', id);
-    await setDoc(productRef, productData);
+    await setDoc(productRef, productData, { merge: true });
   },
 
   /**

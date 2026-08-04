@@ -40,6 +40,30 @@ function Coupons() {
         loadCoupons();
     }, []);
 
+    const handleToggleStatus = async (couponToToggle) => {
+        if (!couponToToggle) return;
+        const targetId = couponToToggle.couponId || couponToToggle.id;
+        if (!targetId) return;
+
+        const newStatus = !(couponToToggle.isActive !== false);
+
+        // Optimistic UI update
+        setCoupons((prev) =>
+            prev.map((c) =>
+                (c.couponId === targetId || c.id === targetId) ? { ...c, isActive: newStatus } : c
+            )
+        );
+
+        try {
+            await couponService.toggleCouponStatus(targetId, newStatus);
+            toast.success(`Coupon "${couponToToggle.code}" marked as ${newStatus ? 'Active' : 'Inactive'}!`);
+        } catch (err) {
+            console.error("Error toggling coupon status:", err);
+            toast.error("Failed to update coupon status");
+            loadCoupons();
+        }
+    };
+
     const handleDeleteConfirm = async () => {
         if (!selectedCoupon?.couponId) return;
         setDeleting(true);
@@ -134,6 +158,7 @@ function Coupons() {
                             setSelectedCoupon(coupon);
                             setIsDeleteModalOpen(true);
                         }}
+                        onToggleStatus={handleToggleStatus}
                     />
                 )}
             </div>

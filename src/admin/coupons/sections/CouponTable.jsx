@@ -5,12 +5,14 @@ function CouponTable({
     coupons = [],
     onEdit,
     onDelete,
+    onToggleStatus,
 }) {
     const getStatus = (coupon) => {
         if (!coupon.isActive)
             return {
                 label: "Inactive",
-                className: "bg-gray-100 text-gray-700 border-gray-200/50",
+                className: "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400",
+                isActive: false
             };
 
         if (
@@ -19,13 +21,15 @@ function CouponTable({
         ) {
             return {
                 label: "Expired",
-                className: "bg-red-50 text-red-700 border-red-100",
+                className: "bg-rose-50 text-rose-700 border-rose-200",
+                isActive: false
             };
         }
 
         return {
             label: "Active",
-            className: "bg-emerald-50 text-[#17700d] border-emerald-100",
+            className: "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300",
+            isActive: true
         };
     };
 
@@ -35,15 +39,27 @@ function CouponTable({
             <div className="block md:hidden space-y-4">
                 {coupons.map((coupon) => {
                     const status = getStatus(coupon);
+                    const isCouponActive = coupon.isActive !== false;
                     return (
-                        <div key={coupon.couponId} className="bg-white p-6 rounded-2xl border border-border-base shadow-xs space-y-4">
-                            <div className="flex justify-between items-center">
+                        <div key={coupon.couponId} className="bg-bg-surface p-6 rounded-2xl border border-border-base shadow-xs space-y-4">
+                            <div className="flex justify-between items-center gap-2">
                                 <span className="font-bold text-sm text-text-base bg-emerald-50/50 px-2.5 py-1 rounded-lg border border-emerald-100/50 text-[#17700d]">
                                     {coupon.code}
                                 </span>
-                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${status.className}`}>
-                                    {status.label}
-                                </span>
+
+                                <button
+                                    type="button"
+                                    onClick={() => onToggleStatus && onToggleStatus(coupon)}
+                                    className={`px-3 py-1 rounded-full text-[10px] font-black transition-all cursor-pointer border inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 active:scale-95 ${
+                                        isCouponActive
+                                            ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                            : "bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400"
+                                    }`}
+                                    title={isCouponActive ? "Click to set Inactive" : "Click to set Active"}
+                                >
+                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCouponActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                                    <span>{status.label}</span>
+                                </button>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3 bg-gray-50/50 p-4 rounded-xl text-xs">
@@ -178,11 +194,19 @@ function CouponTable({
 
                                         {/* Status */}
                                         <td className="px-6 py-4">
-                                            <span
-                                                className={`px-3 py-1 rounded-full text-xs font-bold border ${status.className}`}
+                                            <button
+                                                type="button"
+                                                onClick={() => onToggleStatus && onToggleStatus(coupon)}
+                                                className={`px-3 py-1 rounded-full text-[10px] font-black transition-all cursor-pointer border inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 active:scale-95 ${
+                                                    coupon.isActive !== false
+                                                        ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                                        : "bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-400"
+                                                }`}
+                                                title={coupon.isActive !== false ? "Click to set Inactive" : "Click to set Active"}
                                             >
-                                                {status.label}
-                                            </span>
+                                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${coupon.isActive !== false ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                                                <span>{status.label}</span>
+                                            </button>
                                         </td>
 
                                         {/* Actions */}

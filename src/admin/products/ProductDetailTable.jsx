@@ -7,7 +7,7 @@ import WarningModal from '../../components/modal/WarningModal';
  * Renders the products management panel.
  * Designed with a clean structure, alternating rows, and brand indicators.
  */
-function ProductDetailTable({ mode, product, onAddClick, onEditClick, deleteProduct, formatDate }) {
+function ProductDetailTable({ mode, product, onAddClick, onEditClick, deleteProduct, toggleActiveStatus, formatDate }) {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedProductToDelete, setSelectedProductToDelete] = useState(null);
 
@@ -27,15 +27,13 @@ function ProductDetailTable({ mode, product, onAddClick, onEditClick, deleteProd
     return (
         <div className="mb-12">
 
-
-
             {/* Mobile Cards (Visible only on mobile) */}
             <div className="block md:hidden space-y-4">
                 {product.map((item, index) => {
-                    const { title, price, imageUrl, category, date } = item;
+                    const { title, price, imageUrl, category, date, isActive } = item;
+                    const isItemActive = isActive !== false;
                     return (
                         <div
-                        
                             key={index}
                             className="group bg-bg-surface rounded-2xl border border-border-base/60 shadow-sm hover:shadow-md transition-all duration-300 p-4"
                         >
@@ -43,7 +41,7 @@ function ProductDetailTable({ mode, product, onAddClick, onEditClick, deleteProd
                             <div className="flex gap-3">
 
                                 {/* Image */}
-                                <div className="w-20 h-20 sm:w-16 sm:h-16 rounded-xl overflow-hidden border border-border-base bg-bg-base shrink-0 flex items-center justify-center">
+                                <div className="w-20 h-20 sm:w-16 sm:h-16 rounded-xl overflow-hidden border border-border-base bg-bg-base shrink-0 flex items-center justify-center relative">
                                     <img
                                         src={imageUrl}
                                         alt={title}
@@ -54,12 +52,26 @@ function ProductDetailTable({ mode, product, onAddClick, onEditClick, deleteProd
                                 {/* Details */}
                                 <div className="flex-1 min-w-0">
 
-                                    <h3
-                                        className="font-bold text-sm sm:text-base text-text-base line-clamp-2"
-                                        title={title}
-                                    >
-                                        {title}
-                                    </h3>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <h3
+                                            className="font-bold text-sm sm:text-base text-text-base line-clamp-2"
+                                            title={title}
+                                        >
+                                            {title}
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleActiveStatus && toggleActiveStatus(item)}
+                                            className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-black shrink-0 transition-all cursor-pointer border inline-flex items-center gap-1 whitespace-nowrap ${
+                                                isItemActive
+                                                    ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                                    : "bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400"
+                                            }`}
+                                        >
+                                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isItemActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                                            <span>{isItemActive ? "Live" : "Draft"}</span>
+                                        </button>
+                                    </div>
 
                                     <div className="mt-2 flex flex-wrap items-center gap-2">
 
@@ -120,14 +132,16 @@ function ProductDetailTable({ mode, product, onAddClick, onEditClick, deleteProd
                                 <th className="px-5 py-4 w-20">Image</th>
                                 <th className="px-5 py-4">Title</th>
                                 <th className="px-5 py-4 w-24">Price</th>
-                                <th className="px-5 py-4 w-40">Category</th>
-                                <th className="px-5 py-4 w-40 hidden xl:table-cell">Date Added</th>
+                                 <th className="px-5 py-4 w-32">Category</th>
+                                <th className="px-5 py-4 w-32 text-center">Status</th>
+                                <th className="px-5 py-4 w-36 hidden xl:table-cell">Date Added</th>
                                 <th className="px-5 py-4 w-24 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-base/40 text-text-base font-semibold">
                             {product.map((item, index) => {
-                                const { title, price, imageUrl, category, date } = item;
+                                const { title, price, imageUrl, category, date, isActive } = item;
+                                const isItemActive = isActive !== false;
                                 return (
                                     <tr key={index} className="hover:bg-bg-base/30 transition-colors duration-150">
                                         <td className="px-5 py-3.5 text-text-muted font-bold text-center hidden lg:table-cell">{index + 1}.</td>
@@ -142,6 +156,21 @@ function ProductDetailTable({ mode, product, onAddClick, onEditClick, deleteProd
                                             <span className="inline-flex px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-[10px]">
                                                 {category}
                                             </span>
+                                        </td>
+                                        <td className="px-5 py-3.5 text-center">
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleActiveStatus && toggleActiveStatus(item)}
+                                                className={`px-3 py-1 rounded-full text-[10px] font-black transition-all cursor-pointer border inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 mx-auto ${
+                                                    isItemActive
+                                                        ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                                        : "bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-400"
+                                                }`}
+                                                title={isItemActive ? "Click to set Draft mode" : "Click to set Live (Published)"}
+                                            >
+                                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isItemActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                                                <span>{isItemActive ? "Live" : "Draft"}</span>
+                                            </button>
                                         </td>
                                         <td className="px-5 py-3.5 text-text-muted hidden xl:table-cell">{formatDate(date)}</td>
                                         <td className="px-5 py-3.5 text-center">
@@ -167,7 +196,7 @@ function ProductDetailTable({ mode, product, onAddClick, onEditClick, deleteProd
                             })}
                             {product.length === 0 && (
                                 <tr>
-                                    <td colSpan="7" className="px-5 py-8 text-center text-text-muted">
+                                    <td colSpan="8" className="px-5 py-8 text-center text-text-muted">
                                         No products available.
                                     </td>
                                 </tr>

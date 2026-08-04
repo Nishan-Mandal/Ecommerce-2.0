@@ -133,15 +133,23 @@ function CouponFormPage() {
                             </p>
                         </div>
 
-                        {/* Status Badge */}
-                        <span
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${coupon.isActive
-                                    ? "bg-green-100 text-green-700 border border-green-200"
-                                    : "bg-gray-100 text-gray-600 border border-gray-200"
+                        {/* Top Interactive Status Toggle Button */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold text-text-muted hidden sm:inline">Campaign Status:</span>
+                            <button
+                                type="button"
+                                onClick={() => setCoupon((prev) => ({ ...prev, isActive: !(prev.isActive !== false) }))}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 cursor-pointer flex items-center gap-2 border shadow-xs active:scale-95 ${
+                                    coupon.isActive !== false
+                                        ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-emerald-600/20"
+                                        : "bg-slate-800 hover:bg-slate-900 text-white border-slate-800 dark:bg-slate-200 dark:text-slate-900 shadow-slate-800/20"
                                 }`}
-                        >
-                            {coupon.isActive ? "Active" : "Inactive"}
-                        </span>
+                                title={coupon.isActive !== false ? "Click to set Inactive" : "Click to set Active"}
+                            >
+                                <span className={`w-2 h-2 rounded-full ${coupon.isActive !== false ? "bg-white animate-pulse" : "bg-slate-400"}`} />
+                                <span>{coupon.isActive !== false ? "Active" : "Inactive"}</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 

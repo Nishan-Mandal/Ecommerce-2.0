@@ -15,7 +15,7 @@ function ProductActions({
 
                 <div>
                     <h3 className="text-sm font-bold text-text-base">
-                        Ready to Publish?
+                        Publish Product
                     </h3>
 
                     <p className="text-xs text-text-muted">

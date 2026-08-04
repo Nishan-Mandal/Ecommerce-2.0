@@ -4,6 +4,7 @@ import useAuth from '../../hooks/auth/useAuth';
 import { FaShoppingCart, FaBoxes, FaUsers, FaChartBar, FaStar, FaBandcamp } from 'react-icons/fa';
 import { RiCoupon2Fill } from "react-icons/ri";
 import { useSiteConfig } from '../../context/SiteConfigContext';
+import WarningModal from '../../components/modal/WarningModal';
 
 // Import Layout Sections
 import Sidebar from './sections/Sidebar';
@@ -25,6 +26,7 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
     
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     
     const sidebarItems = [
         { id: 'overview', label: 'Dashboard', icon: <FaChartBar size={16} /> },
@@ -60,7 +62,8 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
         }
     };
 
-    const handleLogout = async () => {
+    const handleConfirmLogout = async () => {
+        setIsLogoutModalOpen(false);
         try {
             await logout();
             navigate('/');
@@ -77,7 +80,7 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
     };
 
     return (
-        <div className="h-screen overflow-hidden bg-bg-base text-text-base flex">
+        <div className="h-screen overflow-hidden bg-bg-base text-text-base flex print:h-auto print:overflow-visible print:bg-white">
             {/* 1. Mobile Drawer Navigation */}
             <MobileDrawer
                 drawerOpen={drawerOpen}
@@ -86,7 +89,7 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
                 activeView={activeView}
                 handleNavClick={handleNavClick}
                 config={config}
-                handleLogout={handleLogout}
+                handleLogout={() => setIsLogoutModalOpen(true)}
             />
 
             {/* 2. Mobile Bottom Navigation */}
@@ -102,13 +105,13 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
                 sidebarCollapsed={sidebarCollapsed}
                 handleNavClick={handleNavClick}
                 config={config}
-                handleLogout={handleLogout}
+                handleLogout={() => setIsLogoutModalOpen(true)}
             />
 
             {/* 4. Main Panel Workspace */}
             <div
                 className={`
-                    flex-1 flex flex-col h-full overflow-hidden transition-all duration-200 ml-0
+                    flex-1 flex flex-col h-full overflow-hidden transition-all duration-200 ml-0 print:ml-0 print:h-auto print:overflow-visible
                     ${sidebarCollapsed ? 'md:ml-20 lg:ml-[260px]' : 'md:ml-[260px] lg:ml-[260px]'}
                 `}
             >
@@ -121,12 +124,22 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
                 />
 
                 {/* Scrollable Main Content Container */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto print:overflow-visible">
                     <MainContent>
                         {children}
                     </MainContent>
                 </div>
             </div>
+
+            {/* Admin Logout Confirmation Warning Modal */}
+            <WarningModal
+                isOpen={isLogoutModalOpen}
+                message="Are you sure you want to log out of the Admin Portal?"
+                onConfirm={handleConfirmLogout}
+                onCancel={() => setIsLogoutModalOpen(false)}
+                confirmText="Log Out"
+                cancelText="Cancel"
+            />
         </div>
     );
 }

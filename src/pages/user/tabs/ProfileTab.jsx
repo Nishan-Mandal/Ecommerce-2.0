@@ -64,14 +64,6 @@ export default function ProfileTab({ profile, setProfile, handleSaveProfile, sav
                         placeholder="+91 98765 43210"
                     />
                 </Field>
-
-                <Field label="Avatar Image URL">
-                    <Input
-                        value={profile.profileImage}
-                        onChange={(e) => setProfile({ ...profile, profileImage: e.target.value })}
-                        placeholder="https://example.com/avatar.jpg"
-                    />
-                </Field>
             </div>
 
             <div className="pt-2">

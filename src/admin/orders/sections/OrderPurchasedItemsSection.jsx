@@ -2,56 +2,116 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { FaBoxOpen, FaExternalLinkAlt } from "react-icons/fa";
 
+function formatVariantName(variant) {
+  if (!variant) return "";
+  if (typeof variant === "string") return variant;
+  if (typeof variant === "object") {
+    return Object.entries(variant)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(" • ");
+  }
+  return String(variant);
+}
+
 export default function OrderPurchasedItemsSection({ productsList = [] }) {
   return (
-    <div className="bg-bg-surface p-6 rounded-2xl border border-border-base shadow-xs space-y-4">
-      <h2 className="text-sm font-bold text-text-base flex items-center gap-2">
-        <FaBoxOpen className="text-primary" /> Purchased Items ({productsList.length})
-      </h2>
-      <div className="h-px bg-border-base/60" />
+    <div className="bg-bg-surface p-5 rounded-2xl border border-border-base shadow-xs space-y-4">
+      <div className="flex items-center justify-between pb-3 border-b border-border-base/70">
+        <h2 className="text-sm font-black text-text-base flex items-center gap-2">
+          <FaBoxOpen className="text-primary" /> Purchased Items
+        </h2>
+        <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-black">
+          {productsList.length} {productsList.length === 1 ? "Item" : "Items"}
+        </span>
+      </div>
 
       <div className="space-y-3">
         {productsList.length === 0 ? (
-          <p className="text-xs text-text-muted">No items available in this order.</p>
+          <p className="text-xs text-text-muted text-center py-4">No items found in this order.</p>
         ) : (
           productsList.map((item, idx) => {
             const img = item.productImage || item.imageUrl || item.image || item.images?.[0] || "https://via.placeholder.com/100";
             const title = item.productName || item.title || item.name || "Product Item";
             const category = item.category || "General";
-            const variantName = item.variantName || (item.options ? Object.entries(item.options).map(([k, v]) => `${k}: ${v}`).join(" | ") : "");
+            const rawVariant = item.variantName || item.selectedVariant || item.variant || item.options;
+            const variantName = formatVariantName(rawVariant);
             const sku = item.sku || item.variantId || "N/A";
             const pid = item.productId || item.id || "";
 
-            const itemPrice = Number(item.price || item.unitPrice || item.sellingPrice || 0);
-            const origPrice = Number(item.originalPrice || itemPrice);
-            const qty = Number(item.quantity || 1);
-            const itemTotal = itemPrice * qty;
+            const qty = Number(item.quantity || item.qty || item.count || 1) || 1;
+
+            // Extract unit price with full property fallbacks
+            let itemPrice = Number(
+              item.price ??
+              item.sellingPrice ??
+              item.unitPrice ??
+              item.offerPrice ??
+              item.discountPrice ??
+              item.salePrice ??
+              item.finalPrice ??
+              item.productPrice ??
+              item.priceAtPurchase ??
+              item.selectedVariant?.price ??
+              0
+            );
+
+            let itemTotal = Number(
+              item.totalPrice ??
+              item.total ??
+              item.amount ??
+              item.itemTotal ??
+              (itemPrice * qty)
+            );
+
+            // Fallback calculations if itemPrice is 0
+            if (!itemPrice && itemTotal) {
+              itemPrice = itemTotal / qty;
+            } else if (!itemPrice && (item.originalPrice || item.mrp)) {
+              itemPrice = Number(item.originalPrice || item.mrp);
+              itemTotal = itemPrice * qty;
+            } else if (!itemTotal && itemPrice) {
+              itemTotal = itemPrice * qty;
+            }
+
+            const origPrice = Number(item.originalPrice || item.mrp || itemPrice);
+
 
             return (
               <div
                 key={idx}
-                className="p-4 rounded-xl border border-border-base bg-bg-base hover:border-primary/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                className="p-4 rounded-xl border border-border-base/70 bg-bg-base/50 hover:bg-bg-base transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group"
               >
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <img
-                    src={img}
-                    alt={title}
-                    className="w-16 h-16 rounded-xl object-cover border border-border-base bg-white shrink-0"
-                  />
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  <div className="w-16 h-16 rounded-xl object-cover border border-border-base bg-white overflow-hidden shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                    <img
+                      src={img}
+                      alt={title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = "https://via.placeholder.com/100";
+                      }}
+                    />
+                  </div>
+
                   <div className="space-y-1 min-w-0">
-                    <h3 className="text-xs font-bold text-text-base truncate">{title}</h3>
+                    <h3 className="text-xs font-black text-text-base truncate group-hover:text-primary transition-colors">
+                      {title}
+                    </h3>
                     <div className="flex items-center gap-2 flex-wrap text-[10px] text-text-muted">
-                      <span className="bg-bg-surface px-2 py-0.5 rounded-md border border-border-base font-semibold">{category}</span>
-                      {variantName && <span className="text-primary font-bold">{variantName}</span>}
+                      <span className="bg-bg-surface px-2 py-0.5 rounded border border-border-base font-bold">
+                        {category}
+                      </span>
+                      {variantName && (
+                        <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-extrabold">
+                          {variantName}
+                        </span>
+                      )}
                       <span>SKU: <strong className="font-mono text-text-base">{sku}</strong></span>
                     </div>
-                    {pid && (
-                      <p className="text-[9.5px] font-mono text-text-muted/70">ID: {pid}</p>
-                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto border-t sm:border-t-0 pt-2 sm:pt-0 border-border-base/40">
+                <div className="flex items-center justify-between sm:justify-end gap-5 w-full sm:w-auto border-t sm:border-t-0 pt-2 sm:pt-0 border-border-base/40 shrink-0">
                   <div className="text-right">
                     <p className="text-xs font-bold text-text-base">
                       ₹{itemPrice.toLocaleString("en-IN")} × {qty}
@@ -59,13 +119,14 @@ export default function OrderPurchasedItemsSection({ productsList = [] }) {
                     {origPrice > itemPrice && (
                       <p className="text-[10px] text-text-muted line-through">₹{origPrice.toLocaleString("en-IN")}</p>
                     )}
-                    <p className="text-xs font-extrabold text-primary mt-0.5">₹{itemTotal.toLocaleString("en-IN")}</p>
+                    <p className="text-sm font-black text-primary mt-0.5">₹{itemTotal.toLocaleString("en-IN")}</p>
                   </div>
+
                   {pid && (
                     <Link
                       to={`/productdetails/${pid}`}
                       target="_blank"
-                      className="p-2 rounded-lg border border-border-base text-text-muted hover:text-primary hover:border-primary transition"
+                      className="p-2 rounded-lg border border-border-base bg-bg-surface text-text-muted hover:text-primary hover:border-primary transition shadow-2xs"
                       title="View Product Details"
                     >
                       <FaExternalLinkAlt size={11} />
