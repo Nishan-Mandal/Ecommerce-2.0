@@ -42,7 +42,7 @@ export default function Navbar() {
   const navlinks = [
     { title: "Home", path: "/" },
     { title: "Products", path: "/allproducts" },
-    { title: "Order", path: "/profile?tab=orders" },
+    { title: "Orders", path: "/profile?tab=orders" },
   ]
 
   const isAdmin = user?.user?.email?.toLowerCase() === adminEmail.toLowerCase() || user?.user?.role === 'ADMIN';
@@ -93,7 +93,7 @@ export default function Navbar() {
               <Link
                 key={idx}
                 to={navlink.path}
-                className="text-sm font-semibold text-gray-700 hover:text-primary transition"
+                className="text-sm font-bold text-gray-700 hover:text-primary transition"
               >
                 {navlink.title}
               </Link>

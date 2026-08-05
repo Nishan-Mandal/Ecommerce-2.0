@@ -7,7 +7,7 @@ import { fireDB } from "../../firebase/FirebaseConfig";
  * Orders Component (Admin Orders Page)
  * Container component for admin orders management, fetching real-time order streams from Firestore.
  */
- function Orders({ mode, order: propOrders = [], formatDate }) {
+function Orders({ mode, order: propOrders = [], formatDate }) {
   const [orders, setOrders] = useState(propOrders);
   const [loading, setLoading] = useState(propOrders.length === 0);
 
@@ -41,20 +41,12 @@ import { fireDB } from "../../firebase/FirebaseConfig";
     return () => unsubscribe();
   }, [propOrders]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[300px] space-y-3">
-        <div className="w-9 h-9 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-xs font-bold text-text-muted">Loading orders data...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <OrderDetailTable
         mode={mode}
         order={orders}
+        loading={loading}
         formatDate={formatDate}
       />
     </div>

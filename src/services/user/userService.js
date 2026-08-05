@@ -6,10 +6,23 @@ import {
   where,
   doc,
   updateDoc,
+  setDoc,
   getDoc,
+  deleteDoc,
   arrayUnion,
   deleteField
 } from 'firebase/firestore';
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+};
 
 const getUserDocRef = async (uid) => {
   if (!uid) return null;
@@ -35,8 +48,8 @@ export const userService = {
   async getUsers() {
     const result = await getDocs(collection(fireDB, "users"));
     const usersArray = [];
-    result.forEach((doc) => {
-      usersArray.push(doc.data());
+    result.forEach((docSnap) => {
+      usersArray.push({ docId: docSnap.id, ...docSnap.data() });
     });
     return usersArray;
   },
@@ -66,7 +79,7 @@ export const userService = {
   async updateUserProfile(docId, updatedData) {
     if (!docId) throw new Error("Document ID is required to update profile");
     const docRef = doc(fireDB, "users", docId);
-    await updateDoc(docRef, updatedData);
+    await setDoc(docRef, { ...updatedData, uid: docId }, { merge: true });
   },
 
   /**
@@ -74,100 +87,91 @@ export const userService = {
    */
   async getAddresses(uid) {
     if (!uid) return [];
-    let result = await getUserDocRef(uid);
-    let savedAddrs = Array.isArray(result?.data?.addresses) ? [...result.data.addresses] : [];
-
-    // Check single address object in user profile (profile.address)
-    if (savedAddrs.length === 0 && result?.data?.address) {
-      const pAddr = result.data.address;
-      if (pAddr.fullName || pAddr.street || pAddr.pincode || pAddr.houseNo || pAddr.phone) {
-        const profileAddrObj = {
-          addressId: `addr_profile_${result.docId}`,
-          fullName: pAddr.fullName || result.data.name || "",
-          phone: pAddr.phone || result.data.phone || "",
-          houseNo: pAddr.houseNo || "",
-          street: [pAddr.buildingName, pAddr.street].filter(Boolean).join(", ") || pAddr.street || "",
-          landmark: pAddr.landmark || "",
-          city: pAddr.city || "",
-          state: pAddr.state || "",
-          pincode: pAddr.pincode || "",
-          addressType: pAddr.type || "HOME",
-          isDefault: true,
-        };
-        savedAddrs.push(profileAddrObj);
-      }
-    }
-
-    if (savedAddrs.length > 0) {
-      return savedAddrs;
-    }
-
-    // Fallback: Check past orders if no saved addresses exist yet
     try {
-      const ordersQ = query(collection(fireDB, "orders"), where("userid", "==", uid));
-      const ordersSnap = await getDocs(ordersQ);
-      let orderAddrs = [];
+      const directRef = doc(fireDB, "users", uid);
+      const directSnap = await getDoc(directRef);
+      let userData = directSnap.exists() ? directSnap.data() : null;
+      let targetRef = directSnap.exists() ? directRef : null;
+      let targetDocId = uid;
 
-      ordersSnap.forEach((oDoc) => {
-        const oData = oDoc.data();
-        const info = oData.addressInfo || oData.shippingAddress;
-        if (info) {
-          const addrObj = {
-            addressId: `addr_past_${oDoc.id}`,
-            fullName: info.name || info.fullName || "",
-            phone: info.phoneNumber || info.phone || "",
-            houseNo: info.houseNo || "",
-            street: info.address || info.street || "",
-            landmark: info.landmark || "",
-            city: info.city || "",
-            state: info.state || "",
-            pincode: info.pincode || "",
-            addressType: info.addressType || "HOME",
+      if (!userData) {
+        const q = query(collection(fireDB, "users"), where("uid", "==", uid));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          userData = snap.docs[0].data();
+          targetRef = snap.docs[0].ref;
+          targetDocId = snap.docs[0].id;
+        }
+      }
+
+      let savedAddrs = Array.isArray(userData?.addresses) ? [...userData.addresses] : [];
+
+      if (savedAddrs.length === 0 && userData?.address) {
+        const pAddr = userData.address;
+        if (pAddr.fullName || pAddr.street || pAddr.pincode || pAddr.houseNo || pAddr.phone) {
+          const profileAddrObj = {
+            addressId: `addr_profile_${targetDocId}`,
+            fullName: pAddr.fullName || userData.name || "",
+            phone: pAddr.phone || userData.phone || "",
+            houseNo: pAddr.houseNo || "",
+            street: [pAddr.buildingName, pAddr.street].filter(Boolean).join(", ") || pAddr.street || "",
+            landmark: pAddr.landmark || "",
+            city: pAddr.city || "",
+            state: pAddr.state || "",
+            pincode: pAddr.pincode || "",
+            addressType: pAddr.type || "HOME",
             isDefault: true,
           };
-          if (!orderAddrs.some((a) => a.phone === addrObj.phone && a.street === addrObj.street)) {
-            orderAddrs.push(addrObj);
-          }
+          savedAddrs.push(profileAddrObj);
         }
-      });
-
-      // Try alternate field query (userId)
-      if (orderAddrs.length === 0) {
-        const altOrdersQ = query(collection(fireDB, "orders"), where("userId", "==", uid));
-        const altSnap = await getDocs(altOrdersQ);
-        altSnap.forEach((oDoc) => {
-          const oData = oDoc.data();
-          const info = oData.addressInfo || oData.shippingAddress;
-          if (info) {
-            const addrObj = {
-              addressId: `addr_past_${oDoc.id}`,
-              fullName: info.name || info.fullName || "",
-              phone: info.phoneNumber || info.phone || "",
-              houseNo: info.houseNo || "",
-              street: info.address || info.street || "",
-              landmark: info.landmark || "",
-              city: info.city || "",
-              state: info.state || "",
-              pincode: info.pincode || "",
-              addressType: info.addressType || "HOME",
-              isDefault: true,
-            };
-            if (!orderAddrs.some((a) => a.phone === addrObj.phone && a.street === addrObj.street)) {
-              orderAddrs.push(addrObj);
-            }
-          }
-        });
       }
 
-      if (orderAddrs.length > 0) {
-        // Save back to user profile for future checkouts
-        if (result?.docRef) {
-          await updateDoc(result.docRef, { addresses: orderAddrs });
+      if (savedAddrs.length > 0) {
+        return savedAddrs;
+      }
+
+      const [ordersSnap, altSnap] = await Promise.all([
+        getDocs(query(collection(fireDB, "orders"), where("userid", "==", uid))).catch(() => null),
+        getDocs(query(collection(fireDB, "orders"), where("userId", "==", uid))).catch(() => null),
+      ]);
+
+      let orderAddrs = [];
+      const processSnap = (snap) => {
+        if (snap && !snap.empty) {
+          snap.forEach((oDoc) => {
+            const oData = oDoc.data();
+            const info = oData.addressInfo || oData.shippingAddress;
+            if (info) {
+              const addrObj = {
+                addressId: `addr_past_${oDoc.id}`,
+                fullName: info.name || info.fullName || "",
+                phone: info.phoneNumber || info.phone || "",
+                houseNo: info.houseNo || "",
+                street: info.address || info.street || "",
+                landmark: info.landmark || "",
+                city: info.city || "",
+                state: info.state || "",
+                pincode: info.pincode || "",
+                addressType: info.addressType || "HOME",
+                isDefault: true,
+              };
+              if (!orderAddrs.some((a) => a.phone === addrObj.phone && a.street === addrObj.street)) {
+                orderAddrs.push(addrObj);
+              }
+            }
+          });
         }
+      };
+
+      processSnap(ordersSnap);
+      processSnap(altSnap);
+
+      if (orderAddrs.length > 0 && targetRef) {
+        await setDoc(targetRef, { addresses: orderAddrs }, { merge: true }).catch(() => {});
         return orderAddrs;
       }
     } catch (err) {
-      console.warn("Error fetching fallback addresses from past orders:", err);
+      console.warn("Error fetching addresses:", err);
     }
 
     return [];
@@ -180,7 +184,6 @@ export const userService = {
     if (!uid) throw new Error("UID required");
     let result = await getUserDocRef(uid);
     
-    // If user profile doc doesn't exist yet, create doc using uid
     let targetRef = result?.docRef;
     if (!targetRef) {
       targetRef = doc(fireDB, "users", uid);
@@ -272,11 +275,64 @@ export const userService = {
       addresses: updatedAddrs,
     };
 
-    if (addressId.startsWith("addr_profile_") || (result.data.address && result.data.address.pincode)) {
-      updatePayload.address = deleteField();
-    }
-
     await updateDoc(result.docRef, updatePayload);
   },
-};
 
+  /**
+   * Creates a user/admin document in Firebase Auth (via secondary app) and Firestore
+   */
+  async createUser(userData) {
+    let authUid = null;
+
+    // 1. If password is provided, create Firebase Auth user via secondary app instance so admin remains logged in
+    if (userData.email && userData.password) {
+      try {
+        const secondaryAppName = "SecondaryAdminCreator";
+        const existingApps = getApps();
+        const found = existingApps.find((a) => a.name === secondaryAppName);
+        const secondaryApp = found || initializeApp(firebaseConfig, secondaryAppName);
+        const secondaryAuth = getAuth(secondaryApp);
+        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userData.email, userData.password);
+        authUid = userCredential.user.uid;
+      } catch (authErr) {
+        console.error("Error creating Firebase Auth user:", authErr);
+        throw authErr;
+      }
+    }
+
+    // 2. Save user profile in Firestore users collection
+    const docId = authUid || userData.uid || userData.email || `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const docRef = doc(fireDB, "users", docId);
+    const payload = {
+      name: userData.name || "",
+      email: userData.email || "",
+      phone: userData.phone || "",
+      role: userData.role || "ADMIN",
+      uid: docId,
+      time: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    await setDoc(docRef, payload, { merge: true });
+    return payload;
+  },
+
+  /**
+   * Updates user role (ADMIN / USER)
+   */
+  async updateUserRole(userId, newRole) {
+    if (!userId) throw new Error("User ID is required");
+    const result = await getUserDocRef(userId);
+    const targetRef = result?.docRef || doc(fireDB, "users", userId);
+    await setDoc(targetRef, { role: newRole }, { merge: true });
+  },
+
+  /**
+   * Deletes a user / admin profile from Firestore
+   */
+  async deleteUser(userId) {
+    if (!userId) throw new Error("User ID required");
+    const result = await getUserDocRef(userId);
+    const targetRef = result?.docRef || doc(fireDB, "users", userId);
+    await deleteDoc(targetRef);
+  },
+};

@@ -5,26 +5,29 @@ import { userService } from "../../../services/user/userService";
 import AddressFormModal from "../../checkout/components/AddressFormModal";
 
 const TYPE_ICONS = {
-  HOME: <FaHome size={12} />,
-  OFFICE: <FaBriefcase size={12} />,
-  WORK: <FaBriefcase size={12} />,
-  OTHER: <FaMapPin size={12} />,
+  HOME: <FaHome size={11} />,
+  OFFICE: <FaBriefcase size={11} />,
+  WORK: <FaBriefcase size={11} />,
+  OTHER: <FaMapPin size={11} />,
 };
 
-export default function AddressTab({ profile }) {
+export default function AddressTab({ profile, uid: propUid }) {
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
 
-  const uid = profile?.uid || profile?.docId;
+  const uid = propUid || profile?.uid || profile?.docId;
 
   const loadAddresses = useCallback(async () => {
-    if (!uid) return;
+    if (!uid) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const addrs = await userService.getAddresses(uid);
-      setAddresses(addrs);
+      setAddresses(addrs || []);
     } catch (err) {
       console.error("Error loading addresses in AddressTab:", err);
     } finally {
@@ -79,98 +82,96 @@ export default function AddressTab({ profile }) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3.5 text-xs">
       {/* Header & Add Button */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between flex-wrap gap-2 pb-1.5 border-b border-border-base/50">
         <div>
-          <h3 className="text-sm font-bold text-text-base">Delivery Addresses</h3>
-          <p className="text-[10px] text-text-muted mt-0.5">Manage your saved shipping addresses for faster checkout</p>
+          <h3 className="text-sm font-extrabold text-text-base">Delivery Addresses</h3>
+          <p className="text-[10px] text-text-muted mt-0.5">Manage saved shipping addresses for instant checkout</p>
         </div>
         <button
           onClick={() => {
             setEditingAddress(null);
             setModalOpen(true);
           }}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-sm transition-all hover:bg-primary-hover active:scale-95"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-compli text-xs font-extrabold shadow-2xs transition-all active:scale-95 cursor-pointer"
         >
-          <FaPlus size={10} />
+          <FaPlus size={9} />
           Add New Address
         </button>
       </div>
 
-      <div className="h-px bg-border-base/60" />
-
       {/* Address List */}
       {loading ? (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {[1, 2].map((i) => (
-            <div key={i} className="h-24 bg-border-base animate-pulse rounded-xl" />
+            <div key={i} className="h-20 bg-border-base/40 animate-pulse rounded-xl" />
           ))}
         </div>
       ) : addresses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-border-base rounded-2xl text-center bg-bg-base/40">
-          <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
-            <FaMapPin size={20} />
+        <div className="flex flex-col items-center justify-center py-8 px-3 border-2 border-dashed border-border-base rounded-2xl text-center bg-bg-base/40">
+          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
+            <FaMapPin size={16} />
           </div>
-          <p className="text-sm font-bold text-text-base mb-1">No Saved Addresses</p>
-          <p className="text-xs text-text-muted max-w-xs mb-4">Add your shipping address so you can use it seamlessly during checkout.</p>
+          <p className="text-xs font-bold text-text-base mb-0.5">No Saved Addresses</p>
+          <p className="text-[11px] text-text-muted max-w-xs mb-3">Add your shipping address so you can use it seamlessly during checkout.</p>
           <button
             onClick={() => {
               setEditingAddress(null);
               setModalOpen(true);
             }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-sm hover:bg-primary-hover transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-compli text-xs font-bold shadow-2xs hover:bg-primary-hover transition-all cursor-pointer"
           >
-            <FaPlus size={11} />
+            <FaPlus size={10} />
             Add Address Now
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-1 gap-2.5">
           {addresses.map((addr) => (
             <div
               key={addr.addressId}
-              className="relative p-4 rounded-xl border border-border-base bg-bg-base hover:border-primary/50 transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              className="relative p-3 sm:p-3.5 rounded-xl border border-border-base/70 bg-bg-surface hover:border-primary/50 transition-all shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
             >
               <div className="space-y-1 min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-xs text-text-base">{addr.fullName}</span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-primary/10 text-primary">
+                  <span className="font-extrabold text-xs sm:text-sm text-text-base">{addr.fullName}</span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-primary/10 text-primary border border-primary/20">
                     {TYPE_ICONS[addr.addressType] || TYPE_ICONS.OTHER}
                     {addr.addressType || "HOME"}
                   </span>
                   {addr.isDefault && (
-                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                    <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50  px-2 py-0.5 rounded-full border border-emerald-200 ">
                       <FaCheckCircle size={8} /> Default
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-text-muted leading-relaxed">
+                <p className="text-[11px] text-text-muted leading-snug">
                   {addr.houseNo && `${addr.houseNo}, `}
                   {addr.street}
                   {addr.landmark && `, Near ${addr.landmark}`}
                   {addr.city && `, ${addr.city}`}
                   {addr.state && `, ${addr.state}`} - <span className="font-bold text-text-base">{addr.pincode}</span>
                 </p>
-                <p className="text-[11px] font-semibold text-text-muted">Phone: {addr.phone}</p>
+                <p className="text-[10px] font-semibold text-text-muted">Phone: <span className="text-text-base">{addr.phone}</span></p>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-border-base/40">
+              <div className="flex items-center gap-1.5 flex-shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-border-base/40">
                 <button
                   onClick={() => {
                     setEditingAddress(addr);
                     setModalOpen(true);
                   }}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-base text-text-muted hover:text-primary hover:border-primary transition text-xs font-semibold"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border-base/70 text-text-muted hover:text-primary hover:border-primary transition text-[11px] font-semibold cursor-pointer"
                 >
-                  <FaEdit size={11} /> Edit
+                  <FaEdit size={10} /> Edit
                 </button>
                 <button
                   onClick={() => handleDelete(addr.addressId)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-base text-text-muted hover:text-red-500 hover:border-red-300 transition text-xs font-semibold"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border-base/70 text-text-muted hover:text-rose-600 hover:border-rose-300 transition text-[11px] font-semibold cursor-pointer"
                 >
-                  <FaTrash size={10} /> Delete
+                  <FaTrash size={9} /> Delete
                 </button>
               </div>
             </div>

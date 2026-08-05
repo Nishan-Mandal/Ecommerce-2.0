@@ -27,9 +27,11 @@ const sanitizeProductForFirestore = (data) => {
     clean.imageUrl = clean.images[0] || '';
   }
 
-  // Flatten tags array
-  if (Array.isArray(clean.tags)) {
-    clean.tags = clean.tags.flat(Infinity).filter(t => typeof t === 'string' && t.trim() !== '');
+  // Process tags
+  if (typeof clean.tags === 'string') {
+    clean.tags = clean.tags.split(',').map(t => t.trim()).filter(Boolean);
+  } else if (Array.isArray(clean.tags)) {
+    clean.tags = clean.tags.flat(Infinity).map(t => typeof t === 'string' ? t.trim() : String(t)).filter(Boolean);
   } else {
     clean.tags = [];
   }
@@ -112,7 +114,7 @@ export default function useAdmin() {
       imageUrl: item.imageUrl || '',
       category: item.category || '',
       description: item.description || '',
-      tags: Array.isArray(item.tags) ? item.tags : [],
+      tags: Array.isArray(item.tags) ? item.tags.join(', ') : (item.tags || ''),
       images: Array.isArray(item.images) ? item.images : (item.imageUrl ? [item.imageUrl] : []),
       variants: Array.isArray(item.variants) ? item.variants : [],
       variantTypes: Array.isArray(item.variantTypes) ? item.variantTypes : [],
@@ -176,6 +178,19 @@ export default function useAdmin() {
 
       const docData = sanitizeProductForFirestore(rawData);
       await productService.createProduct(docData);
+
+      try {
+        const { activityService } = await import('../../services/activity/activityService.js');
+        await activityService.logActivity({
+          type: 'PRODUCT_ADDED',
+          title: `Product Added: ${docData.title}`,
+          description: `Category: ${docData.category} • Brand: ${docData.brand}`,
+          userEmail: 'Admin',
+        });
+      } catch (logErr) {
+        console.warn('Activity logging failed:', logErr);
+      }
+
       toast.success("Product Added successfully");
       setTimeout(() => {
         navigate('/dashboard');
@@ -415,10 +430,9 @@ export default function useAdmin() {
 
   const handleTagsChange = (e) => {
     const value = e.target.value;
-    const parsedTags = value.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
     setProductForm(prev => ({
       ...prev,
-      tags: parsedTags
+      tags: value
     }));
   };
 

@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { FaStar, FaRegStar, FaTrash } from "react-icons/fa";
+import TableSkeleton from "../../../components/loader/SkeletonLoader/TableSkeleton";
+import Pagination from "../../../components/common/Pagination";
 
 function StarRating({ rating = 0 }) {
     return (
@@ -27,20 +29,26 @@ function formatDate(timestamp) {
     return String(timestamp);
 }
 
-function ReviewTable({ reviews = [], products = {}, loading, onDelete }) {
+function ReviewTable({ reviews = [], products = {}, loading = false, onDelete }) {
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [reviews.length]);
+
     if (loading) {
-        return (
-            <div className="bg-white border border-border-base rounded-2xl shadow-xs p-8 text-center text-text-muted text-sm">
-                Loading reviews...
-            </div>
-        );
+        return <TableSkeleton rows={pageSize} columns={6} />;
     }
 
+    const startIndex = (currentPage - 1) * pageSize;
+    const paginatedReviews = reviews.slice(startIndex, startIndex + pageSize);
+
     return (
-        <div className="w-full">
+        <div className="w-full space-y-4">
             {/* Mobile Cards (Visible only on mobile) */}
             <div className="block md:hidden space-y-4">
-                {reviews.map((review) => {
+                {paginatedReviews.map((review) => {
                     const productName = products[review.productId] || review.productId;
                     return (
                         <div key={review.id} className="bg-white p-6 rounded-2xl border border-border-base shadow-xs space-y-4">
@@ -120,7 +128,7 @@ function ReviewTable({ reviews = [], products = {}, loading, onDelete }) {
                                 </tr>
                             )}
 
-                            {reviews.map((review) => {
+                            {paginatedReviews.map((review) => {
                                 const productName = products[review.productId] || review.productId;
 
                                 return (
@@ -189,6 +197,18 @@ function ReviewTable({ reviews = [], products = {}, loading, onDelete }) {
                     </table>
                 </div>
             </div>
+
+            {/* Universal Pagination */}
+            <Pagination
+                currentPage={currentPage}
+                totalItems={reviews.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(newSize) => {
+                    setPageSize(newSize);
+                    setCurrentPage(1);
+                }}
+            />
         </div>
     );
 }

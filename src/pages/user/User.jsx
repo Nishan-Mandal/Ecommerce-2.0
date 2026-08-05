@@ -4,17 +4,18 @@ import { toast } from "react-toastify";
 import useAuth from "../../hooks/auth/useAuth";
 import { userService } from "../../services/user/userService";
 import { orderService } from "../../services/order/orderService";
-import { storage } from "../../firebase/FirebaseConfig";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { FaUser, FaMapMarkerAlt, FaShoppingBag, FaCamera, FaSpinner, FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
+import {
+    FaUser, FaMapMarkerAlt, FaShoppingBag, FaWallet,
+    FaSpinner, FaShieldAlt, FaChevronRight
+} from "react-icons/fa";
 import ProfileTab from "./tabs/ProfileTab";
 import AddressTab from "./tabs/AddressTab";
 import OrdersTab from "./tabs/OrdersTab";
 
-const TABS = [
-    { id: "profile", label: "Profile", icon: <FaUser size={11} /> },
-    { id: "address", label: "Address", icon: <FaMapMarkerAlt size={11} /> },
-    { id: "orders", label: "Orders", icon: <FaShoppingBag size={11} /> },
+const MENU_ITEMS = [
+    { id: "profile", label: "Profile Information", shortLabel: "Profile", icon: <FaUser size={14} /> },
+    { id: "address", label: "Manage Addresses", shortLabel: "Addresses", icon: <FaMapMarkerAlt size={14} /> },
+    { id: "orders", label: "My Orders", shortLabel: "Orders", icon: <FaShoppingBag size={14} /> },
 ];
 
 function getInitials(name, email) {
@@ -40,6 +41,7 @@ function User() {
             setActiveTab(tab);
         }
     }, [location]);
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [orders, setOrders] = useState([]);
@@ -134,139 +136,186 @@ function User() {
         }));
     };
 
-    const totalSpent = orders.reduce((acc, o) => {
-        const amt = Number(o.totalAmount || o.pricing?.grandTotal || 0);
+    const validOrders = orders.filter((o) => {
+        const status = (o.orderStatus || o.status || '').toUpperCase();
+        const paymentStat = (o.paymentStatus || o.payment?.status || '').toUpperCase();
+        return status !== 'CANCELLED' && status !== 'REFUNDED' && status !== 'PAYMENT_FAILED' && paymentStat !== 'FAILED';
+    });
+
+    const totalSpent = validOrders.reduce((acc, o) => {
+        const raw = o.totalAmount ?? o.pricing?.grandTotal ?? o.amount ?? o.total ?? 0;
+        const amt = typeof raw === 'number' ? (isNaN(raw) ? 0 : raw) : (parseFloat(String(raw).replace(/[^0-9.]/g, '')) || 0);
         return acc + amt;
     }, 0);
 
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-bg-base text-text-muted text-xs">
-                <div className="flex flex-col items-center gap-2">
-                    <FaSpinner className="animate-spin text-xl text-primary" />
-                    <span>Loading your profile...</span>
+                <div className="flex flex-col items-center gap-3">
+                    <FaSpinner className="animate-spin text-2xl text-primary" />
+                    <span className="font-semibold tracking-wide">Loading your profile...</span>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-bg-base text-xs">
+        <div className="min-h-screen bg-bg-base py-4 sm:py-6 px-3 sm:px-5 lg:px-8 font-sans">
+            <div className="max-w-6xl mx-auto">
 
-            {/* ── Mobile Profile Header Strip ── */}
-            <div className="lg:hidden bg-bg-surface border-b border-border-base px-4 py-4">
-                <div className="flex items-center gap-3">
-                    {/* Avatar Initials Badge */}
-                    <div className="w-14 h-14 rounded-full border-2 border-primary/30 bg-primary/10 text-primary font-black text-xl flex items-center justify-center shrink-0 shadow-xs">
-                        {getInitials(profile.name, profile.email)}
-                    </div>
+                {/* ─── DESKTOP LAYOUT ─────────────────────────────────────────── */}
+                <div className="hidden lg:grid grid-cols-12 gap-5 items-start relative">
 
-                    {/* Name / Email / Role */}
-                    <div className="flex-1 min-w-0">
-                        <h2 className="text-sm font-extrabold text-text-base truncate">{profile.name || "User Profile"}</h2>
-                        <p className="text-text-muted truncate mt-0.5">{profile.email}</p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                            <span className="inline-block px-2 py-0.5 rounded bg-primary/10 text-primary font-bold text-[9px] uppercase">
-                                {profile.role == "ADMIN" ? "Admin" : "Customer"}
-                            </span>
+                    {/* ── Left Sidebar (Sticky/Fixed on Scroll) ── */}
+                    <div className="col-span-3 space-y-4 sticky top-20 self-start">
+
+                        {/* Profile Card */}
+                        <div className="bg-bg-surface rounded-2xl overflow-hidden shadow-sm border border-border-base/60">
+                            <div className="p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-base text-primary shrink-0">
+                                        {getInitials(profile.name, profile.email)}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h3 className="font-black text-sm text-text-base truncate">{profile.name || "Customer"}</h3>
+                                        <p className="text-[11px] text-text-muted truncate mt-0.5">{profile.email}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Mini Metric Row */}
+                            <div className="grid grid-cols-2 border-t border-border-base/50 divide-x divide-border-base/50">
+                                <div className="flex flex-col items-center py-3 gap-0.5">
+                                    <p className="text-base font-black text-text-base">{validOrders.length}</p>
+                                    <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Orders</p>
+                                </div>
+                                <div className="flex flex-col items-center py-3 gap-0.5 px-1">
+                                    <p className="text-base font-black text-text-base truncate w-full text-center"
+                                       title={`₹${Math.round(totalSpent).toLocaleString("en-IN")}`}>
+                                        ₹{Math.round(totalSpent).toLocaleString("en-IN")}
+                                    </p>
+                                    <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Spent</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Nav Menu Card */}
+                        <div className="bg-bg-surface rounded-2xl border border-border-base/60 shadow-sm overflow-hidden">
+                            {MENU_ITEMS.map((item, idx) => {
+                                const isActive = activeTab === item.id;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => setActiveTab(item.id)}
+                                        className={`w-full flex items-center gap-3 px-4 py-3.5 text-xs transition-all duration-150 group ${
+                                            isActive
+                                                ? "bg-primary/10 text-primary font-bold border-l-4 border-primary"
+                                                : "text-text-base hover:bg-bg-base font-semibold"
+                                        } ${idx !== MENU_ITEMS.length - 1 ? "border-b border-border-base/40" : ""}`}
+                                    >
+                                        <span className={`shrink-0 transition-colors ${isActive ? "text-primary" : "text-text-muted group-hover:text-primary"}`}>
+                                            {item.icon}
+                                        </span>
+                                        <span className="flex-1 text-left">{item.label}</span>
+                                        <FaChevronRight size={10} className={`shrink-0 transition-colors ${isActive ? "text-primary" : "text-border-base group-hover:text-primary"}`} />
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
-                    {/* Quick Stats */}
-                    <div className="shrink-0 flex flex-col items-end gap-1.5">
-                        <div className="text-right">
-                            <p className="text-[9px] text-text-muted uppercase font-semibold tracking-wide">Orders</p>
-                            <p className="text-sm font-bold text-text-base">{orders.length}</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-[9px] text-text-muted uppercase font-semibold tracking-wide">Spent</p>
-                            <p className="text-[11px] font-bold text-text-base">₹{totalSpent.toLocaleString("en-IN")}</p>
+                    {/* ── Right Content Area ── */}
+                    <div className="col-span-9 space-y-4">
+                        {/* Active Tab Content Card */}
+                        <div className="bg-bg-surface rounded-2xl border border-border-base/60 shadow-sm p-5 sm:p-6">
+                            {activeTab === "profile" && (
+                                <ProfileTab profile={profile} setProfile={setProfile} handleSaveProfile={handleSaveProfile} saving={saving} />
+                            )}
+                            {activeTab === "address" && (
+                                <AddressTab uid={uid} profile={profile} handleAddressChange={handleAddressChange} handleSaveProfile={handleSaveProfile} saving={saving} />
+                            )}
+                            {activeTab === "orders" && (
+                                <OrdersTab orders={orders} />
+                            )}
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* ── Desktop & Mobile Main Layout ── */}
-            <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8 grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+                {/* ─── MOBILE / TABLET LAYOUT ─────────────────────────────────── */}
+                <div className="lg:hidden space-y-3">
 
-                {/* ── Left Sidebar: Desktop only ── */}
-                <div className="hidden lg:block lg:col-span-1 space-y-4">
-                    <div className="bg-bg-surface border border-border-base rounded-2xl p-5 shadow-xs flex flex-col items-center text-center space-y-4">
-                        {/* Avatar Initials Badge */}
-                        <div className="w-24 h-24 rounded-full border-2 border-primary/30 bg-primary/10 text-primary font-black text-3xl flex items-center justify-center shrink-0 shadow-sm">
-                            {getInitials(profile.name, profile.email)}
+                    {/* Mobile Profile Hero Card */}
+                    <div className="bg-bg-surface rounded-2xl p-4 shadow-sm border border-border-base/60">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-base text-primary shrink-0">
+                                {getInitials(profile.name, profile.email)}
+                            </div>
+                            <div className="min-w-0">
+                                <h2 className="font-black text-sm text-text-base truncate">{profile.name || "Customer"}</h2>
+                                <p className="text-[10px] text-text-muted truncate">{profile.email}</p>
+                            </div>
                         </div>
 
-                        <div>
-                            <h2 className="text-base font-extrabold text-text-base">{profile.name || "User Profile"}</h2>
-                            <p className="text-text-muted mt-0.5">{profile.email}</p>
-                            <span className="inline-block mt-2 px-2.5 py-0.5 rounded bg-primary/10 text-primary font-bold text-[10px] uppercase">
-                                {profile.role == "ADMIN" ? "ADMIN" : "USER"}
-                            </span>
-                        </div>
-                        <div className="flex gap-2 w-full justify-center pt-2 border-t border-border-base/50">
-                            <div className={`flex items-center gap-1 text-[10px] font-semibold ${profile.phoneVerified ? "text-green-600" : "text-text-muted/60"}`}>
-                                {profile.phoneVerified ? <FaCheckCircle /> : <FaExclamationCircle />}
-                                <span>Phone</span>
+                        {/* Mobile Metric Row */}
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
+                                <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-600 flex items-center justify-center shrink-0">
+                                    <FaShoppingBag size={12} />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-semibold text-text-muted uppercase tracking-wide">Orders</p>
+                                    <p className="text-sm font-black text-text-base">{validOrders.length}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40">
+                                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0">
+                                    <FaWallet size={12} />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-semibold text-text-muted uppercase tracking-wide">Spent</p>
+                                    <p className="text-sm font-black text-text-base truncate" title={`₹${Math.round(totalSpent).toLocaleString("en-IN")}`}>
+                                        ₹{Math.round(totalSpent).toLocaleString("en-IN")}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Stats Card */}
-                    <div className="bg-bg-surface border border-border-base rounded-2xl p-4 shadow-xs grid grid-cols-2 gap-3">
-                        <div className="text-center p-2.5 rounded-xl bg-bg-base border border-border-base/50">
-                            <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Orders</p>
-                            <h3 className="text-lg font-bold text-text-base mt-0.5">{orders.length}</h3>
-                        </div>
-                        <div className="text-center p-2.5 rounded-xl bg-bg-base border border-border-base/50">
-                            <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Spent</p>
-                            <h3 className="text-lg font-bold text-text-base mt-0.5">₹{totalSpent.toLocaleString("en-IN")}</h3>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Right Detailed Panel ── */}
-                <div className="lg:col-span-3 space-y-3">
-                    {/* Tabs Row */}
-                    <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
-                        {TABS.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all active:scale-95 ${activeTab === tab.id
-                                        ? "bg-primary text-compli shadow-sm"
-                                        : "text-text-muted border border-border-base bg-bg-surface hover:text-text-base"
+                    {/* Mobile Tab Pills */}
+                    <div className="flex items-center gap-2 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+                        {MENU_ITEMS.map((item) => {
+                            const isActive = activeTab === item.id;
+                            return (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all active:scale-95 ${
+                                        isActive
+                                            ? "bg-primary text-white shadow-sm"
+                                            : "bg-bg-surface text-text-muted border border-border-base/70 hover:text-text-base"
                                     }`}
-                            >
-                                {tab.icon}
-                                {tab.label}
-                            </button>
-                        ))}
+                                >
+                                    {item.icon}
+                                    <span>{item.shortLabel}</span>
+                                </button>
+                            );
+                        })}
                     </div>
 
-                    {/* Content Panel */}
-                    <div className="bg-bg-surface border border-border-base rounded-2xl shadow-xs p-4 sm:p-6">
+                    {/* Mobile Tab Content */}
+                    <div className="bg-bg-surface rounded-2xl border border-border-base/60 shadow-sm p-4">
                         {activeTab === "profile" && (
-                            <ProfileTab
-                                profile={profile}
-                                setProfile={setProfile}
-                                handleSaveProfile={handleSaveProfile}
-                                saving={saving}
-                            />
+                            <ProfileTab profile={profile} setProfile={setProfile} handleSaveProfile={handleSaveProfile} saving={saving} />
                         )}
                         {activeTab === "address" && (
-                            <AddressTab
-                                profile={profile}
-                                handleAddressChange={handleAddressChange}
-                                handleSaveProfile={handleSaveProfile}
-                                saving={saving}
-                            />
+                            <AddressTab uid={uid} profile={profile} handleAddressChange={handleAddressChange} handleSaveProfile={handleSaveProfile} saving={saving} />
                         )}
                         {activeTab === "orders" && (
                             <OrdersTab orders={orders} />
                         )}
                     </div>
                 </div>
+
             </div>
         </div>
     );

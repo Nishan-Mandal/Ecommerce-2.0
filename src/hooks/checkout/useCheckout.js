@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import { doc, onSnapshot } from "firebase/firestore";
 import { fireDB } from "../../firebase/FirebaseConfig";
@@ -41,6 +41,7 @@ export function useCheckout() {
   const [placedOrderId, setPlacedOrderId] = useState(null);
 
   const unsubscribeRef = useRef(null);
+  const hasHandledSuccessRef = useRef(false);
 
   // Derived calculations (display only)
   const subtotal = cart.reduce((acc, item) => acc + Number(item.price || 0) * item.quantity, 0);
@@ -128,6 +129,42 @@ export function useCheckout() {
     setEditingAddress(null);
   }, []);
 
+  const location = useLocation();
+
+  // Load and auto-sync saved coupon on mount
+  useEffect(() => {
+    const initialCoupon = location.state?.appliedCoupon || (() => {
+      try {
+        const saved = sessionStorage.getItem('appliedCoupon');
+        return saved ? JSON.parse(saved) : null;
+      } catch (e) {
+        return null;
+      }
+    })();
+
+    if (initialCoupon && initialCoupon.code) {
+      setCouponCode(initialCoupon.code);
+      setAppliedCoupon(initialCoupon);
+      // Auto-validate against current subtotal
+      paymentService.validateCoupon(initialCoupon.code, subtotal)
+        .then((res) => {
+          if (res && res.valid) {
+            const couponObj = {
+              code: res.code,
+              type: res.type,
+              discountValue: res.discountValue,
+              discountAmount: res.discountAmount
+            };
+            setAppliedCoupon(couponObj);
+            sessionStorage.setItem('appliedCoupon', JSON.stringify(couponObj));
+          }
+        })
+        .catch((err) => {
+          console.warn("Auto-validating initial checkout coupon warning:", err);
+        });
+    }
+  }, []);
+
   // Coupon Actions
   const handleApplyCoupon = useCallback(async () => {
     if (!couponCode.trim()) {
@@ -139,20 +176,29 @@ export function useCheckout() {
     try {
       const res = await paymentService.validateCoupon(couponCode.trim(), subtotal);
       if (res?.valid) {
-        setAppliedCoupon({ code: res.code, type: res.type, discountValue: res.discountValue, discountAmount: res.discountAmount });
+        const couponObj = {
+          code: res.code,
+          type: res.type,
+          discountValue: res.discountValue,
+          discountAmount: res.discountAmount
+        };
+        setAppliedCoupon(couponObj);
         setCouponError("");
+        sessionStorage.setItem('appliedCoupon', JSON.stringify(couponObj));
         toast.success(`Coupon "${res.code}" applied! You save ₹${Number(res.discountAmount).toFixed(2)}`);
       } else {
         const errorMsg = res?.message || "Invalid or expired coupon code.";
         setCouponError(errorMsg);
         toast.error(errorMsg);
         setAppliedCoupon(null);
+        sessionStorage.removeItem('appliedCoupon');
       }
     } catch (err) {
       const errorMsg = err?.message || "Invalid or expired coupon code.";
       setCouponError(errorMsg);
       toast.error(errorMsg);
       setAppliedCoupon(null);
+      sessionStorage.removeItem('appliedCoupon');
     } finally {
       setCouponLoading(false);
     }
@@ -162,6 +208,7 @@ export function useCheckout() {
     setAppliedCoupon(null);
     setCouponCode("");
     setCouponError("");
+    sessionStorage.removeItem('appliedCoupon');
   }, []);
 
   // Firestore Order Listener
@@ -174,9 +221,13 @@ export function useCheckout() {
       const data = snap.data();
       if (data.orderStatus === "PLACED") {
         if (unsubscribeRef.current) unsubscribeRef.current();
+        sessionStorage.removeItem('appliedCoupon');
         dispatch(clearCart());
         setStage("success");
-        toast.success("Order confirmed!");
+        if (!hasHandledSuccessRef.current) {
+          hasHandledSuccessRef.current = true;
+          toast.success("Order placed successfully!");
+        }
         navigate("/profile?tab=orders");
       } else if (data.orderStatus === "PAYMENT_FAILED") {
         if (unsubscribeRef.current) unsubscribeRef.current();
@@ -201,6 +252,7 @@ export function useCheckout() {
   const handleProceedToPayment = useCallback(async () => {
     if (cart.length === 0) { toast.error("Your cart is empty."); return; }
     if (!selectedAddress) { toast.error("Please select a shipping address."); return; }
+    hasHandledSuccessRef.current = false;
     setStage("submitting");
     setErrorMessage("");
     try {
@@ -246,9 +298,13 @@ export function useCheckout() {
                 razorpay_signature: razorpayResponse.razorpay_signature,
                 orderId: payOrder.orderId,
               });
+              sessionStorage.removeItem('appliedCoupon');
               dispatch(clearCart());
               setStage("success");
-              toast.success("Order placed successfully!");
+              if (!hasHandledSuccessRef.current) {
+                hasHandledSuccessRef.current = true;
+                toast.success("Order placed successfully!");
+              }
               navigate("/profile?tab=orders");
             } catch (vErr) {
               console.error("Client verify error:", vErr);
@@ -256,7 +312,10 @@ export function useCheckout() {
               listenForOrderPlaced(payOrder.orderId);
               setTimeout(() => {
                 dispatch(clearCart());
-                toast.info("Payment completed. Redirecting to your orders...");
+                if (!hasHandledSuccessRef.current) {
+                  hasHandledSuccessRef.current = true;
+                  toast.info("Payment completed. Redirecting to your orders...");
+                }
                 navigate("/profile?tab=orders");
               }, 5000);
             }
