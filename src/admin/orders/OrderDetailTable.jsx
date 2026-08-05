@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../Components/Header';
 import FilterBar from '../Components/FilterBar';
@@ -6,21 +6,25 @@ import OrderMobileCard from './tableComponents/OrderMobileCard';
 import OrderTableRow from './tableComponents/OrderTableRow';
 import { normalizeOrder } from './tableComponents/orderHelpers';
 import { toast } from 'react-toastify';
-import { FaClock, FaEye } from 'react-icons/fa';
+import { FaClock } from 'react-icons/fa';
+import TableSkeleton from '../../components/loader/SkeletonLoader/TableSkeleton';
+import Pagination from '../../components/common/Pagination';
 
 /**
  * OrderDetailTable Component
- * Redesigned clean, informative Admin Orders Table.
- * Default: Shows confirmed/placed orders.
- * Toggle Button: "Show Pending Orders" to include PAYMENT_PENDING orders.
+ * Redesigned clean, informative Admin Orders Table with skeleton loading and pagination.
  */
-function OrderDetailTable({ mode, order = [], formatDate }) {
+function OrderDetailTable({ mode, order = [], loading = false, formatDate }) {
     const navigate = useNavigate();
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [paymentFilter, setPaymentFilter] = useState('ALL');
     const [showPendingOrders, setShowPendingOrders] = useState(false);
     const [copiedId, setCopiedId] = useState(null);
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
 
     const handleCopy = (e, text, id) => {
         e.stopPropagation();
@@ -78,6 +82,11 @@ function OrderDetailTable({ mode, order = [], formatDate }) {
         });
     }, [order, showPendingOrders, statusFilter, paymentFilter, search]);
 
+    // Reset pagination to page 1 when filtered dataset size changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filteredOrders.length]);
+
     const filtersConfig = [
         {
             value: statusFilter,
@@ -102,6 +111,21 @@ function OrderDetailTable({ mode, order = [], formatDate }) {
             ]
         }
     ];
+
+    if (loading) {
+        return (
+            <div className="space-y-5">
+                <Header 
+                    title="Customer Orders Management" 
+                    description="Monitor customer orders, fulfillment statuses, customer details, and payment receipts." 
+                />
+                <TableSkeleton rows={pageSize} columns={7} />
+            </div>
+        );
+    }
+
+    const startIndex = (currentPage - 1) * pageSize;
+    const paginatedOrders = filteredOrders.slice(startIndex, startIndex + pageSize);
 
     return (
         <div className="space-y-5">
@@ -150,11 +174,11 @@ function OrderDetailTable({ mode, order = [], formatDate }) {
 
             {/* Mobile Responsive Cards */}
             <div className="block md:hidden space-y-4">
-                {filteredOrders.map((allorder, index) => (
+                {paginatedOrders.map((allorder, index) => (
                     <OrderMobileCard
                         key={allorder.docId || allorder.id || index}
                         allorder={allorder}
-                        index={index}
+                        index={startIndex + index}
                         copiedId={copiedId}
                         onCopy={handleCopy}
                         onNavigate={handleNavigate}
@@ -184,11 +208,11 @@ function OrderDetailTable({ mode, order = [], formatDate }) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-base/60 text-text-base">
-                            {filteredOrders.map((allorder, index) => (
+                            {paginatedOrders.map((allorder, index) => (
                                 <OrderTableRow
                                     key={allorder.docId || allorder.id || index}
                                     allorder={allorder}
-                                    index={index}
+                                    index={startIndex + index}
                                     formatDate={formatDate}
                                     copiedId={copiedId}
                                     onCopy={handleCopy}
@@ -207,6 +231,18 @@ function OrderDetailTable({ mode, order = [], formatDate }) {
                     </table>
                 </div>
             </div>
+
+            {/* Universal Pagination */}
+            <Pagination
+                currentPage={currentPage}
+                totalItems={filteredOrders.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(newSize) => {
+                    setPageSize(newSize);
+                    setCurrentPage(1);
+                }}
+            />
         </div>
     );
 }

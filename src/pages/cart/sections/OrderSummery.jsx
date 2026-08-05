@@ -31,6 +31,28 @@ export default function OrderSummary({ subtotal, shippingFee, taxRate, cartItems
   const estimatedTax = subtotal * taxRate;
   const grandTotal = Math.max(0, subtotal - discountAmount + (shippingFee === 'Free' ? 0 : Number(shippingFee || 0)));
 
+  // Sync / load saved coupon on mount or subtotal change
+  React.useEffect(() => {
+    const saved = sessionStorage.getItem('appliedCoupon');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.code) {
+          setAppliedCoupon(parsed);
+          setPromoCode(parsed.code);
+          let discount = Number(parsed.discountAmount || 0);
+          if (parsed.type === 'PERCENTAGE' || parsed.type === 'percentage') {
+            const val = Number(parsed.discountValue || parsed.value || 0);
+            discount = (subtotal * val) / 100;
+          }
+          setDiscountAmount(discount);
+        }
+      } catch (e) {
+        console.warn("Failed to parse stored coupon:", e);
+      }
+    }
+  }, [subtotal]);
+
   const handleApplyCoupon = async () => {
     if (!promoCode.trim()) {
       toast.error('Please enter a coupon code');
@@ -42,19 +64,29 @@ export default function OrderSummary({ subtotal, shippingFee, taxRate, cartItems
       // Validate via Cloud Function
       const res = await paymentService.validateCoupon(promoCode.trim(), subtotal);
       if (res && res.valid) {
-        setAppliedCoupon({ code: res.code, type: res.type, value: res.discountValue });
+        const couponObj = {
+          code: res.code,
+          type: res.type,
+          value: res.discountValue,
+          discountValue: res.discountValue,
+          discountAmount: res.discountAmount
+        };
+        setAppliedCoupon(couponObj);
         setDiscountAmount(res.discountAmount);
+        sessionStorage.setItem('appliedCoupon', JSON.stringify(couponObj));
         toast.success(`Coupon ${res.code} applied! Saved ₹${formatCurrency(res.discountAmount)}`);
       } else {
         toast.error(res?.message || 'Invalid or expired coupon code');
         setAppliedCoupon(null);
         setDiscountAmount(0);
+        sessionStorage.removeItem('appliedCoupon');
       }
     } catch (err) {
       console.error("Error validating coupon via Cloud Function:", err);
       toast.error(err?.message || 'Invalid or expired coupon code');
       setAppliedCoupon(null);
       setDiscountAmount(0);
+      sessionStorage.removeItem('appliedCoupon');
     } finally {
       setApplying(false);
     }
@@ -64,6 +96,7 @@ export default function OrderSummary({ subtotal, shippingFee, taxRate, cartItems
     setAppliedCoupon(null);
     setDiscountAmount(0);
     setPromoCode('');
+    sessionStorage.removeItem('appliedCoupon');
     toast.info('Coupon removed');
   };
 
@@ -88,7 +121,7 @@ export default function OrderSummary({ subtotal, shippingFee, taxRate, cartItems
     if (onCheckout) {
       onCheckout();
     } else {
-      navigate('/order');
+      navigate('/order', { state: { appliedCoupon } });
     }
   };
 
@@ -126,15 +159,20 @@ export default function OrderSummary({ subtotal, shippingFee, taxRate, cartItems
 
           <div className="space-y-3">
             {appliedCoupon ? (
-              <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 rounded-xl text-xs">
-                <div>
-                  <span className="font-bold text-emerald-700 dark:text-emerald-400 uppercase">{appliedCoupon.code}</span>
-                  <p className="text-[10px] text-emerald-600">Applied (-₹{formatCurrency(discountAmount)})</p>
+              <div className="flex items-center justify-between p-3.5 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-xl text-xs shadow-2xs">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-black text-emerald-800 dark:text-emerald-300 text-sm tracking-wider uppercase">{appliedCoupon.code}</span>
+                    <span className="px-1.5 py-0.2 bg-emerald-500 text-white rounded text-[9px] font-black uppercase">Active</span>
+                  </div>
+                  <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                    Coupon Applied: <strong className="font-extrabold">-₹{formatCurrency(discountAmount)}</strong>
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={handleRemoveCoupon}
-                  className="text-red-500 hover:text-red-700 font-bold underline text-[11px]"
+                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-500/30 font-extrabold text-[11px] transition-all cursor-pointer shadow-2xs"
                 >
                   Remove
                 </button>

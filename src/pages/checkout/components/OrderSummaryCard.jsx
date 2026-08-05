@@ -79,12 +79,25 @@ export default function OrderSummaryCard({
             {onChangeCoupon && (
               <div className="flex flex-col gap-3">
                 {appliedCoupon ? (
-                  <div className="flex items-center justify-between bg-green-600/10 border border-green-600/20 rounded-lg p-3 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-green-600 dark:text-green-400">{appliedCoupon.code}</span>
-                      <span className="text-[10px] bg-green-600 text-white px-1.5 py-0.5 rounded font-bold">APPLIED</span>
+                  <div className="flex items-center justify-between p-3.5 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-xl text-xs shadow-2xs">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-emerald-800 dark:text-emerald-300 text-sm tracking-wider uppercase">{appliedCoupon.code}</span>
+                        <span className="px-1.5 py-0.2 bg-emerald-500 text-white rounded text-[9px] font-black uppercase">Active</span>
+                      </div>
+                      {couponDiscount > 0 && (
+                        <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                          Coupon Applied: <strong className="font-extrabold">-₹{fmt(couponDiscount)}</strong>
+                        </p>
+                      )}
                     </div>
-                    <button onClick={onRemoveCoupon} className="text-red-500 font-bold hover:underline">Remove</button>
+                    <button
+                      type="button"
+                      onClick={onRemoveCoupon}
+                      className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-500/30 font-extrabold text-[11px] transition-all cursor-pointer shadow-2xs"
+                    >
+                      Remove
+                    </button>
                   </div>
                 ) : (
                   <>

@@ -27,7 +27,7 @@ function Coupons() {
         setLoading(true);
         try {
             const data = await couponService.getCoupons();
-            setCoupons(data);
+            setCoupons(data || []);
         } catch (err) {
             console.error("Error loading coupons:", err);
             toast.error("Failed to load coupons");
@@ -58,51 +58,56 @@ function Coupons() {
             await couponService.toggleCouponStatus(targetId, newStatus);
             toast.success(`Coupon "${couponToToggle.code}" marked as ${newStatus ? 'Active' : 'Inactive'}!`);
         } catch (err) {
-            console.error("Error toggling coupon status:", err);
-            toast.error("Failed to update coupon status");
-            loadCoupons();
+            console.error("Failed to toggle coupon status:", err);
+            toast.error("Failed to update status");
+            loadCoupons(); // revert on error
         }
     };
 
-    const handleDeleteConfirm = async () => {
-        if (!selectedCoupon?.couponId) return;
+    const handleDeleteClick = (coupon) => {
+        setSelectedCoupon(coupon);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!selectedCoupon) return;
         setDeleting(true);
+
+        const targetId = selectedCoupon.couponId || selectedCoupon.id;
+
         try {
-            await couponService.deleteCoupon(selectedCoupon.couponId);
-            setCoupons((prev) => prev.filter((c) => c.couponId !== selectedCoupon.couponId));
-            toast.success("Coupon deleted successfully");
+            await couponService.deleteCoupon(targetId);
+            toast.success("Coupon deleted successfully!");
+            setIsDeleteModalOpen(false);
+            setSelectedCoupon(null);
+            loadCoupons();
         } catch (err) {
             console.error("Error deleting coupon:", err);
             toast.error("Failed to delete coupon");
         } finally {
             setDeleting(false);
-            setIsDeleteModalOpen(false);
         }
     };
 
-    // Filter coupons logic based on state
     const filteredCoupons = coupons.filter((coupon) => {
         const searchLower = search.toLowerCase();
-        const matchSearch =
+        const matchesSearch =
             !search ||
             coupon.code?.toLowerCase().includes(searchLower) ||
             coupon.appliesTo?.toLowerCase().includes(searchLower);
 
-        // Calculate active status matching CouponTable.jsx
-        let status = "ACTIVE";
-        if (!coupon.isActive) {
-            status = "INACTIVE";
-        } else if (coupon.validUntil && new Date(coupon.validUntil) < new Date()) {
-            status = "EXPIRED";
-        }
+        const matchesStatus =
+            statusFilter === "ALL" ||
+            (statusFilter === "ACTIVE" && coupon.isActive !== false) ||
+            (statusFilter === "INACTIVE" && coupon.isActive === false);
 
-        const matchStatus = statusFilter === "ALL" || status === statusFilter;
-        const matchType = typeFilter === "ALL" || coupon.type === typeFilter;
+        const matchesType =
+            typeFilter === "ALL" || coupon.type === typeFilter;
 
-        return matchSearch && matchStatus && matchType;
+        return matchesSearch && matchesStatus && matchesType;
     });
 
-    const filtersConfig = [
+    const filterConfig = [
         {
             value: statusFilter,
             onChange: setStatusFilter,
@@ -110,8 +115,7 @@ function Coupons() {
                 { value: "ALL", label: "All Status" },
                 { value: "ACTIVE", label: "Active" },
                 { value: "INACTIVE", label: "Inactive" },
-                { value: "EXPIRED", label: "Expired" }
-            ]
+            ],
         },
         {
             value: typeFilter,
@@ -119,57 +123,51 @@ function Coupons() {
             options: [
                 { value: "ALL", label: "All Types" },
                 { value: "PERCENTAGE", label: "Percentage" },
-                { value: "FIXED", label: "Fixed Amount" }
-            ]
-        }
+                { value: "FIXED", label: "Fixed Amount" },
+            ],
+        },
     ];
 
     return (
-        <div className="space-y-6 lg:space-y-4">
-            {/* Header Action Row */}
+        <div className="space-y-6 lg:space-y-5">
             <Header
-                title="Promotional Campaigns"
-                description="Create, monitor, and configure promotional campaigns, discounts, and customer incentives."
-                icon={<FaPlus size={20} />}
-                buttonText="Create Coupon"
+                title="Coupon & Discount Management"
+                description="Create promo codes, manage usage caps, set discount values, and monitor active campaigns."
+                icon={<FaPlus size={14} />}
+                buttonText="Add Coupon"
                 clickhandler={() => navigate("/coupons/add")}
             />
 
-            {/* Stats */}
             <CouponStats coupons={coupons} />
 
-            {/* Filters */}
             <FilterBar
                 search={search}
                 setSearch={setSearch}
-                searchPlaceholder="Search by coupon code..."
-                filters={filtersConfig}
+                searchPlaceholder="Search coupons by promo code, target item..."
+                filters={filterConfig}
             />
 
-            {/* Table */}
-            <div className="w-full">
-                {loading ? (
-                    <div className="p-8 text-center text-text-muted text-xs font-bold">Loading promotional coupons...</div>
-                ) : (
-                    <CouponTable
-                        coupons={filteredCoupons}
-                        onEdit={(coupon) => navigate("/coupons/edit", { state: { coupon } })}
-                        onDelete={(coupon) => {
-                            setSelectedCoupon(coupon);
-                            setIsDeleteModalOpen(true);
-                        }}
-                        onToggleStatus={handleToggleStatus}
-                    />
-                )}
-            </div>
+            <CouponTable
+                coupons={filteredCoupons}
+                loading={loading}
+                onEdit={(coupon) =>
+                    navigate(`/coupons/edit/${coupon.couponId || coupon.id}`, {
+                        state: { coupon },
+                    })
+                }
+                onDelete={handleDeleteClick}
+                onToggleStatus={handleToggleStatus}
+            />
 
-            {/* Delete Confirmation Dialog */}
             <DeleteCoupon
                 open={isDeleteModalOpen}
                 coupon={selectedCoupon}
                 deleting={deleting}
-                onClose={() => setIsDeleteModalOpen(false)}
-                onDelete={handleDeleteConfirm}
+                onClose={() => {
+                    setIsDeleteModalOpen(false);
+                    setSelectedCoupon(null);
+                }}
+                onDelete={handleConfirmDelete}
             />
         </div>
     );

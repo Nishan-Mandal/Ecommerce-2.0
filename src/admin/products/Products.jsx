@@ -15,7 +15,7 @@ import FilterBar from "../Components/FilterBar";
 function Products({ mode, formatDate }) {
     const location = useLocation();
     const navigate = useNavigate();
-    const { products } = useProducts();
+    const { products, loading } = useProducts();
     const adminHook = useAdmin();
     const [view, setView] = useState('list'); // 'list', 'add', 'edit'
 
@@ -124,6 +124,7 @@ function Products({ mode, formatDate }) {
             <ProductDetailTable
                 mode={mode}
                 product={filteredProducts}
+                loading={loading}
                 onEditClick={handleEditClick}
                 deleteProduct={adminHook.deleteProduct}
                 toggleActiveStatus={adminHook.toggleProductActiveStatus}

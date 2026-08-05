@@ -43,7 +43,22 @@ function Allproducts() {
 
     // Apply filtering and sorting dynamically
     const filteredAndSorted = [...products]
-        .filter((obj) => obj.title.toLowerCase().includes(searchkey.toLowerCase()))
+        .filter((obj) => {
+            if (!searchkey || !searchkey.trim()) return true;
+            const rawQuery = searchkey.toLowerCase().trim();
+            const searchTerms = rawQuery.split(',').map(t => t.trim()).filter(Boolean);
+
+            const title = (obj.title || '').toLowerCase();
+            const brand = (obj.brand || '').toLowerCase();
+            const category = (obj.category || '').toLowerCase();
+            const tags = Array.isArray(obj.tags)
+                ? obj.tags.map(t => String(t).toLowerCase()).join(' ')
+                : String(obj.tags || '').toLowerCase();
+
+            const combinedText = `${title} ${brand} ${category} ${tags}`;
+
+            return searchTerms.some(term => combinedText.includes(term));
+        })
         .filter((obj) => obj.category.includes(filterType))
         .filter((obj) => {
             if (!filterPrice) return true;

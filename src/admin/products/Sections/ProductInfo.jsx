@@ -91,20 +91,26 @@ export function ProductBasicInfo({ products, setProducts, handleTagsChange }) {
                         </label>
                         <input
                             type="text"
-                            value={Array.isArray(products.tags) ? products.tags.join(", ") : (products.tags || "")}
+                            value={typeof products.tags === 'string' ? products.tags : (Array.isArray(products.tags) ? products.tags.join(", ") : "")}
                             onChange={handleTagsChange}
                             placeholder="e.g. wireless, bluetooth, gaming, bass"
                             className="w-full rounded-xl border border-border-base bg-bg-base px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 font-medium"
                         />
-                        {Array.isArray(products.tags) && products.tags.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                                {products.tags.map((tag, idx) => (
-                                    <span key={idx} className="px-2.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold">
-                                        #{tag}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
+                        {(() => {
+                            const badges = typeof products.tags === 'string'
+                                ? products.tags.split(',').map(t => t.trim()).filter(Boolean)
+                                : (Array.isArray(products.tags) ? products.tags : []);
+                            if (badges.length === 0) return null;
+                            return (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {badges.map((tag, idx) => (
+                                        <span key={idx} className="px-2.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold">
+                                            #{tag}
+                                        </span>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
             </div>

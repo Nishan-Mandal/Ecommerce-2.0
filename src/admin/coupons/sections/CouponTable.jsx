@@ -1,12 +1,22 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
+import TableSkeleton from "../../../components/loader/SkeletonLoader/TableSkeleton";
+import Pagination from "../../../components/common/Pagination";
 
 function CouponTable({
     coupons = [],
+    loading = false,
     onEdit,
     onDelete,
     onToggleStatus,
 }) {
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [coupons.length]);
+
     const getStatus = (coupon) => {
         if (!coupon.isActive)
             return {
@@ -33,15 +43,22 @@ function CouponTable({
         };
     };
 
+    if (loading) {
+        return <TableSkeleton rows={pageSize} columns={7} />;
+    }
+
+    const startIndex = (currentPage - 1) * pageSize;
+    const paginatedCoupons = coupons.slice(startIndex, startIndex + pageSize);
+
     return (
-        <div className="w-full">
+        <div className="w-full space-y-4">
             {/* Mobile Cards (Visible only on mobile) */}
             <div className="block md:hidden space-y-4">
-                {coupons.map((coupon) => {
+                {paginatedCoupons.map((coupon) => {
                     const status = getStatus(coupon);
                     const isCouponActive = coupon.isActive !== false;
                     return (
-                        <div key={coupon.couponId} className="bg-bg-surface p-6 rounded-2xl border border-border-base shadow-xs space-y-4">
+                        <div key={coupon.couponId || coupon.id} className="bg-bg-surface p-6 rounded-2xl border border-border-base shadow-xs space-y-4">
                             <div className="flex justify-between items-center gap-2">
                                 <span className="font-bold text-sm text-text-base bg-emerald-50/50 px-2.5 py-1 rounded-lg border border-emerald-100/50 text-[#17700d]">
                                     {coupon.code}
@@ -52,8 +69,8 @@ function CouponTable({
                                     onClick={() => onToggleStatus && onToggleStatus(coupon)}
                                     className={`px-3 py-1 rounded-full text-[10px] font-black transition-all cursor-pointer border inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 active:scale-95 ${
                                         isCouponActive
-                                            ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
-                                            : "bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400"
+                                            ? "bg-emerald-100 text-emerald-800 border-emerald-300  "
+                                            : "bg-red-200 text-red-700 border-red-300 "
                                     }`}
                                     title={isCouponActive ? "Click to set Inactive" : "Click to set Active"}
                                 >
@@ -144,11 +161,11 @@ function CouponTable({
                                 </tr>
                             )}
 
-                            {coupons.map((coupon) => {
+                            {paginatedCoupons.map((coupon) => {
                                 const status = getStatus(coupon);
                                 return (
                                     <tr
-                                        key={coupon.couponId}
+                                        key={coupon.couponId || coupon.id}
                                         className="hover:bg-gray-50/20 transition-colors"
                                     >
                                         {/* Coupon */}
@@ -199,12 +216,12 @@ function CouponTable({
                                                 onClick={() => onToggleStatus && onToggleStatus(coupon)}
                                                 className={`px-3 py-1 rounded-full text-[10px] font-black transition-all cursor-pointer border inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 active:scale-95 ${
                                                     coupon.isActive !== false
-                                                        ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300"
-                                                        : "bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-400"
+                                                        ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200"
+                                                        : "bg-red-200 text-red-700 border-red-300 hover:bg-red-300"
                                                 }`}
                                                 title={coupon.isActive !== false ? "Click to set Inactive" : "Click to set Active"}
                                             >
-                                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${coupon.isActive !== false ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${coupon.isActive !== false ? "bg-emerald-500 animate-pulse" : "bg-red-400"}`} />
                                                 <span>{status.label}</span>
                                             </button>
                                         </td>
@@ -236,6 +253,18 @@ function CouponTable({
                     </table>
                 </div>
             </div>
+
+            {/* Universal Pagination */}
+            <Pagination
+                currentPage={currentPage}
+                totalItems={coupons.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(newSize) => {
+                    setPageSize(newSize);
+                    setCurrentPage(1);
+                }}
+            />
         </div>
     );
 }
