@@ -1,38 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { FaCartPlus, FaTrash, FaEdit } from 'react-icons/fa';
+import { FaTrash, FaEdit } from 'react-icons/fa';
 import WarningModal from '../../components/modal/WarningModal';
 import TableSkeleton from '../../components/loader/SkeletonLoader/TableSkeleton';
 import Pagination from '../../components/common/Pagination';
+import StatusBadge from '../Components/common/StatusBadge';
+import DataTable from '../Components/common/DataTable';
 
 /**
- * Helper to render stock badge indicator
+ * Helper to render stock badge indicator using StatusBadge
  */
 export function renderStockBadge(stockCount) {
     if (stockCount <= 0) {
-        return (
-            <span className="px-2 py-0.5 text-rose-600 font-extrabold text-[10px] whitespace-nowrap">
-                Out of Stock
-            </span>
-        );
+        return <StatusBadge status="OUT_OF_STOCK" size="sm" />;
     }
     if (stockCount <= 5) {
-        return (
-            <span className="px-2 py-0.5 rounded-full text-amber-700 dark:text-amber-400 font-extrabold text-[10px] whitespace-nowrap">
-                {stockCount} left
-            </span>
-        );
+        return <StatusBadge status="LOW_STOCK" label={`${stockCount} left`} size="sm" />;
     }
-    return (
-        <span className="px-2 py-0.5 text-emerald-700 dark:text-emerald-400 font-extrabold text-[10px] whitespace-nowrap">
-            {stockCount} in stock
-        </span>
-    );
+    return <StatusBadge status="IN_STOCK" label={`${stockCount} in stock`} size="sm" />;
 }
 
 /**
  * ProductDetailTable Component
  * Renders the products management panel.
- * Designed with a clean structure, alternating rows, pagination, and brand indicators.
+ * Uses shared DataTable and StatusBadge components for unified UI consistency.
  */
 function ProductDetailTable({ mode, product = [], loading = false, onAddClick, onEditClick, deleteProduct, toggleActiveStatus, formatDate }) {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -42,7 +32,7 @@ function ProductDetailTable({ mode, product = [], loading = false, onAddClick, o
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
 
-    // Reset to page 1 if products list length changes (e.g., search/filter applied)
+    // Reset to page 1 if products list length changes
     useEffect(() => {
         setCurrentPage(1);
     }, [product.length]);
@@ -68,202 +58,188 @@ function ProductDetailTable({ mode, product = [], loading = false, onAddClick, o
     const startIndex = (currentPage - 1) * pageSize;
     const paginatedProducts = product.slice(startIndex, startIndex + pageSize);
 
-    return (
-        <div className="mb-12 space-y-4">
+    const columns = [
+        {
+            key: 'sno',
+            header: 'S.No',
+            align: 'center',
+            className: 'w-14 hidden lg:table-cell',
+            cellClassName: 'text-text-muted font-bold text-center hidden lg:table-cell',
+            render: (item, idx) => startIndex + idx + 1,
+        },
+        {
+            key: 'image',
+            header: 'Image',
+            className: 'w-16',
+            render: (item) => (
+                <div className="w-10 h-10 rounded-xl overflow-hidden border border-border-base bg-bg-base flex items-center justify-center p-0.5 shadow-xs">
+                    <img className="w-full h-full object-contain rounded-lg" src={item.imageUrl} alt={item.title} />
+                </div>
+            ),
+        },
+        {
+            key: 'title',
+            header: 'Title',
+            cellClassName: 'font-extrabold text-text-base max-w-[200px] truncate',
+            render: (item) => <span title={item.title}>{item.title}</span>,
+        },
+        {
+            key: 'price',
+            header: 'Price',
+            className: 'w-24',
+            cellClassName: 'font-extrabold text-text-base',
+            render: (item) => `₹${Number(item.price).toLocaleString('en-IN')}`,
+        },
+        {
+            key: 'stock',
+            header: 'Stock',
+            align: 'center',
+            className: 'w-28 text-center',
+            cellClassName: 'text-center',
+            render: (item) => {
+                const stockCount = item.hasVariants && Array.isArray(item.variants) && item.variants.length > 0
+                    ? item.variants.reduce((acc, v) => acc + Number(v.inStock || v.quantity || 0), 0)
+                    : Number(item.inStock ?? item.stock ?? 0);
+                return renderStockBadge(stockCount);
+            },
+        },
+        {
+            key: 'category',
+            header: 'Category',
+            className: 'w-28',
+            render: (item) => (
+                <span className="inline-flex px-2.5 py-0.5 rounded-full text-primary border border-primary/30 font-semibold text-[10px] whitespace-nowrap">
+                    {item.category}
+                </span>
+            ),
+        },
+        {
+            key: 'status',
+            header: 'Status',
+            align: 'center',
+            className: 'w-28 text-center',
+            cellClassName: 'text-center',
+            render: (item) => (
+                <button
+                    type="button"
+                    onClick={() => toggleActiveStatus && toggleActiveStatus(item)}
+                    className="cursor-pointer inline-flex items-center"
+                    title={item.isActive !== false ? "Click to set Draft mode" : "Click to set Live (Published)"}
+                >
+                    <StatusBadge status={item.isActive !== false ? 'LIVE' : 'DRAFT'} size="sm" />
+                </button>
+            ),
+        },
+        {
+            key: 'date',
+            header: 'Date Added',
+            className: 'w-32 hidden xl:table-cell',
+            cellClassName: 'text-text-muted hidden xl:table-cell',
+            render: (item) => formatDate(item.date),
+        },
+        {
+            key: 'actions',
+            header: 'Actions',
+            align: 'center',
+            className: 'w-24 text-center',
+            cellClassName: 'text-center',
+            render: (item) => (
+                <div className="flex items-center justify-center gap-1.5">
+                    <button
+                        onClick={() => onEditClick(item)}
+                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-all cursor-pointer"
+                        title="Edit Product"
+                    >
+                        <FaEdit size={14} />
+                    </button>
+                    <button
+                        onClick={() => handleDeleteClick(item)}
+                        className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                        title="Delete Product"
+                    >
+                        <FaTrash size={12} />
+                    </button>
+                </div>
+            ),
+        },
+    ];
 
-            {/* Mobile Cards (Visible only on mobile) */}
-            <div className="block md:hidden space-y-4">
-                {paginatedProducts.map((item, index) => {
-                    const { title, price, imageUrl, category, date, isActive, hasVariants, variants, inStock, stock } = item;
-                    const isItemActive = isActive !== false;
-                    const stockCount = hasVariants && Array.isArray(variants) && variants.length > 0
-                        ? variants.reduce((acc, v) => acc + Number(v.inStock || v.quantity || 0), 0)
-                        : Number(inStock ?? stock ?? 0);
-                    return (
-                        <div
-                            key={index}
-                            className="group bg-bg-surface rounded-2xl border border-border-base/60 shadow-sm hover:shadow-md transition-all duration-300 p-4"
-                        >
-                            {/* Product Info */}
-                            <div className="flex gap-3">
+    const mobileCardRender = (item, index) => {
+        const { title, price, imageUrl, category, date, isActive, hasVariants, variants, inStock, stock } = item;
+        const isItemActive = isActive !== false;
+        const stockCount = hasVariants && Array.isArray(variants) && variants.length > 0
+            ? variants.reduce((acc, v) => acc + Number(v.inStock || v.quantity || 0), 0)
+            : Number(inStock ?? stock ?? 0);
 
-                                {/* Image */}
-                                <div className="w-20 h-20 sm:w-16 sm:h-16 rounded-xl overflow-hidden border border-border-base bg-bg-base shrink-0 flex items-center justify-center relative">
-                                    <img
-                                        src={imageUrl}
-                                        alt={title}
-                                        className="w-full h-full object-contain"
-                                    />
-                                </div>
-
-                                {/* Details */}
-                                <div className="flex-1 min-w-0">
-
-                                    <div className="flex items-center justify-between gap-2">
-                                        <h3
-                                            className="font-bold text-sm sm:text-base text-text-base line-clamp-2"
-                                            title={title}
-                                        >
-                                            {title}
-                                        </h3>
-                                        <button
-                                            type="button"
-                                            onClick={() => toggleActiveStatus && toggleActiveStatus(item)}
-                                            className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-black shrink-0 transition-all cursor-pointer inline-flex items-center gap-1 whitespace-nowrap ${
-                                                isItemActive
-                                                    ? "text-emerald-800  dark:text-emerald-300"
-                                                    : "text-slate-700 dark:text-slate-400"
-                                            }`}
-                                        >
-                                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isItemActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
-                                            <span>{isItemActive ? "Live" : "Draft"}</span>
-                                        </button>
-                                    </div>
-
-                                    <div className="mt-2 flex flex-wrap items-center gap-2">
-
-                                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">
-                                            {category}
-                                        </span>
-
-                                        {renderStockBadge(stockCount)}
-
-                                        <span className="text-base font-extrabold text-text-base ml-auto">
-                                            ₹{Number(price).toLocaleString("en-IN")}
-                                        </span>
-
-                                    </div>
-
-                                    <p className="mt-2 text-xs text-text-muted">
-                                        Added • {formatDate(date)}
-                                    </p>
-
-                                </div>
-                            </div>
-
-                            {/* Divider */}
-                            <div className="my-4 border-t border-border-base/60" />
-
-                            {/* Actions */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    onClick={() => onEditClick(item)}
-                                    className=" h-11 rounded-xl bg-primary/10 text-primary font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/20 transition cursor-pointer "     >
-                                    <FaEdit size={14} />
-                                    Edit
-                                </button>
-
-                                <button
-                                    onClick={() => handleDeleteClick(item)}
-                                    className=" h-11 rounded-xl text-red-400 font-semibold text-sm flex items-center justify-center cursor-pointer gap-2 hover:bg-rose-100 transition"
-                                >
-                                    <FaTrash size={14} />
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
-                {product.length === 0 && (
-                    <div className="bg-bg-surface p-8 text-center text-text-muted rounded-2xl border border-border-base/60">
-                        No products available.
+        return (
+            <div
+                key={index}
+                className="group bg-bg-surface rounded-2xl border border-border-base/60 shadow-xs hover:shadow-md transition-all duration-300 p-4"
+            >
+                <div className="flex gap-3">
+                    <div className="w-20 h-20 sm:w-16 sm:h-16 rounded-xl overflow-hidden border border-border-base bg-bg-base shrink-0 flex items-center justify-center relative">
+                        <img src={imageUrl} alt={title} className="w-full h-full object-contain" />
                     </div>
-                )}
-            </div>
 
-            {/* Desktop/Tablet Table (Hidden on mobile) */}
-            <div className="hidden md:block relative overflow-hidden bg-bg-surface rounded-2xl border border-border-base/60 shadow-[0_4px_25px_rgba(0,0,0,0.01)]">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-xs text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-border-base bg-primary/5 text-text-base uppercase text-[10px] tracking-wider font-extrabold">
-                                <th className="px-5 py-4 w-14 text-center hidden lg:table-cell">S.No</th>
-                                <th className="px-5 py-4 w-16">Image</th>
-                                <th className="px-5 py-4">Title</th>
-                                <th className="px-5 py-4 w-24">Price</th>
-                                <th className="px-5 py-4 w-28 text-center">Stock</th>
-                                <th className="px-5 py-4 w-28">Category</th>
-                                <th className="px-5 py-4 w-28 text-center">Status</th>
-                                <th className="px-5 py-4 w-32 hidden xl:table-cell">Date Added</th>
-                                <th className="px-5 py-4 w-24 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border-base/40 text-text-base font-semibold">
-                            {paginatedProducts.map((item, index) => {
-                                const { title, price, imageUrl, category, date, isActive, hasVariants, variants, inStock, stock } = item;
-                                const isItemActive = isActive !== false;
-                                const stockCount = hasVariants && Array.isArray(variants) && variants.length > 0
-                                    ? variants.reduce((acc, v) => acc + Number(v.inStock || v.quantity || 0), 0)
-                                    : Number(inStock ?? stock ?? 0);
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                            <h3 className="font-bold text-sm sm:text-base text-text-base line-clamp-2" title={title}>
+                                {title}
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => toggleActiveStatus && toggleActiveStatus(item)}
+                                className="shrink-0 cursor-pointer"
+                            >
+                                <StatusBadge status={isItemActive ? 'LIVE' : 'DRAFT'} size="sm" />
+                            </button>
+                        </div>
 
-                                return (
-                                    <tr key={index} className="hover:bg-bg-base/30 transition-colors duration-150">
-                                        <td className="px-5 py-3.5 text-text-muted font-bold text-center hidden lg:table-cell">
-                                            {startIndex + index + 1}.
-                                        </td>
-                                        <td className="px-5 py-3.5">
-                                            <div className="w-10 h-10 rounded-xl overflow-hidden border border-border-base bg-bg-base flex items-center justify-center p-0.5 shadow-inner">
-                                                <img className="w-full h-full object-contain rounded-lg" src={imageUrl} alt={title} />
-                                            </div>
-                                        </td>
-                                        <td className="px-5 py-3.5 font-extrabold text-text-base max-w-[200px] truncate" title={title}>{title}</td>
-                                        <td className="px-5 py-3.5 font-extrabold text-text-base">₹{Number(price).toLocaleString('en-IN')}</td>
-                                        <td className="px-5 py-3.5 text-center">
-                                            {renderStockBadge(stockCount)}
-                                        </td>
-                                        <td className="px-5 py-3.5">
-                                            <span className="inline-flex px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-[10px]">
-                                                {category}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-3.5 text-center">
-                                            <button
-                                                type="button"
-                                                onClick={() => toggleActiveStatus && toggleActiveStatus(item)}
-                                                className={`px-3 py-1 rounded-full text-[10px] font-black transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 mx-auto ${
-                                                    isItemActive
-                                                        ? "bg--100 text-emerald-800  hover:bg-emerald-200 "
-                                                        : " text-slate-700 dark:text-slate-400"
-                                                }`}
-                                                title={isItemActive ? "Click to set Draft mode" : "Click to set Live (Published)"}
-                                            >
-                                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isItemActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
-                                                <span>{isItemActive ? "Live" : "Draft"}</span>
-                                            </button>
-                                        </td>
-                                        <td className="px-5 py-3.5 text-text-muted hidden xl:table-cell">{formatDate(date)}</td>
-                                        <td className="px-5 py-3.5 text-center">
-                                            <div className="flex items-center justify-center gap-1.5">
-                                                <button
-                                                    onClick={() => onEditClick(item)}
-                                                    className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-all cursor-pointer"
-                                                    title="Edit Product"
-                                                >
-                                                    <FaEdit size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteClick(item)}
-                                                    className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                                                    title="Delete Product"
-                                                >
-                                                    <FaTrash size={12} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            {product.length === 0 && (
-                                <tr>
-                                    <td colSpan="9" className="px-5 py-8 text-center text-text-muted">
-                                        No products available.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-full text-primary border border-primary/30 text-[10px] font-semibold whitespace-nowrap">
+                                {category}
+                            </span>
+                            {renderStockBadge(stockCount)}
+                            <span className="text-base font-extrabold text-text-base ml-auto">
+                                ₹{Number(price).toLocaleString("en-IN")}
+                            </span>
+                        </div>
+
+                        <p className="mt-2 text-xs text-text-muted">
+                            Added • {formatDate(date)}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="my-4 border-t border-border-base/60" />
+
+                <div className="grid grid-cols-2 gap-3">
+                    <button
+                        onClick={() => onEditClick(item)}
+                        className="h-11 rounded-xl bg-primary/10 text-primary font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/20 transition cursor-pointer"
+                    >
+                        <FaEdit size={14} /> Edit
+                    </button>
+                    <button
+                        onClick={() => handleDeleteClick(item)}
+                        className="h-11 rounded-xl text-rose-500 font-semibold text-sm flex items-center justify-center cursor-pointer gap-2 hover:bg-rose-100 transition"
+                    >
+                        <FaTrash size={14} /> Delete
+                    </button>
                 </div>
             </div>
+        );
+    };
+
+    return (
+        <div className="mb-12 space-y-4">
+            {/* Reusable Data Table */}
+            <DataTable
+                columns={columns}
+                data={paginatedProducts}
+                emptyMessage="No products available."
+                mobileCardRender={mobileCardRender}
+            />
 
             {/* Universal Pagination */}
             <Pagination

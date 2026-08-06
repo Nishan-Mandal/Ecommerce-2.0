@@ -1,67 +1,102 @@
-import React from "react";
-import { FaFilePdf, FaExternalLinkAlt, FaDownload } from "react-icons/fa";
+import React, { useState } from "react";
 
 /**
  * LegalPdfViewer
- * Renders uploaded PDF files in a clean, responsive viewer.
- * Includes direct open & download actions for universal accessibility.
+ * Clean document viewing layout.
+ * Pure white background, no outer borders, no shadows, no extra padding, and no download buttons.
  */
-export default function LegalPdfViewer({ pdfUrl, title = "Legal Document" }) {
-  if (!pdfUrl) {
+export default function LegalPdfViewer({ pdfUrl, title = "Document", lastUpdated }) {
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [hasError, setHasError] = useState(false);
+
+    // If no PDF URL is available or load failed
+    if (!pdfUrl || hasError) {
+        return (
+            <div className="w-full bg-white py-8 px-4 flex justify-center items-center font-sans">
+                <div className="w-full max-w-[920px] bg-white text-center space-y-3 py-12">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center mx-auto">
+                        <span className="material-symbols-outlined text-2xl">description</span>
+                    </div>
+                    <div className="space-y-1">
+                        <h3 className="text-base font-semibold text-text-base">Document unavailable</h3>
+                        <p className="text-xs text-text-muted max-w-sm mx-auto">
+                            The document could not be loaded or is currently unavailable.
+                        </p>
+                    </div>
+                    <div className="pt-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setHasError(false);
+                                setIsLoaded(false);
+                            }}
+                            className="h-9 px-4 rounded-lg border border-border-base bg-white hover:bg-gray-50 text-xs font-semibold text-text-base transition cursor-pointer"
+                        >
+                            Try again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-text-muted p-8 text-center bg-bg-surface rounded-2xl border border-border-base/60 my-6">
-        <FaFilePdf size={48} className="text-primary/40 mb-3" />
-        <h2 className="text-xl font-bold text-text-base mb-1">{title}</h2>
-        <p className="text-xs text-text-muted max-w-md">
-          This document has not been uploaded yet. Please check back soon or visit the admin configuration page.
-        </p>
-      </div>
+        <div className="w-full bg-white min-h-screen py-6 sm:py-8 px-4 sm:px-6 flex justify-center items-start font-sans text-text-base">
+            {/* Centered Document Area */}
+            <div className="w-full max-w-[920px] bg-white space-y-6">
+                
+                {/* Minimal Header */}
+                <div className="pb-4 border-b border-border-base">
+                    <h1 className="text-xl sm:text-2xl font-bold text-text-base tracking-tight">{title}</h1>
+                    {lastUpdated && (
+                        <p className="text-xs text-text-muted mt-1 font-medium">
+                            Last updated: {lastUpdated}
+                        </p>
+                    )}
+                </div>
+
+                {/* PDF Viewing Area */}
+                <div className="relative w-full bg-white min-h-[700px] overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    {/* Document Skeleton Loader (No Spinner) */}
+                    {!isLoaded && (
+                        <div className="absolute inset-0 bg-white space-y-6 animate-pulse flex flex-col justify-start z-10">
+                            <div className="h-6 bg-gray-100 rounded-md w-1/3 mb-2" />
+                            <div className="h-3 bg-gray-100 rounded-md w-1/4 mb-6" />
+
+                            <div className="space-y-3">
+                                <div className="h-4 bg-gray-100 rounded-md w-full" />
+                                <div className="h-4 bg-gray-100 rounded-md w-11/12" />
+                                <div className="h-4 bg-gray-100 rounded-md w-4/5" />
+                            </div>
+
+                            <div className="space-y-3 pt-4">
+                                <div className="h-5 bg-gray-100 rounded-md w-2/5 mb-3" />
+                                <div className="h-4 bg-gray-100 rounded-md w-full" />
+                                <div className="h-4 bg-gray-100 rounded-md w-full" />
+                                <div className="h-4 bg-gray-100 rounded-md w-3/4" />
+                            </div>
+
+                            <div className="space-y-3 pt-4">
+                                <div className="h-5 bg-gray-100 rounded-md w-1/3 mb-3" />
+                                <div className="h-4 bg-gray-100 rounded-md w-full" />
+                                <div className="h-4 bg-gray-100 rounded-md w-5/6" />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Clean Embedded PDF Viewport */}
+                    <iframe
+                        src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                        title={title}
+                        scrolling="no"
+                        onLoad={() => setIsLoaded(true)}
+                        onError={() => setHasError(true)}
+                        className={`w-full h-[82vh] min-h-[700px] border-0 bg-white transition-opacity duration-500 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
+                            isLoaded ? "opacity-100" : "opacity-0"
+                        }`}
+                    />
+                </div>
+            </div>
+        </div>
     );
-  }
-
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10 space-y-4">
-      {/* Document Header & Toolbar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-bg-surface border border-border-base/60 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 flex items-center justify-center shrink-0">
-            <FaFilePdf size={20} />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-text-base leading-tight">{title}</h1>
-            <p className="text-[11px] text-text-muted mt-0.5">Official PDF Policy Document</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
-          <a
-            href={pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 sm:flex-initial h-9 px-3.5 rounded-xl border border-border-base bg-white dark:bg-bg-base hover:bg-gray-50 text-text-base text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-          >
-            <FaExternalLinkAlt size={11} />
-            <span>Open PDF</span>
-          </a>
-          <a
-            href={pdfUrl}
-            download={`${title.toLowerCase().replace(/\s+/g, "_")}.pdf`}
-            className="flex-1 sm:flex-initial h-9 px-3.5 rounded-xl bg-primary text-compli hover:bg-primary-hover text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-          >
-            <FaDownload size={11} />
-            <span>Download</span>
-          </a>
-        </div>
-      </div>
-
-      {/* PDF Responsive Embedded Viewport */}
-      <div className="relative w-full rounded-2xl overflow-hidden border border-border-base/80 bg-white shadow-sm min-h-[75vh]">
-        <iframe
-          src={`${pdfUrl}#toolbar=1&navpanes=0`}
-          title={title}
-          className="w-full h-[78vh] border-0"
-        />
-      </div>
-    </div>
-  );
 }

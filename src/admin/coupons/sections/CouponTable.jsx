@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import TableSkeleton from "../../../components/loader/SkeletonLoader/TableSkeleton";
 import Pagination from "../../../components/common/Pagination";
+import StatusBadge from '../../Components/common/StatusBadge';
+import DataTable from '../../Components/common/DataTable';
 
 function CouponTable({
     coupons = [],
@@ -17,30 +19,10 @@ function CouponTable({
         setCurrentPage(1);
     }, [coupons.length]);
 
-    const getStatus = (coupon) => {
-        if (!coupon.isActive)
-            return {
-                label: "Inactive",
-                className: "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400",
-                isActive: false
-            };
-
-        if (
-            coupon.validUntil &&
-            new Date(coupon.validUntil) < new Date()
-        ) {
-            return {
-                label: "Expired",
-                className: "bg-rose-50 text-rose-700 border-rose-200",
-                isActive: false
-            };
-        }
-
-        return {
-            label: "Active",
-            className: "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300",
-            isActive: true
-        };
+    const getCouponStatusKey = (coupon) => {
+        if (coupon.isActive === false) return "INACTIVE";
+        if (coupon.validUntil && new Date(coupon.validUntil) < new Date()) return "EXPIRED";
+        return "ACTIVE";
     };
 
     if (loading) {
@@ -50,209 +32,170 @@ function CouponTable({
     const startIndex = (currentPage - 1) * pageSize;
     const paginatedCoupons = coupons.slice(startIndex, startIndex + pageSize);
 
-    return (
-        <div className="w-full space-y-4">
-            {/* Mobile Cards (Visible only on mobile) */}
-            <div className="block md:hidden space-y-4">
-                {paginatedCoupons.map((coupon) => {
-                    const status = getStatus(coupon);
-                    const isCouponActive = coupon.isActive !== false;
-                    return (
-                        <div key={coupon.couponId || coupon.id} className="bg-bg-surface p-6 rounded-2xl border border-border-base shadow-xs space-y-4">
-                            <div className="flex justify-between items-center gap-2">
-                                <span className="font-bold text-sm text-text-base bg-emerald-50/50 px-2.5 py-1 rounded-lg border border-emerald-100/50 text-[#17700d]">
-                                    {coupon.code}
-                                </span>
-
-                                <button
-                                    type="button"
-                                    onClick={() => onToggleStatus && onToggleStatus(coupon)}
-                                    className={`px-3 py-1 rounded-full text-[10px] font-black transition-all cursor-pointer border inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 active:scale-95 ${
-                                        isCouponActive
-                                            ? "bg-emerald-100 text-emerald-800 border-emerald-300  "
-                                            : "bg-red-200 text-red-700 border-red-300 "
-                                    }`}
-                                    title={isCouponActive ? "Click to set Inactive" : "Click to set Active"}
-                                >
-                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCouponActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
-                                    <span>{status.label}</span>
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 bg-gray-50/50 p-4 rounded-xl text-xs">
-                                <div>
-                                    <span className="block text-[10px] font-bold text-text-muted uppercase tracking-wider">Discount</span>
-                                    <span className="font-bold text-text-base text-sm mt-0.5 block">
-                                        {coupon.type === "PERCENTAGE" ? `${coupon.discountValue}% OFF` : `₹${coupon.discountValue} OFF`}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="block text-[10px] font-bold text-text-muted uppercase tracking-wider">Min Order</span>
-                                    <span className="font-bold text-text-base text-sm mt-0.5 block">₹{coupon.minimumOrderAmount}</span>
-                                </div>
-                                <div className="mt-2">
-                                    <span className="block text-[10px] font-bold text-text-muted uppercase tracking-wider">Usage</span>
-                                    <span className="font-bold text-text-base mt-0.5 block">{coupon.currentUsage} / {coupon.usageLimit}</span>
-                                </div>
-                                <div className="mt-2">
-                                    <span className="block text-[10px] font-bold text-text-muted uppercase tracking-wider">Applies To</span>
-                                    <span className="font-bold text-text-base mt-0.5 block truncate">{coupon.appliesTo}</span>
-                                </div>
-                            </div>
-
-                            <div className="text-xs text-text-muted flex justify-between gap-2 pl-1">
-                                <div>From: <span className="font-semibold text-text-base">{coupon.validFrom ? new Date(coupon.validFrom).toLocaleDateString() : "--"}</span></div>
-                                <div>Until: <span className="font-semibold text-text-base">{coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString() : "--"}</span></div>
-                            </div>
-
-                            <div className="border-t border-border-base my-2"></div>
-
-                            <div className="flex items-center gap-3">
-                                <button 
-                                    onClick={() => onEdit(coupon)} 
-                                    className="flex-1 h-11 flex items-center justify-center gap-2 text-[#17700d] bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 rounded-xl text-sm font-bold transition duration-150 cursor-pointer"
-                                >
-                                    <FaEdit size={14} />
-                                    <span>Edit</span>
-                                </button>
-                                <button 
-                                    onClick={() => onDelete(coupon)} 
-                                    className="flex-1 h-11 flex items-center justify-center gap-2 text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 rounded-xl text-sm font-bold transition duration-150 cursor-pointer"
-                                >
-                                    <FaTrash size={12} />
-                                    <span>Delete</span>
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
-                {coupons.length === 0 && (
-                    <div className="bg-white p-8 text-center text-text-muted rounded-2xl border border-border-base shadow-xs">
-                        No Coupons Found
+    const columns = [
+        {
+            key: "coupon",
+            header: "Coupon Code",
+            render: (coupon) => (
+                <div>
+                    <p className="font-bold text-text-base">{coupon.code}</p>
+                    <p className="text-xs text-text-muted mt-0.5">Applies to: {coupon.appliesTo}</p>
+                </div>
+            ),
+        },
+        {
+            key: "discount",
+            header: "Discount",
+            cellClassName: "font-bold",
+            render: (coupon) =>
+                coupon.type === "PERCENTAGE"
+                    ? `${coupon.discountValue}% OFF`
+                    : `₹${coupon.discountValue} OFF`,
+        },
+        {
+            key: "minOrder",
+            header: "Min Order",
+            className: "hidden lg:table-cell",
+            cellClassName: "text-text-muted hidden lg:table-cell",
+            render: (coupon) => `₹${coupon.minimumOrderAmount}`,
+        },
+        {
+            key: "usage",
+            header: "Usage",
+            cellClassName: "text-text-muted font-medium",
+            render: (coupon) => `${coupon.currentUsage} / ${coupon.usageLimit}`,
+        },
+        {
+            key: "validity",
+            header: "Validity",
+            render: (coupon) => (
+                <div className="text-xs space-y-0.5">
+                    <div>
+                        From: <span className="font-semibold text-text-base">{coupon.validFrom ? new Date(coupon.validFrom).toLocaleDateString() : "--"}</span>
                     </div>
-                )}
-            </div>
+                    <div className="text-text-muted">
+                        Until: <span className="font-semibold text-text-base">{coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString() : "--"}</span>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: "status",
+            header: "Status",
+            render: (coupon) => (
+                <button
+                    type="button"
+                    onClick={() => onToggleStatus && onToggleStatus(coupon)}
+                    className="cursor-pointer inline-flex items-center"
+                    title={coupon.isActive !== false ? "Click to set Inactive" : "Click to set Active"}
+                >
+                    <StatusBadge status={getCouponStatusKey(coupon)} size="sm" />
+                </button>
+            ),
+        },
+        {
+            key: "actions",
+            header: "Actions",
+            align: "center",
+            className: "text-center",
+            cellClassName: "text-center",
+            render: (coupon) => (
+                <div className="flex items-center justify-center gap-1">
+                    <button
+                        onClick={() => onEdit(coupon)}
+                        className="w-8 h-8 flex items-center justify-center text-primary hover:bg-primary/10 rounded-xl transition cursor-pointer"
+                        title="Edit Coupon"
+                    >
+                        <FaEdit size={15} />
+                    </button>
+                    <button
+                        onClick={() => onDelete(coupon)}
+                        className="w-8 h-8 flex items-center justify-center text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer"
+                        title="Delete Coupon"
+                        type="button"
+                    >
+                        <FaTrash size={13} />
+                    </button>
+                </div>
+            ),
+        },
+    ];
 
-            {/* Desktop/Tablet Table (Hidden on mobile) */}
-            <div className="hidden md:block bg-white border border-border-base rounded-2xl shadow-xs overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-border-base bg-gray-50/50 text-text-muted text-xs font-bold uppercase tracking-wider">
-                                <th className="px-6 py-4">Coupon</th>
-                                <th className="px-6 py-4">Discount</th>
-                                <th className="px-6 py-4 hidden lg:table-cell">Min Order</th>
-                                <th className="px-6 py-4">Usage</th>
-                                <th className="px-6 py-4">Validity</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-center">Actions</th>
-                            </tr>
-                        </thead>
+    const mobileCardRender = (coupon) => {
+        return (
+            <div key={coupon.couponId || coupon.id} className="bg-bg-surface p-5 rounded-2xl border border-border-base shadow-xs space-y-4">
+                <div className="flex justify-between items-center gap-2">
+                    <span className="font-bold text-sm text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
+                        {coupon.code}
+                    </span>
 
-                        <tbody className="divide-y divide-border-base text-sm text-text-base">
-                            {coupons.length === 0 && (
-                                <tr>
-                                    <td
-                                        colSpan={7}
-                                        className="px-6 py-12 text-center text-text-muted"
-                                    >
-                                        No Coupons Found
-                                    </td>
-                                </tr>
-                            )}
+                    <button
+                        type="button"
+                        onClick={() => onToggleStatus && onToggleStatus(coupon)}
+                        className="cursor-pointer inline-flex items-center"
+                        title={coupon.isActive !== false ? "Click to set Inactive" : "Click to set Active"}
+                    >
+                        <StatusBadge status={getCouponStatusKey(coupon)} size="sm" />
+                    </button>
+                </div>
 
-                            {paginatedCoupons.map((coupon) => {
-                                const status = getStatus(coupon);
-                                return (
-                                    <tr
-                                        key={coupon.couponId || coupon.id}
-                                        className="hover:bg-gray-50/20 transition-colors"
-                                    >
-                                        {/* Coupon */}
-                                        <td className="px-6 py-4">
-                                            <div>
-                                                <p className="font-bold text-text-base">
-                                                    {coupon.code}
-                                                </p>
-                                                <p className="text-xs text-text-muted mt-1">
-                                                    Applies to: {coupon.appliesTo}
-                                                </p>
-                                            </div>
-                                        </td>
+                <div className="grid grid-cols-2 gap-3 bg-bg-base/60 p-3.5 rounded-xl text-xs">
+                    <div>
+                        <span className="block text-[10px] font-bold text-text-muted uppercase tracking-wider">Discount</span>
+                        <span className="font-bold text-text-base text-sm mt-0.5 block">
+                            {coupon.type === "PERCENTAGE" ? `${coupon.discountValue}% OFF` : `₹${coupon.discountValue} OFF`}
+                        </span>
+                    </div>
+                    <div>
+                        <span className="block text-[10px] font-bold text-text-muted uppercase tracking-wider">Min Order</span>
+                        <span className="font-bold text-text-base text-sm mt-0.5 block">₹{coupon.minimumOrderAmount}</span>
+                    </div>
+                    <div className="mt-2">
+                        <span className="block text-[10px] font-bold text-text-muted uppercase tracking-wider">Usage</span>
+                        <span className="font-bold text-text-base mt-0.5 block">{coupon.currentUsage} / {coupon.usageLimit}</span>
+                    </div>
+                    <div className="mt-2">
+                        <span className="block text-[10px] font-bold text-text-muted uppercase tracking-wider">Applies To</span>
+                        <span className="font-bold text-text-base mt-0.5 block truncate">{coupon.appliesTo}</span>
+                    </div>
+                </div>
 
-                                        {/* Discount */}
-                                        <td className="px-6 py-4 font-bold">
-                                            {coupon.type === "PERCENTAGE"
-                                                ? `${coupon.discountValue}% OFF`
-                                                : `₹${coupon.discountValue} OFF`}
-                                        </td>
+                <div className="text-xs text-text-muted flex justify-between gap-2 pl-1">
+                    <div>From: <span className="font-semibold text-text-base">{coupon.validFrom ? new Date(coupon.validFrom).toLocaleDateString() : "--"}</span></div>
+                    <div>Until: <span className="font-semibold text-text-base">{coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString() : "--"}</span></div>
+                </div>
 
-                                        {/* Minimum */}
-                                        <td className="px-6 py-4 text-text-muted hidden lg:table-cell">
-                                            ₹{coupon.minimumOrderAmount}
-                                        </td>
+                <div className="border-t border-border-base my-2"></div>
 
-                                        {/* Usage */}
-                                        <td className="px-6 py-4 text-text-muted font-medium">
-                                            {coupon.currentUsage} / {coupon.usageLimit}
-                                        </td>
-
-                                        {/* Validity */}
-                                        <td className="px-6 py-4">
-                                            <div className="text-xs space-y-0.5">
-                                                <div>
-                                                    From: <span className="font-semibold text-text-base">{coupon.validFrom ? new Date(coupon.validFrom).toLocaleDateString() : "--"}</span>
-                                                </div>
-                                                <div className="text-text-muted">
-                                                    Until: <span className="font-semibold text-text-base">{coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString() : "--"}</span>
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        {/* Status */}
-                                        <td className="px-6 py-4">
-                                            <button
-                                                type="button"
-                                                onClick={() => onToggleStatus && onToggleStatus(coupon)}
-                                                className={`px-3 py-1 rounded-full text-[10px] font-black transition-all cursor-pointer border inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 active:scale-95 ${
-                                                    coupon.isActive !== false
-                                                        ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200"
-                                                        : "bg-red-200 text-red-700 border-red-300 hover:bg-red-300"
-                                                }`}
-                                                title={coupon.isActive !== false ? "Click to set Inactive" : "Click to set Active"}
-                                            >
-                                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${coupon.isActive !== false ? "bg-emerald-500 animate-pulse" : "bg-red-400"}`} />
-                                                <span>{status.label}</span>
-                                            </button>
-                                        </td>
-
-                                        {/* Actions */}
-                                        <td className="px-6 py-4 text-center">
-                                            <div className="flex items-center justify-center gap-1">
-                                                <button
-                                                    onClick={() => onEdit(coupon)}
-                                                    className="w-9 h-9 flex items-center justify-center text-[#17700d] hover:bg-emerald-50 rounded-xl transition duration-150 cursor-pointer"
-                                                    title="Edit Coupon"
-                                                >
-                                                    <FaEdit size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => onDelete(coupon)}
-                                                    className="w-9 h-9 flex items-center justify-center text-rose-600 hover:bg-rose-50 rounded-xl transition duration-150 cursor-pointer"
-                                                    title="Delete Coupon"
-                                                    type="button"
-                                                >
-                                                    <FaTrash size={14} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => onEdit(coupon)} 
+                        className="flex-1 h-10 flex items-center justify-center gap-2 text-primary bg-primary/10 hover:bg-primary/20 rounded-xl text-xs font-bold transition cursor-pointer"
+                    >
+                        <FaEdit size={14} />
+                        <span>Edit</span>
+                    </button>
+                    <button 
+                        onClick={() => onDelete(coupon)} 
+                        className="flex-1 h-10 flex items-center justify-center gap-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl text-xs font-bold transition cursor-pointer"
+                    >
+                        <FaTrash size={12} />
+                        <span>Delete</span>
+                    </button>
                 </div>
             </div>
+        );
+    };
+
+    return (
+        <div className="w-full space-y-4">
+            {/* Reusable Data Table */}
+            <DataTable
+                columns={columns}
+                data={paginatedCoupons}
+                emptyMessage="No Coupons Found"
+                mobileCardRender={mobileCardRender}
+            />
 
             {/* Universal Pagination */}
             <Pagination

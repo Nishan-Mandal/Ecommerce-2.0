@@ -4,8 +4,10 @@ import FilterBar from '../Components/FilterBar';
 import TableSkeleton from '../../components/loader/SkeletonLoader/TableSkeleton';
 import Pagination from '../../components/common/Pagination';
 import WarningModal from '../../components/modal/WarningModal';
+import StatusBadge from '../Components/common/StatusBadge';
+import DataTable from '../Components/common/DataTable';
 import { 
-  FaUserPlus, FaShieldAlt, FaUser, FaTimes, FaSpinner, 
+  FaUserPlus, FaShieldAlt, FaTimes, FaSpinner, 
   FaEye, FaEyeSlash, FaTrash 
 } from 'react-icons/fa';
 import { userService } from '../../services/user/userService';
@@ -15,7 +17,7 @@ import { toast } from 'react-toastify';
 /**
  * UserDetailTable Component
  * Displays client and administrator accounts inside the admin panel.
- * Includes password-enabled admin creation, static role badges, account deletion, search, skeleton loading, and pagination.
+ * Uses shared DataTable and StatusBadge components for unified UI consistency.
  */
 function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDate }) {
     const [search, setSearch] = useState('');
@@ -80,7 +82,6 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
                 role: adminForm.role,
             });
 
-            // Log activity audit entry
             await activityService.logActivity({
                 type: adminForm.role === 'ADMIN' ? 'ADMIN_ADDED' : 'USER_ROLE_UPDATED',
                 title: `New ${adminForm.role} Created: ${adminForm.name.trim()}`,
@@ -114,7 +115,6 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
         try {
             await userService.deleteUser(targetUid);
 
-            // Log activity audit entry
             await activityService.logActivity({
                 type: 'ACCOUNT_DELETED',
                 title: `Account Removed: ${selectedUserToDelete.name || selectedUserToDelete.email}`,
@@ -164,6 +164,116 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
     const startIndex = (currentPage - 1) * pageSize;
     const paginatedUsers = filteredUsers.slice(startIndex, startIndex + pageSize);
 
+    const columns = [
+        {
+            key: 'sno',
+            header: 'S.No',
+            align: 'center',
+            className: 'w-16 hidden lg:table-cell',
+            cellClassName: 'text-text-muted text-center hidden lg:table-cell',
+            render: (item, idx) => startIndex + idx + 1,
+        },
+        {
+            key: 'name',
+            header: 'Account Name',
+            cellClassName: 'font-bold',
+            render: (item) => item.name || 'Customer',
+        },
+        {
+            key: 'email',
+            header: 'Email Address',
+            render: (item) => (
+                <div>
+                    <div>{item.email}</div>
+                    <div className="text-xs text-text-muted mt-1 xl:hidden">Registered: {formatDate(item.time)}</div>
+                </div>
+            ),
+        },
+        {
+            key: 'role',
+            header: 'Role',
+            align: 'center',
+            className: 'w-32 text-center',
+            cellClassName: 'text-center',
+            render: (item) => <StatusBadge status={item.role || 'USER'} size="sm" />,
+        },
+        {
+            key: 'uid',
+            header: 'User UID',
+            className: 'w-60',
+            cellClassName: 'font-mono text-text-muted select-all',
+            render: (item) => (
+                <span className="bg-gray-50 dark:bg-bg-base px-2.5 py-1 rounded-xl border border-border-base text-xs font-semibold">
+                    {item.uid || 'N/A'}
+                </span>
+            ),
+        },
+        {
+            key: 'time',
+            header: 'Registration Date',
+            className: 'w-44 hidden xl:table-cell',
+            cellClassName: 'text-text-muted hidden xl:table-cell',
+            render: (item) => formatDate(item.time),
+        },
+        {
+            key: 'actions',
+            header: 'Actions',
+            align: 'center',
+            className: 'w-24 text-center',
+            cellClassName: 'text-center',
+            render: (item) => (
+                <button
+                    type="button"
+                    onClick={() => handleDeleteClick(item)}
+                    className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer"
+                    title={(item.role || 'USER').toUpperCase() === 'ADMIN' ? "Remove Admin Profile" : "Delete Account"}
+                >
+                    <FaTrash size={13} />
+                </button>
+            ),
+        },
+    ];
+
+    const mobileCardRender = (item, index) => {
+        const { name, uid, email, time, role } = item;
+        const isRoleAdmin = (role || 'USER').toUpperCase() === 'ADMIN';
+
+        return (
+            <div key={index} className="bg-bg-surface p-5 rounded-2xl border border-border-base shadow-xs space-y-4">
+                <div className="flex justify-between items-center text-xs">
+                    <span className="text-text-muted font-bold">User #{startIndex + index + 1}</span>
+                    <div className="flex items-center gap-2">
+                        <StatusBadge status={role || 'USER'} size="sm" />
+                        <button
+                            type="button"
+                            onClick={() => handleDeleteClick(item)}
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition cursor-pointer"
+                            title={isRoleAdmin ? "Remove Admin Profile" : "Delete User"}
+                        >
+                            <FaTrash size={12} />
+                        </button>
+                    </div>
+                </div>
+                
+                <div className="space-y-1.5">
+                    <h3 className="font-bold text-base text-text-base">{name || "Customer Account"}</h3>
+                    <p className="text-sm text-text-muted">{email}</p>
+                </div>
+                
+                <div className="flex flex-col gap-1.5 text-xs text-text-muted pl-1">
+                    <span className="font-bold text-text-base uppercase tracking-wider text-[10px]">User UID:</span>
+                    <span className="bg-bg-base px-3 py-1.5 rounded-xl border border-border-base font-mono select-all w-fit break-all text-xs font-semibold">
+                        {uid || "N/A"}
+                    </span>
+                </div>
+
+                <div className="text-[11px] text-text-muted border-t border-border-base pt-2 flex justify-between items-center">
+                    <span>Registered: <strong className="font-semibold text-text-base">{formatDate(time)}</strong></span>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-6">
             <Header 
@@ -174,7 +284,7 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
                 clickhandler={() => setIsAddModalOpen(true)}
             />
 
-            {/* Reusable Filter Bar */}
+            {/* Filter Bar */}
             <FilterBar
                 search={search}
                 setSearch={setSearch}
@@ -182,135 +292,13 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
                 filters={filterConfig}
             />
 
-            {/* Mobile Cards (Visible only on mobile) */}
-            <div className="block md:hidden space-y-4">
-                {paginatedUsers.map((item, index) => {
-                    const { name, uid, email, time, role } = item;
-                    const isRoleAdmin = (role || 'USER').toUpperCase() === 'ADMIN';
-
-                    return (
-                        <div key={index} className="bg-white dark:bg-bg-surface p-6 rounded-2xl border border-border-base shadow-xs space-y-4">
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-text-muted font-bold">User #{startIndex + index + 1}</span>
-                                
-                                <div className="flex items-center gap-2">
-                                    <span
-                                        className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border inline-flex items-center gap-1.5 whitespace-nowrap ${
-                                            isRoleAdmin
-                                                ? "bg-purple-100 text-purple-800 border-purple-300 "
-                                                : "bg-blue-50 text-blue-700 border-blue-200 "
-                                        }`}
-                                    >
-                                        {isRoleAdmin ? <FaShieldAlt size={10} /> : <FaUser size={10} />}
-                                        <span>{isRoleAdmin ? "ADMIN" : "USER"}</span>
-                                    </span>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDeleteClick(item)}
-                                        className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition cursor-pointer"
-                                        title={isRoleAdmin ? "Remove Admin Profile" : "Delete User"}
-                                    >
-                                        <FaTrash size={12} />
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div className="space-y-1.5">
-                                <h3 className="font-bold text-base text-text-base">{name || "Customer Account"}</h3>
-                                <p className="text-sm text-text-muted">{email}</p>
-                            </div>
-                            
-                            <div className="flex flex-col gap-1.5 text-xs text-text-muted pl-1">
-                                <span className="font-bold text-text-base uppercase tracking-wider text-[10px]">User UID:</span>
-                                <span className="bg-gray-50 dark:bg-bg-base px-3 py-1.5 rounded-xl border border-border-base font-mono select-all w-fit break-all text-xs font-semibold">
-                                    {uid || "N/A"}
-                                </span>
-                            </div>
-
-                            <div className="text-[11px] text-text-muted border-t border-border-base pt-2 flex justify-between items-center">
-                                <span>Registered: <strong className="font-semibold text-text-base">{formatDate(time)}</strong></span>
-                            </div>
-                        </div>
-                    );
-                })}
-                {filteredUsers.length === 0 && (
-                    <div className="bg-white dark:bg-bg-surface p-8 text-center text-text-muted rounded-2xl border border-border-base shadow-xs">
-                        No registered users found.
-                    </div>
-                )}
-            </div>
-
-            {/* Desktop Table (Hidden on mobile) */}
-            <div className="hidden md:block bg-white dark:bg-bg-surface rounded-2xl border border-border-base shadow-xs overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-border-base bg-gray-50/50 dark:bg-bg-base/50 text-text-muted text-xs font-bold uppercase tracking-wider">
-                                <th className="px-6 py-4 w-16 text-center hidden lg:table-cell">S.No</th>
-                                <th className="px-6 py-4">Account Name</th>
-                                <th className="px-6 py-4">Email Address</th>
-                                <th className="px-6 py-4 w-32 text-center">Role</th>
-                                <th className="px-6 py-4 w-60">User UID</th>
-                                <th className="px-6 py-4 w-44 hidden xl:table-cell">Registration Date</th>
-                                <th className="px-6 py-4 w-24 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border-base text-sm text-text-base">
-                            {paginatedUsers.map((item, index) => {
-                                const { name, uid, email, time, role } = item;
-                                const isRoleAdmin = (role || 'USER').toUpperCase() === 'ADMIN';
-
-                                return (
-                                    <tr key={index} className="hover:bg-gray-50/20 dark:hover:bg-bg-base/20 transition-colors">
-                                        <td className="px-6 py-4 text-text-muted text-center hidden lg:table-cell">{startIndex + index + 1}</td>
-                                        <td className="px-6 py-4 font-bold">{name || "Customer"}</td>
-                                        <td className="px-6 py-4">
-                                            <div>{email}</div>
-                                            <div className="text-xs text-text-muted mt-1 xl:hidden">Registered: {formatDate(time)}</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span
-                                                className={`px-3 py-1 rounded-full text-[10px] font-black border inline-flex items-center gap-1.5 whitespace-nowrap ${
-                                                    isRoleAdmin
-                                                        ? "bg-purple-100 text-purple-800 border-purple-300 "
-                                                        : "bg-blue-50 text-blue-700 border-blue-200"
-                                                }`}
-                                            >
-                                                {isRoleAdmin ? <FaShieldAlt size={10} /> : <FaUser size={10} />}
-                                                <span>{isRoleAdmin ? "ADMIN" : "USER"}</span>
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 font-mono text-text-muted select-all">
-                                            <span className="bg-gray-50 dark:bg-bg-base px-2.5 py-1 rounded-xl border border-border-base text-xs font-semibold">
-                                                {uid || "N/A"}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-text-muted hidden xl:table-cell">{formatDate(time)}</td>
-                                        <td className="px-6 py-4 text-center">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDeleteClick(item)}
-                                                className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer"
-                                                title={isRoleAdmin ? "Remove Admin Profile" : "Delete Account"}
-                                            >
-                                                <FaTrash size={13} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            {filteredUsers.length === 0 && (
-                                <tr>
-                                    <td colSpan="7" className="px-6 py-12 text-center text-text-muted">
-                                        No registered users found.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            {/* Reusable Data Table */}
+            <DataTable
+                columns={columns}
+                data={paginatedUsers}
+                emptyMessage="No registered users found."
+                mobileCardRender={mobileCardRender}
+            />
 
             {/* Universal Pagination */}
             <Pagination

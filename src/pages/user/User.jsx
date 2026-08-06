@@ -209,7 +209,7 @@ function User() {
                                         onClick={() => setActiveTab(item.id)}
                                         className={`w-full flex items-center gap-3 px-4 py-3.5 text-xs transition-all duration-150 group ${
                                             isActive
-                                                ? "bg-primary/10 text-primary font-bold border-l-4 border-primary"
+                                                ? "bg-primary/10 text-primary font-bold "
                                                 : "text-text-base hover:bg-bg-base font-semibold"
                                         } ${idx !== MENU_ITEMS.length - 1 ? "border-b border-border-base/40" : ""}`}
                                     >
@@ -258,8 +258,8 @@ function User() {
 
                         {/* Mobile Metric Row */}
                         <div className="grid grid-cols-2 gap-2">
-                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
-                                <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-600 flex items-center justify-center shrink-0">
+                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50 border border-blue-100">
+                                <div className="w-7 h-7 rounded-lg  text-blue-600 flex items-center justify-center shrink-0">
                                     <FaShoppingBag size={12} />
                                 </div>
                                 <div className="min-w-0">
@@ -267,8 +267,8 @@ function User() {
                                     <p className="text-sm font-black text-text-base">{validOrders.length}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40">
-                                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0">
+                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-100">
+                                <div className="w-7 h-7 rounded-lg  text-emerald-600 flex items-center justify-center shrink-0">
                                     <FaWallet size={12} />
                                 </div>
                                 <div className="min-w-0">

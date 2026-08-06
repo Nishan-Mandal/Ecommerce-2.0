@@ -14,13 +14,17 @@ const Field = ({ label, children }) => (
     </div>
 );
 
-const Input = ({ value, onChange, placeholder, type = "text" }) => (
+const Input = ({ value, onChange, placeholder, type = "text", disabled = false, readOnly = false, className = "" }) => (
     <input
         type={type}
         value={value || ""}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full h-11 rounded-xl border border-border-base bg-white px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all"
+        disabled={disabled}
+        readOnly={readOnly}
+        className={`w-full h-11 rounded-xl border border-border-base bg-white px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all ${
+            disabled || readOnly ? "bg-gray-100/90 text-gray-500 cursor-not-allowed border-gray-200 select-none" : ""
+        } ${className}`}
     />
 );
 
@@ -81,7 +85,7 @@ function LogoUpload({ label, currentUrl, onUpload, hint }) {
                             className="max-h-full max-w-full object-contain p-4"
                         />
                         {localPreview && (
-                            <div className="absolute top-3 right-3 px-2 py-1 rounded-full bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider">
+                            <div className="absolute top-3 right-3 px-2 py-1 rounded-full bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider shadow-xs">
                                 Unsaved
                             </div>
                         )}
@@ -114,10 +118,31 @@ function LogoUpload({ label, currentUrl, onUpload, hint }) {
             )}
 
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-3">
-                <label className="flex-1">
-                    <span className="h-11 rounded-xl border border-border-base bg-white hover:bg-gray-50 text-text-base font-bold text-sm transition-colors flex items-center justify-center cursor-pointer shadow-xs">
-                        {displayUrl ? `Replace ${label}` : `Select ${label}`}
+            <div className="space-y-2.5">
+                {localPreview && !uploading && (
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleUpload}
+                            className="flex-1 h-10 px-3 rounded-xl bg-primary text-compli hover:bg-primary-hover font-bold text-xs transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5 whitespace-nowrap"
+                        >
+                            <span className="material-symbols-outlined text-base">cloud_upload</span>
+                            <span>Upload & Save</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleDiscard}
+                            className="h-10 px-3.5 rounded-xl border border-border-base bg-white hover:bg-gray-50 text-text-muted font-bold text-xs transition-colors cursor-pointer shrink-0"
+                        >
+                            Discard
+                        </button>
+                    </div>
+                )}
+
+                <label className="block">
+                    <span className="w-full h-10 rounded-xl border border-border-base bg-white hover:bg-gray-50 text-text-base font-bold text-xs transition-colors flex items-center justify-center cursor-pointer shadow-xs gap-1.5">
+                        <span className="material-symbols-outlined text-base">photo_camera</span>
+                        <span>{displayUrl ? `Replace ${label}` : `Select ${label}`}</span>
                     </span>
                     <input
                         type="file"
@@ -127,23 +152,6 @@ function LogoUpload({ label, currentUrl, onUpload, hint }) {
                         disabled={uploading}
                     />
                 </label>
-
-                {localPreview && !uploading && (
-                    <div className="flex gap-2 flex-1">
-                        <button
-                            onClick={handleUpload}
-                            className="flex-1 h-11 rounded-xl bg-primary text-compli hover:bg-primary-hover font-bold text-sm transition-colors cursor-pointer shadow-xs"
-                        >
-                            Upload & Save
-                        </button>
-                        <button
-                            onClick={handleDiscard}
-                            className="h-11 px-5 rounded-xl border border-border-base bg-white hover:bg-gray-50 text-text-muted font-bold text-sm transition-colors cursor-pointer"
-                        >
-                            Discard
-                        </button>
-                    </div>
-                )}
             </div>
         </div>
     );
@@ -179,11 +187,13 @@ export default function CompanyTab({ draft, updateDraft }) {
         <div className="max-w-2xl space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Field label="Company Name">
-                    <Input
-                        value={draft.companyName}
-                        onChange={(e) => updateDraft({ companyName: e.target.value })}
-                        placeholder="HN Enterprise"
-                    />
+                    <div>
+                        <Input
+                            value={draft.companyName || "NeedMet Ecommerce"}
+                            readOnly
+                            disabled
+                        />
+                    </div>
                 </Field>
                 <Field label="Company Tagline">
                     <Input

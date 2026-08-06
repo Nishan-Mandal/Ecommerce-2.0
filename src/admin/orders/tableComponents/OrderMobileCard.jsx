@@ -1,10 +1,10 @@
 import React from "react";
 import { FaCopy, FaCheck, FaEye, FaBoxOpen, FaMapMarkerAlt } from "react-icons/fa";
-import { normalizeOrder, getStatusBadge } from "./orderHelpers";
+import { normalizeOrder } from "./orderHelpers";
+import StatusBadge from "../../Components/common/StatusBadge";
 
 function OrderMobileCard({ allorder, index, copiedId, onCopy, onNavigate }) {
   const norm = normalizeOrder(allorder);
-  const statusBadge = getStatusBadge(norm.orderStatus);
 
   return (
     <div
@@ -29,12 +29,7 @@ function OrderMobileCard({ allorder, index, copiedId, onCopy, onNavigate }) {
           </button>
         </div>
 
-        <div
-          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border flex items-center gap-1 ${statusBadge.className}`}
-        >
-          {statusBadge.icon}
-          <span>{statusBadge.label}</span>
-        </div>
+        <StatusBadge status={norm.orderStatus} size="sm" />
       </div>
 
       {/* Customer Info */}

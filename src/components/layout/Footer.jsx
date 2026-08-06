@@ -68,10 +68,23 @@ function Footer() {
                             © {new Date().getFullYear()} {companyName || "HN Enterprise"}. All rights reserved.
                         </p>
 
-                        {fullAddress && (
-                            <div className="flex gap-1.5 items-start justify-center lg:justify-start">
-                                <span className="material-symbols-outlined text-sm text-primary mt-0.5">location_on</span>
-                                <p className="font-medium text-xs text-text-muted max-w-xs leading-relaxed">{fullAddress}</p>
+                        {(fullAddress || address?.mapUrl) && (
+                            <div className="flex gap-1.5 items-start justify-center lg:justify-start pt-1">
+                                <span className="material-symbols-outlined text-sm text-primary mt-0.5 shrink-0">location_on</span>
+                                {address?.mapUrl ? (
+                                    <a
+                                        href={address.mapUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-medium text-xs text-text-muted hover:text-primary hover:underline max-w-xs leading-relaxed transition-colors flex items-center gap-1 group"
+                                        title="Open in Google Maps"
+                                    >
+                                        <span>{fullAddress || "View Store Location"}</span>
+                                        <span className="material-symbols-outlined text-[12px] text-primary group-hover:translate-x-0.5 transition-transform">open_in_new</span>
+                                    </a>
+                                ) : (
+                                    <p className="font-medium text-xs text-text-muted max-w-xs leading-relaxed">{fullAddress}</p>
+                                )}
                             </div>
                         )}
                     </div>
