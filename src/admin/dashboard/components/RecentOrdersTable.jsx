@@ -1,23 +1,12 @@
 import React from 'react';
 import { FaShoppingBag, FaArrowRight } from 'react-icons/fa';
-
-const getStatusBadge = (status) => {
-  const s = (status || 'PLACED').toUpperCase();
-  switch (s) {
-    case 'DELIVERED':
-      return <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-extrabold text-[10px]">Delivered</span>;
-    case 'CANCELLED':
-      return <span className="px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 font-extrabold text-[10px]">Cancelled</span>;
-    case 'SHIPPED':
-      return <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-400 font-extrabold text-[10px]">Shipped</span>;
-    default:
-      return <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 font-extrabold text-[10px]">Placed</span>;
-  }
-};
+import { normalizeOrder } from '../../orders/tableComponents/orderHelpers';
+import StatusBadge from '../../Components/common/StatusBadge';
 
 /**
  * RecentOrdersTable Component
  * Quick preview table of the top 5 most recent orders on the dashboard.
+ * Uses shared StatusBadge component for high contrast visibility.
  */
 export default function RecentOrdersTable({ orders = [], onViewAll }) {
   const recentOrders = orders.slice(0, 5);
@@ -58,23 +47,28 @@ export default function RecentOrdersTable({ orders = [], onViewAll }) {
           <tbody className="divide-y divide-border-base/30 font-semibold">
             {recentOrders.length === 0 ? (
               <tr>
-                <td colSpan="4" className="py-8 text-center text-text-muted">
+                <td colSpan="4" className="py-8 text-center text-text-muted font-bold">
                   No orders placed yet.
                 </td>
               </tr>
             ) : (
               recentOrders.map((ord) => {
-                const orderIdStr = ord.id ? `#${ord.id.slice(-6).toUpperCase()}` : '#ORDER';
-                const customerName = ord.addressInfo?.name || ord.shippingAddress?.fullName || ord.email || 'Customer';
-                const rawAmt = ord.totalAmount ?? ord.pricing?.grandTotal ?? ord.amount ?? 0;
-                const amt = typeof rawAmt === 'number' ? rawAmt : (parseFloat(String(rawAmt).replace(/[^0-9.]/g, '')) || 0);
+                const norm = normalizeOrder(ord);
 
                 return (
-                  <tr key={ord.id} className="hover:bg-bg-base/30 transition-colors">
-                    <td className="py-3 px-3 font-mono font-extrabold text-text-base text-xs">{orderIdStr}</td>
-                    <td className="py-3 px-3 max-w-[140px] truncate text-text-base" title={customerName}>{customerName}</td>
-                    <td className="py-3 px-3 text-center">{getStatusBadge(ord.orderStatus || ord.status)}</td>
-                    <td className="py-3 px-3 text-right font-black text-text-base">₹{amt.toLocaleString('en-IN')}</td>
+                  <tr key={ord.id || norm.targetId} className="hover:bg-bg-base/30 transition-colors">
+                    <td className="py-3 px-3 font-mono font-extrabold text-text-base text-xs">
+                      #{norm.displayId.slice(0, 10)}
+                    </td>
+                    <td className="py-3 px-3 max-w-[140px] truncate text-text-base" title={norm.name}>
+                      {norm.name}
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <StatusBadge status={norm.orderStatus} size="sm" />
+                    </td>
+                    <td className="py-3 px-3 text-right font-black text-text-base">
+                      ₹{norm.totalAmount.toLocaleString('en-IN')}
+                    </td>
                   </tr>
                 );
               })

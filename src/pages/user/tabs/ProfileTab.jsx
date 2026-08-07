@@ -1,102 +1,179 @@
-import React from "react";
-import { FaUser, FaEnvelope, FaPhone, FaCheckCircle } from "react-icons/fa";
-
-const Field = ({ label, children }) => (
-  <div className="flex flex-col gap-1">
-    <label className="text-[10px] font-black text-text-muted uppercase tracking-wider">
-      {label}
-    </label>
-    {children}
-  </div>
-);
-
-const Input = ({ value, onChange, placeholder, type = "text", disabled = false, icon: Icon }) => (
-  <div className="relative flex items-center">
-    {Icon && <Icon className="absolute left-3 text-text-muted text-xs pointer-events-none" />}
-    <input
-      type={type}
-      value={value || ""}
-      onChange={onChange}
-      placeholder={placeholder}
-      disabled={disabled}
-      className={`w-full ${Icon ? "pl-8.5" : "px-3"} pr-3 py-2 rounded-xl border text-xs font-semibold transition-all
-        focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
-        ${disabled
-          ? "border-border-base/50 bg-bg-base/60 text-text-muted cursor-not-allowed opacity-75"
-          : "border-border-base/70 bg-bg-surface hover:border-primary/40 text-text-base"
-        }`}
-    />
-  </div>
-);
+import React, { useState } from "react";
+import { FaUser, FaEnvelope, FaPhone, FaEdit, FaCheck, FaSpinner } from "react-icons/fa";
 
 export default function ProfileTab({ profile, setProfile, handleSaveProfile, saving }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempProfile, setTempProfile] = useState({ ...profile });
+
+  const handleStartEdit = () => {
+    setTempProfile({ ...profile });
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setProfile({ ...tempProfile });
+    setIsEditing(false);
+  };
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    await handleSaveProfile();
+    setIsEditing(false);
+  };
+
   return (
     <div className="space-y-4 text-xs">
-      {/* Header */}
-      <div className="pb-1.5 border-b border-border-base/50">
-        <h3 className="text-sm font-extrabold text-text-base">Profile Information</h3>
-        <p className="text-[10px] text-text-muted mt-0.5">Manage your personal account details and credentials</p>
+      {/* Header Row */}
+      <div className="flex items-center justify-between pb-2 border-b border-border-base/50">
+        <div>
+          <h3 className="text-base font-bold text-text-base">Profile Information</h3>
+          <p className="text-[11px] text-text-muted mt-0.5">Manage your personal account details and credentials</p>
+        </div>
+
+        {!isEditing && (
+          <button
+            type="button"
+            onClick={handleStartEdit}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs transition active:scale-95 cursor-pointer"
+          >
+            <FaEdit size={12} />
+            <span>Edit Profile</span>
+          </button>
+        )}
       </div>
 
-      {/* Account Verification & Status Pills */}
-      <div className="flex flex-wrap items-center gap-2.5 p-2.5 px-3 rounded-xl bg-primary/5 border border-primary/10">
-        <div className="flex items-center gap-1.5 text-xs font-extrabold text-primary">
-          <FaCheckCircle size={12} />
-          <span>Email Verified</span>
-        </div>
-        <span className="text-text-muted/40">•</span>
-        <div className="flex items-center gap-1.5 text-xs font-extrabold">
-          <span className="inline-block px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase text-[9px] font-black tracking-wider">
-            ROLE: {profile.role || "CUSTOMER"}
-          </span>
-        </div>
-      </div>
-
-      {/* Form Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Full Name">
-          <Input
-            icon={FaUser}
-            value={profile.name}
-            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-            placeholder="Your full name"
-          />
-        </Field>
-
-        <Field label="Email Address">
-          <div className="relative">
-            <Input
-              icon={FaEnvelope}
-              value={profile.email}
-              disabled
-              placeholder="yourname@example.com"
-            />
-            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-wider bg-bg-base border border-border-base text-text-muted px-1.5 py-0.5 rounded">
-              PRIMARY
-            </span>
+      {/* Mode A: Clean Read-Only Summary View */}
+      {!isEditing ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {/* Full Name */}
+          <div className="p-2.5 rounded-xl bg-bg-base/40 border border-border-base/50 space-y-1">
+            <div className="flex items-center gap-1.5 text-text-muted text-[10px] font-bold uppercase tracking-wider">
+              <FaUser size={11} className="text-primary" />
+              <span>Full Name</span>
+            </div>
+            <p className="font-semibold text-sm text-text-base pl-5">
+              {profile.name || <span className="italic text-text-muted font-normal">Not provided</span>}
+            </p>
           </div>
-        </Field>
 
-        <Field label="Phone Number">
-          <Input
-            icon={FaPhone}
-            value={profile.phone}
-            onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-            placeholder="+91 98765 43210"
-          />
-        </Field>
-      </div>
+          {/* Email Address */}
+          <div className="p-2.5 rounded-xl bg-bg-base/40 border border-border-base/50 space-y-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-text-muted text-[10px] font-bold uppercase tracking-wider">
+                <FaEnvelope size={11} className="text-primary" />
+                <span>Email Address</span>
+              </div>
+              <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
+                Primary
+              </span>
+            </div>
+            <p className="font-semibold text-sm text-text-base pl-5">
+              {profile.email || <span className="italic text-text-muted font-normal">Not added</span>}
+            </p>
+          </div>
 
-      {/* Action Button */}
-      <div className="pt-2 border-t border-border-base/50 flex justify-end">
-        <button
-          onClick={handleSaveProfile}
-          disabled={saving}
-          className="w-full sm:w-auto px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-compli text-xs font-extrabold shadow-2xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        >
-          {saving ? "Saving Changes…" : "Save Changes"}
-        </button>
-      </div>
+          {/* Phone Number */}
+          <div className="p-2.5 rounded-xl bg-bg-base/40 border border-border-base/50 space-y-1">
+            <div className="flex items-center gap-1.5 text-text-muted text-[10px] font-bold uppercase tracking-wider">
+              <FaPhone size={11} className="text-primary" />
+              <span>Phone Number</span>
+            </div>
+            <p className="font-semibold text-sm text-text-base pl-5">
+              {profile.phone || <span className="italic text-text-muted font-normal">Not added</span>}
+            </p>
+          </div>
+        </div>
+      ) : (
+        /* Mode B: Edit Form */
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* Full Name Input */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                Full Name
+              </label>
+              <div className="relative flex items-center">
+                <FaUser className="absolute left-3.5 text-text-muted text-xs pointer-events-none z-10" />
+                <input
+                  type="text"
+                  value={profile.name || ""}
+                  onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                  placeholder="Enter your full name"
+                  className="w-full pl-10 pr-3 py-2 rounded-xl border border-border-base/70 bg-bg-surface text-text-base text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Email Address Input (Disabled / Primary) */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                  Email Address
+                </label>
+                <span className="text-[9px] font-bold uppercase tracking-wider bg-bg-base border border-border-base text-text-muted px-1.5 py-0.5 rounded">
+                  Primary
+                </span>
+              </div>
+              <div className="relative flex items-center">
+                <FaEnvelope className="absolute left-3.5 text-text-muted text-xs pointer-events-none z-10" />
+                <input
+                  type="email"
+                  value={profile.email || ""}
+                  disabled
+                  placeholder="yourname@example.com"
+                  className="w-full pl-10 pr-3 py-2 rounded-xl border border-border-base/50 bg-bg-base/60 text-text-muted text-sm font-semibold cursor-not-allowed opacity-75 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Phone Number Input */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                Phone Number
+              </label>
+              <div className="relative flex items-center">
+                <FaPhone className="absolute left-3.5 text-text-muted text-xs pointer-events-none z-10" />
+                <input
+                  type="text"
+                  value={profile.phone || ""}
+                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                  placeholder="+91 98765 43210"
+                  className="w-full pl-10 pr-3 py-2 rounded-xl border border-border-base/70 bg-bg-surface text-text-base text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Edit Actions Bar */}
+          <div className="pt-2 border-t border-border-base/50 flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              disabled={saving}
+              className="px-4 py-1.5 rounded-xl border border-border-base text-text-base font-bold text-xs hover:bg-bg-base transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex items-center gap-1.5 px-5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-compli text-xs font-bold shadow-2xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+            >
+              {saving ? (
+                <>
+                  <FaSpinner className="animate-spin" size={11} />
+                  <span>Saving…</span>
+                </>
+              ) : (
+                <>
+                  <FaCheck size={11} />
+                  <span>Save Profile</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

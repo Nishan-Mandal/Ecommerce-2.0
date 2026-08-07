@@ -1,10 +1,10 @@
 import React from "react";
 import { FaCopy, FaCheck, FaArrowRight } from "react-icons/fa";
-import { normalizeOrder, getStatusBadge, formatTableDateTime, formatItemsSummary } from "./orderHelpers";
+import { normalizeOrder, formatTableDateTime, formatItemsSummary } from "./orderHelpers";
+import StatusBadge from "../../Components/common/StatusBadge";
 
 function OrderTableRow({ allorder, index, formatDate, copiedId, onCopy, onNavigate }) {
   const norm = normalizeOrder(allorder);
-  const statusBadge = getStatusBadge(norm.orderStatus);
   const formattedDateTime = formatTableDateTime(norm.dateVal);
   const itemsSummary = formatItemsSummary(norm.items, norm.isCustom, norm.itemInfo);
 
@@ -51,12 +51,7 @@ function OrderTableRow({ allorder, index, formatDate, copiedId, onCopy, onNaviga
 
       {/* Status Badge */}
       <td className="px-5 py-4 whitespace-nowrap">
-        <div
-          className={`px-3 py-1 rounded-full text-[10.5px] font-black border inline-flex items-center gap-1.5 ${statusBadge.className}`}
-        >
-          {statusBadge.icon}
-          <span>{statusBadge.label}</span>
-        </div>
+        <StatusBadge status={norm.orderStatus} />
       </td>
 
       {/* Order Date & Time (e.g. Aug 2, 6:16 PM) */}

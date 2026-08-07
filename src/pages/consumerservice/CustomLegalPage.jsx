@@ -1,7 +1,7 @@
 import React from "react";
 import { useParams } from "react-router-dom";
 import { useSiteConfig } from "../../context/SiteConfigContext";
-import LegalPdfViewer from "../../components/Common/LegalPdfViewer";
+import { FormattedLegalContent } from "../../components/Common/LegalPage";
 
 /**
  * CustomLegalPage
@@ -43,5 +43,11 @@ export default function CustomLegalPage() {
     );
   }
 
-  return <LegalPdfViewer pdfUrl={currentPage.pdfUrl} title={currentPage.name} />;
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+      <div className="bg-bg-surface border border-border-base/60 rounded-3xl p-6 sm:p-10 shadow-xs">
+        <FormattedLegalContent content={currentPage.content} title={currentPage.name} />
+      </div>
+    </div>
+  );
 }

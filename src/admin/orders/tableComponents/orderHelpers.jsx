@@ -162,65 +162,70 @@ export function normalizeOrder(allorder) {
 }
 
 /**
- * Get distinct status badge style and icon
+ * Get distinct status badge style without background fill for maximum clarity
  */
 export function getStatusBadge(status) {
-    const s = (status || 'PLACED').toUpperCase();
+    let s = (status || 'PLACED').toUpperCase().trim();
+    if (s === 'ORDER PLACED' || s === 'ORDER_PLACED') s = 'PLACED';
+    if (s === 'ORDER CANCELLED' || s === 'ORDER_CANCELLED') s = 'CANCELLED';
+    if (s === 'ORDER DELIVERED' || s === 'ORDER_DELIVERED') s = 'DELIVERED';
+    if (s === 'ORDER SHIPPED' || s === 'ORDER_SHIPPED') s = 'SHIPPED';
+
     switch (s) {
         case "DELIVERED":
             return {
                 label: "Delivered",
-                icon: <FaCheckCircle className="text-emerald-500" />,
-                className: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300"
+                icon: <FaCheckCircle className="text-emerald-500" size={11} />,
+                className: "bg-transparent text-emerald-600 dark:text-emerald-400 font-extrabold border border-emerald-500/30"
             };
         case "OUT_FOR_DELIVERY":
             return {
                 label: "Out For Delivery",
-                icon: <FaTruck className="text-orange-500" />,
-                className: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950/40 dark:text-orange-300"
+                icon: <FaTruck className="text-amber-500" size={11} />,
+                className: "bg-transparent text-amber-600 dark:text-amber-400 font-extrabold border border-amber-500/30"
             };
         case "SHIPPED":
         case "IN_TRANSIT":
             return {
                 label: "Shipped",
-                icon: <FaTruck className="text-cyan-500" />,
-                className: "bg-cyan-100 text-cyan-800 border-cyan-300 dark:bg-cyan-950/40 dark:text-cyan-300"
+                icon: <FaTruck className="text-sky-500" size={11} />,
+                className: "bg-transparent text-sky-600 dark:text-sky-400 font-extrabold border border-sky-500/30"
             };
         case "PACKED":
             return {
                 label: "Packed",
-                icon: <FaBoxOpen className="text-purple-500" />,
-                className: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300"
+                icon: <FaBoxOpen className="text-purple-500" size={11} />,
+                className: "bg-transparent text-purple-600 dark:text-purple-400 font-extrabold border border-purple-500/30"
             };
         case "CONFIRMED":
             return {
                 label: "Confirmed",
-                icon: <FaCheckCircle className="text-blue-500" />,
-                className: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300"
+                icon: <FaCheckCircle className="text-indigo-500" size={11} />,
+                className: "bg-transparent text-indigo-600 dark:text-indigo-400 font-extrabold border border-indigo-500/30"
             };
         case "PLACED":
             return {
                 label: "Placed",
-                icon: <FaClock className="text-indigo-500 animate-pulse" />,
-                className: "bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300"
+                icon: <FaClock className="text-blue-500 animate-pulse" size={11} />,
+                className: "bg-transparent text-blue-600 dark:text-blue-400 font-extrabold border border-blue-500/30"
             };
         case "PAYMENT_PENDING":
             return {
                 label: "Payment Pending",
-                icon: <FaClock className="text-amber-500 animate-pulse" />,
-                className: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300"
+                icon: <FaClock className="text-amber-500 animate-pulse" size={11} />,
+                className: "bg-transparent text-amber-600 dark:text-amber-400 font-extrabold border border-amber-500/30"
             };
         case "CANCELLED":
             return {
                 label: "Cancelled",
-                icon: <FaTimesCircle className="text-rose-500" />,
-                className: "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300"
+                icon: <FaTimesCircle className="text-rose-500" size={11} />,
+                className: "bg-transparent text-rose-600 dark:text-rose-400 font-extrabold border border-rose-500/30"
             };
         default:
             return {
                 label: status.replace(/_/g, " "),
-                icon: <FaClock className="text-slate-500" />,
-                className: "bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300"
+                icon: <FaClock className="text-slate-400" size={11} />,
+                className: "bg-transparent text-text-muted font-extrabold border border-border-base"
             };
     }
 }
