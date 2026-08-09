@@ -93,7 +93,13 @@ function OrderCard({ order, onViewDetails }) {
   };
 
   const isCustomOrder = Boolean(order.isCustom || order.itemInfo);
-  const items = Array.isArray(order.products) ? order.products : (Array.isArray(order.items) ? order.items : []);
+  const items = Array.isArray(order.products) && order.products.length > 0
+    ? order.products
+    : (Array.isArray(order.items) && order.items.length > 0
+        ? order.items
+        : (Array.isArray(order.cart) && order.cart.length > 0
+            ? order.cart
+            : (Array.isArray(order.cartItems) ? order.cartItems : [])));
   const grandTotal = order.pricing?.grandTotal || order.totalAmount || 0;
 
   return (

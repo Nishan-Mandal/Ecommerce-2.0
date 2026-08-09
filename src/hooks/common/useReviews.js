@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { collection, getDocs, doc, deleteDoc, query, orderBy } from "firebase/firestore";
 import { fireDB } from "../../firebase/FirebaseConfig";
 import { toast } from "react-toastify";
+import { getFriendlyErrorMessage } from "../../utils/firebaseErrorHandler.js";
 
 /**
  * useReviews
@@ -40,8 +41,7 @@ export function useReviews() {
                 }));
                 setReviews(reviewData);
             } catch (err) {
-                console.error("Error fetching reviews:", err);
-                toast.error("Failed to load reviews");
+                toast.error(getFriendlyErrorMessage(err, "Failed to load reviews."));
             } finally {
                 setLoading(false);
             }
@@ -57,8 +57,7 @@ export function useReviews() {
             setReviews((prev) => prev.filter((r) => r.id !== review.id));
             toast.success("Review deleted successfully");
         } catch (err) {
-            console.error("Delete error:", err);
-            toast.error("Failed to delete review");
+            toast.error(getFriendlyErrorMessage(err, "Failed to delete review."));
             throw err; // re-throw so the caller can reset loading state
         }
     };

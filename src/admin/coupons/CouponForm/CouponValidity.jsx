@@ -64,33 +64,6 @@ function CouponValidity({
 
                 </div>
 
-                {/* Active Status Switcher */}
-                <div className="flex items-center justify-between border border-border-base rounded-lg px-3.5 py-2.5 bg-bg-surface">
-                    <div>
-                        <h4 className="font-bold text-text-base">
-                            Coupon Status
-                        </h4>
-                        <p className="text-[10px] text-text-muted mt-0.5">
-                            Disable this coupon without deleting it.
-                        </p>
-                    </div>
-
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={coupon.isActive}
-                            onChange={(e) =>
-                                setCoupon((prev) => ({
-                                    ...prev,
-                                    isActive: e.target.checked,
-                                }))
-                            }
-                            className="sr-only peer"
-                        />
-                        <div className="w-10 h-6 bg-gray-300 rounded-full peer peer-checked:bg-primary transition relative after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-4"></div>
-                    </label>
-                </div>
-
                 {/* Summary Row */}
                 <div className="grid grid-cols-3 gap-3">
                     <div className="rounded-lg border border-border-base bg-bg-surface p-2.5">

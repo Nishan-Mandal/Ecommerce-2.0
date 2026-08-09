@@ -4,6 +4,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { fireDB } from "../../../firebase/FirebaseConfig";
 import { couponService } from "../../../services/coupon/couponService";
 import { toast } from "react-toastify";
+import { getFriendlyErrorMessage } from "../../../utils/firebaseErrorHandler.js";
 
 import CouponBasicInfo from "./CouponBasicinfo";
 import CouponConditions from "./CouponsCondition";
@@ -11,6 +12,9 @@ import CouponUsage from "./CouponUsage";
 import CouponValidity from "./CouponValidity";
 import CouponScope from "./CouponScope";
 import CouponActions from "./CouponAction";
+import ToggleButton from "../../../components/Common/ToggleButton";
+
+import { useFormAutoSave } from "../../../hooks/common/useFormAutoSave";
 
 const initBlankCoupon = () => ({
     code: "",
@@ -41,7 +45,11 @@ function CouponFormPage() {
     const existingCoupon = location.state?.coupon ?? null;
     const isEditing = Boolean(existingCoupon?.couponId || existingCoupon?.id);
 
-    const [coupon, setCoupon] = useState(existingCoupon ?? initBlankCoupon());
+    const [coupon, setCoupon, clearCouponDraft, resetCouponForm] = useFormAutoSave(
+        isEditing ? null : 'draft_coupon_form',
+        existingCoupon ?? initBlankCoupon(),
+        { debounceMs: 400 }
+    );
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [saving, setSaving] = useState(false);
@@ -106,13 +114,18 @@ function CouponFormPage() {
                 await couponService.addCoupon(coupon);
                 toast.success("Coupon created successfully");
             }
+            clearCouponDraft();
             navigate("/coupons");
         } catch (err) {
-            console.error("Error saving coupon:", err);
-            toast.error(err.message || "Failed to save coupon");
+            toast.error(getFriendlyErrorMessage(err, "Failed to save coupon. Please try again."));
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleCancel = () => {
+        clearCouponDraft();
+        navigate("/coupons");
     };
 
     return (
@@ -135,20 +148,15 @@ function CouponFormPage() {
 
                         {/* Top Interactive Status Toggle Button */}
                         <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-bold text-text-muted hidden sm:inline">Campaign Status:</span>
-                            <button
-                                type="button"
-                                onClick={() => setCoupon((prev) => ({ ...prev, isActive: !(prev.isActive !== false) }))}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 cursor-pointer flex items-center gap-2 border shadow-xs active:scale-95 ${
-                                    coupon.isActive !== false
-                                        ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-emerald-600/20"
-                                        : "bg-slate-800 hover:bg-slate-900 text-white border-slate-800 dark:bg-slate-200 dark:text-slate-900 shadow-slate-800/20"
-                                }`}
-                                title={coupon.isActive !== false ? "Click to set Inactive" : "Click to set Active"}
-                            >
-                                <span className={`w-2 h-2 rounded-full ${coupon.isActive !== false ? "bg-white animate-pulse" : "bg-slate-400"}`} />
-                                <span>{coupon.isActive !== false ? "Active" : "Inactive"}</span>
-                            </button>
+                            <span className="text-[11px] font-bold text-text-muted hidden sm:inline">Coupon Status:</span>
+                            <ToggleButton
+                                checked={coupon.isActive !== false}
+                                onChange={(checked) => setCoupon((prev) => ({ ...prev, isActive: checked }))}
+                                size="sm"
+                                color="success"
+                                onLabel="ACTIVE"
+                                offLabel="INACTIVE"
+                            />
                         </div>
                     </div>
                 </div>
@@ -172,7 +180,7 @@ function CouponFormPage() {
                 {/* Actions */}
                 <CouponActions
                     saving={saving}
-                    onCancel={() => navigate("/coupons")}
+                    onCancel={handleCancel}
                     onSave={handleSave}
                 />
 

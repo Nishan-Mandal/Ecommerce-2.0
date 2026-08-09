@@ -4,6 +4,7 @@ import TableSkeleton from "../../../components/loader/SkeletonLoader/TableSkelet
 import Pagination from "../../../components/common/Pagination";
 import StatusBadge from '../../Components/common/StatusBadge';
 import DataTable from '../../Components/common/DataTable';
+import ToggleButton from '../../../components/Common/ToggleButton';
 
 function CouponTable({
     coupons = [],
@@ -83,14 +84,16 @@ function CouponTable({
             key: "status",
             header: "Status",
             render: (coupon) => (
-                <button
-                    type="button"
-                    onClick={() => onToggleStatus && onToggleStatus(coupon)}
-                    className="cursor-pointer inline-flex items-center"
-                    title={coupon.isActive !== false ? "Click to set Inactive" : "Click to set Active"}
-                >
-                    <StatusBadge status={getCouponStatusKey(coupon)} size="sm" />
-                </button>
+                <div className="flex items-center gap-2">
+                    <ToggleButton
+                        checked={coupon.isActive !== false}
+                        onChange={() => onToggleStatus && onToggleStatus(coupon)}
+                        size="sm"
+                        color="success"
+                        onLabel="ACTIVE"
+                        offLabel="INACTIVE"
+                    />
+                </div>
             ),
         },
         {
@@ -129,14 +132,14 @@ function CouponTable({
                         {coupon.code}
                     </span>
 
-                    <button
-                        type="button"
-                        onClick={() => onToggleStatus && onToggleStatus(coupon)}
-                        className="cursor-pointer inline-flex items-center"
-                        title={coupon.isActive !== false ? "Click to set Inactive" : "Click to set Active"}
-                    >
-                        <StatusBadge status={getCouponStatusKey(coupon)} size="sm" />
-                    </button>
+                    <ToggleButton
+                        checked={coupon.isActive !== false}
+                        onChange={() => onToggleStatus && onToggleStatus(coupon)}
+                        size="sm"
+                        color="success"
+                        onLabel="ACTIVE"
+                        offLabel="INACTIVE"
+                    />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 bg-bg-base/60 p-3.5 rounded-xl text-xs">

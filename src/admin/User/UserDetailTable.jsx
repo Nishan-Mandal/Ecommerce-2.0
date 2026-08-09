@@ -13,6 +13,7 @@ import {
 import { userService } from '../../services/user/userService';
 import { activityService } from '../../services/activity/activityService';
 import { toast } from 'react-toastify';
+import { getFriendlyErrorMessage } from '../../utils/firebaseErrorHandler.js';
 
 /**
  * UserDetailTable Component
@@ -94,8 +95,7 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
             setAdminForm({ name: '', email: '', password: '', phone: '', role: 'ADMIN' });
             if (onRefresh) onRefresh();
         } catch (err) {
-            console.error("Error creating admin:", err);
-            toast.error(err.message || "Failed to create account profile");
+            toast.error(getFriendlyErrorMessage(err, "Failed to create account profile. Please try again."));
         } finally {
             setSubmitting(false);
         }

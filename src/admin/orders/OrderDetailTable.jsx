@@ -9,6 +9,7 @@ import { toast } from 'react-toastify';
 import { FaClock } from 'react-icons/fa';
 import TableSkeleton from '../../components/loader/SkeletonLoader/TableSkeleton';
 import Pagination from '../../components/common/Pagination';
+import ToggleButton from '../../components/Common/ToggleButton';
 
 /**
  * OrderDetailTable Component
@@ -74,8 +75,8 @@ function OrderDetailTable({ mode, order = [], loading = false, formatDate }) {
                 norm.items.some((item) => (item.title || item.productName || item.name || '').toLowerCase().includes(searchLower));
 
             const matchStatus = statusFilter === 'ALL' || norm.orderStatus === statusFilter;
-            const matchPayment = paymentFilter === 'ALL' || 
-                (paymentFilter === 'Online' && (norm.paymentMode.toUpperCase().includes('ONLINE') || norm.paymentMode.toUpperCase().includes('RAZORPAY'))) || 
+            const matchPayment = paymentFilter === 'ALL' ||
+                (paymentFilter === 'Online' && (norm.paymentMode.toUpperCase().includes('ONLINE') || norm.paymentMode.toUpperCase().includes('RAZORPAY'))) ||
                 (paymentFilter === 'COD' && norm.paymentMode.toUpperCase().includes('COD'));
 
             return matchSearch && matchStatus && matchPayment;
@@ -115,9 +116,9 @@ function OrderDetailTable({ mode, order = [], loading = false, formatDate }) {
     if (loading) {
         return (
             <div className="space-y-5">
-                <Header 
-                    title="Customer Orders Management" 
-                    description="Monitor customer orders, fulfillment statuses, customer details, and payment receipts." 
+                <Header
+                    title="Customer Orders Management"
+                    description="Monitor customer orders, fulfillment statuses, customer details, and payment receipts."
                 />
                 <TableSkeleton rows={pageSize} columns={7} />
             </div>
@@ -128,49 +129,47 @@ function OrderDetailTable({ mode, order = [], loading = false, formatDate }) {
     const paginatedOrders = filteredOrders.slice(startIndex, startIndex + pageSize);
 
     return (
-        <div className="space-y-5">
-            <Header 
-                title="Customer Orders Management" 
-                description="Monitor customer orders, fulfillment statuses, customer details, and payment receipts." 
+        <div className="space-y-5 ">
+            <Header
+                title="Customer Orders Management"
+                description="Monitor customer orders, fulfillment statuses, customer details, and payment receipts."
             />
 
             {/* Filter Bar & Show Pending Orders Toggle Row */}
-            <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex-1">
-                        <FilterBar
-                            search={search}
-                            setSearch={setSearch}
-                            searchPlaceholder="Search by Order ID, customer name, email, phone, items, or payment ID..."
-                            filters={filtersConfig}
-                        />
-                    </div>
-
-                    {/* Show Pending Orders Toggle Button */}
-                    <button
-                        type="button"
-                        onClick={() => setShowPendingOrders((prev) => !prev)}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 border shadow-2xs shrink-0 active:scale-95 ${
-                            showPendingOrders
-                                ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-500 shadow-amber-500/20"
-                                : "bg-bg-surface hover:bg-bg-base text-text-base border-border-base"
-                        }`}
-                        title={showPendingOrders ? "Click to hide pending orders" : "Click to show pending payment orders"}
-                    >
-                        <FaClock className={showPendingOrders ? "animate-pulse" : "text-amber-500"} size={13} />
-                        <span>{showPendingOrders ? "Hide Pending Orders" : "Show Pending Orders"}</span>
-                        <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                                showPendingOrders
-                                    ? "bg-white/20 text-white"
-                                    : "bg-amber-100 text-amber-800 border border-amber-200"
-                            }`}
-                        >
+            <FilterBar
+                search={search}
+                setSearch={setSearch}
+                searchPlaceholder="Search by Order ID, customer name, items, or payment ID..."
+                filters={filtersConfig}
+            >
+                {/* Show Pending Orders Toggle Card */}
+                <div
+                    className={`flex items-center justify-between gap-3 px-3 py-1.5 h-11 rounded-xl border transition-all duration-300 w-full sm:w-auto shrink-0 shadow-2xs ${
+                        showPendingOrders
+                            ? "border-amber-300/80 bg-amber-500/10 shadow-amber-500/10"
+                            : "border-border-base bg-white hover:border-border-base/80"
+                    }`}
+                >
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-text-base tracking-tight whitespace-nowrap">
+                            Pending Orders
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black border border-amber-200">
                             {pendingCount}
                         </span>
-                    </button>
+                    </div>
+
+                    <ToggleButton
+                        checked={showPendingOrders}
+                        onChange={setShowPendingOrders}
+                        size="sm"
+                        color="primary"
+                        onLabel="ON"
+                        offLabel="OFF"
+                        labelPosition="left"
+                    />
                 </div>
-            </div>
+            </FilterBar>
 
             {/* Mobile Responsive Cards */}
             <div className="block md:hidden space-y-4">

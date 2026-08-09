@@ -13,7 +13,7 @@ import AllProductsGrid from './sections/AllProductsGrid';
 
 function Allproducts() {
     const navigate = useNavigate();
-    const { products } = useProducts();
+    const { products, loading } = useProducts();
     const { searchkey, setSearchkey, filterType, setFilterType, filterPrice, setFilterPrice } = useFilter();
     const { mode } = useTheme();
     const [sortBy, setSortBy] = useState('Featured');
@@ -100,6 +100,7 @@ function Allproducts() {
 
                     {/* Product Grid */}
                     <AllProductsGrid
+                        loading={loading}
                         filteredAndSorted={filteredAndSorted}
                         totalProductsCount={products.length}
                         sortBy={sortBy}
@@ -112,7 +113,7 @@ function Allproducts() {
 
             </main>
         </div>
-    )
+    );
 }
 
 export default Allproducts

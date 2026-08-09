@@ -5,14 +5,11 @@ import { fireDB } from "../../../firebase/FirebaseConfig";
 import { FaPlus, FaTrash, FaEdit, FaCheck } from "react-icons/fa";
 import { toast } from "react-toastify";
 
-const LAYOUTS = ["grid", "horizontal-scroll"];
-
 function CollectionEditor({ col, products, onSave, onCancel, saving }) {
     const [form, setForm] = useState({
         title: col?.title || "",
         subtitle: col?.subtitle || "",
         productIds: col?.productIds || [],
-        layout: col?.layout || "grid",
         isActive: col?.isActive ?? true,
     });
     const [searchQuery, setSearchQuery] = useState("");
@@ -39,7 +36,7 @@ function CollectionEditor({ col, products, onSave, onCancel, saving }) {
     return (
         <div className="bg-bg-surface border border-border-base/60 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2 space-y-1">
+                <div className="space-y-1">
                     <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider pl-0.5">Collection Title</label>
                     <input
                         value={form.title}
@@ -56,20 +53,6 @@ function CollectionEditor({ col, products, onSave, onCancel, saving }) {
                         placeholder="e.g. Handcrafted with love"
                         className="w-full h-11 px-4 rounded-xl border border-border-base bg-white focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary text-sm font-medium transition-all"
                     />
-                </div>
-                <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-text-muted uppercase tracking-wider pl-0.5">Layout Type</label>
-                    <select
-                        value={form.layout}
-                        onChange={(e) => setForm((p) => ({ ...p, layout: e.target.value }))}
-                        className="w-full h-11 px-4 rounded-xl border border-border-base bg-white focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary text-sm font-bold text-text-base cursor-pointer transition-all appearance-none"
-                    >
-                        {LAYOUTS.map((l) => (
-                            <option key={l} value={l}>
-                                {l.charAt(0).toUpperCase() + l.slice(1)}
-                            </option>
-                        ))}
-                    </select>
                 </div>
             </div>
 
@@ -223,7 +206,7 @@ export default function CollectionsTab() {
                             <div className="flex items-center justify-between gap-3 p-4 border border-border-base/60 rounded-2xl bg-bg-surface hover:border-gray-300 transition-colors shadow-xs">
                                 <div className="flex-1 min-w-0">
                                     <p className="font-extrabold text-text-base text-sm truncate">{col.title}</p>
-                                    <p className="text-xs text-text-muted mt-1 font-semibold">{col.productIds?.length || 0} products · {col.layout}</p>
+                                    <p className="text-xs text-text-muted mt-1 font-semibold">{col.productIds?.length || 0} products</p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
@@ -253,24 +236,23 @@ export default function CollectionsTab() {
                         )}
                     </div>
                 ))}
-            </div>
 
-            {/* New collection editor */}
-            {editing === "new" ? (
-                <CollectionEditor
-                    products={products}
-                    onSave={handleSaveNew}
-                    onCancel={() => setEditing(null)}
-                    saving={saving}
-                />
-            ) : (
-                <button
-                    onClick={() => setEditing("new")}
-                    className="w-full h-11 border-2 border-dashed border-border-base hover:border-primary/50 bg-white rounded-xl text-xs sm:text-sm text-text-muted hover:text-primary transition font-bold flex items-center justify-center gap-2 cursor-pointer"
-                >
-                    <FaPlus className="text-xs" /> Add Collection
-                </button>
-            )}
+                {editing === "new" ? (
+                    <CollectionEditor
+                        products={products}
+                        onSave={handleSaveNew}
+                        onCancel={() => setEditing(null)}
+                        saving={saving}
+                    />
+                ) : (
+                    <button
+                        onClick={() => setEditing("new")}
+                        className="w-full py-3.5 border-2 border-dashed border-border-base/80 rounded-2xl text-xs font-extrabold text-primary hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                        <FaPlus size={12} /> Add New Collection Section
+                    </button>
+                )}
+            </div>
         </div>
     );
 }

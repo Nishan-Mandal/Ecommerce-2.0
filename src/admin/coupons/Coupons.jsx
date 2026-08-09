@@ -129,7 +129,7 @@ function Coupons() {
     ];
 
     return (
-        <div className="space-y-6 lg:space-y-5">
+        <div className="space-y-6 lg:space-y-5 px-4 md:px-0">
             <Header
                 title="Coupon & Discount Management"
                 description="Create promo codes, manage usage caps, set discount values, and monitor active campaigns."

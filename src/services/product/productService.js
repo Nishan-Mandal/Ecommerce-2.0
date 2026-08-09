@@ -109,6 +109,38 @@ export const productService = {
   },
 
   /**
+   * Fetches paginated products using Firestore cursor queries
+   */
+  async getPaginatedProducts({ pageSize = 10, lastDoc = null, category = null }) {
+    const { limit, startAfter } = await import('firebase/firestore');
+    const constraints = [];
+    if (category && category !== 'ALL') {
+      constraints.push(where("category", "==", category));
+    }
+    constraints.push(limit(pageSize));
+    if (lastDoc) {
+      constraints.push(startAfter(lastDoc));
+    }
+    const q = query(collection(fireDB, "products"), ...constraints);
+    const snap = await getDocs(q);
+    const products = [];
+    snap.forEach((d) => {
+      const data = d.data();
+      const price = data.price || (data.variants && data.variants.length > 0 ? String(data.variants[0].price) : "");
+      const imageUrl = data.imageUrl || (data.images && data.images.length > 0 ? data.images[0] : "");
+      products.push({
+        ...data,
+        id: d.id,
+        price,
+        imageUrl,
+        docSnap: d
+      });
+    });
+    const lastVisible = snap.docs[snap.docs.length - 1] || null;
+    return { products, lastDoc: lastVisible, hasMore: snap.docs.length === pageSize };
+  },
+
+  /**
    * Submits a user review for a product.
    * Schema matches ratings.model.js:
    *   { productId, userId, userName, rating, review, createdAt, updatedAt }

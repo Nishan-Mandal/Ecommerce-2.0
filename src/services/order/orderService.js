@@ -4,15 +4,103 @@ import {
   getDocs, 
   query, 
   where, 
-  addDoc 
+  addDoc,
+  doc,
+  getDoc,
+  updateDoc,
+  arrayUnion,
+  Timestamp
 } from 'firebase/firestore';
 
 export const orderService = {
   /**
-   * Fetches orders from Firestore.
-   * If the user is an admin, fetches all orders.
-   * Otherwise, fetches orders matching the user's uid.
+   * Validates whether an order status transition is allowed according to lifecycle rules.
    */
+  validateStatusTransition(currentOrder, targetStatus) {
+    if (!currentOrder || !targetStatus) {
+      throw new Error("Order and target status are required for validation.");
+    }
+
+    const currentStatus = (currentOrder.orderStatus || currentOrder.status || "PLACED").toUpperCase();
+    const target = targetStatus.toUpperCase();
+    const paymentStat = String(currentOrder.paymentStatus || currentOrder.payment?.status || "").toUpperCase();
+
+    const isPaymentSuccess = paymentStat.includes("PAID") || paymentStat.includes("SUCCESS");
+
+    const paidOrAdvancedStatuses = [
+      "CONFIRMED",
+      "PROCESSING",
+      "PACKED",
+      "SHIPPED",
+      "IN_TRANSIT",
+      "OUT_FOR_DELIVERY",
+      "DELIVERED",
+    ];
+
+    const isPaidOrAdvanced = isPaymentSuccess || paidOrAdvancedStatuses.includes(currentStatus);
+
+    // Rule 1: Once payment is completed or order reaches Confirmed/beyond, cannot revert to PAYMENT_PENDING or PLACED
+    if (isPaidOrAdvanced && (target === "PAYMENT_PENDING" || target === "PLACED")) {
+      throw new Error("Invalid status transition: A paid or confirmed order cannot be moved back to Payment Pending or Placed.");
+    }
+
+    // Rule 2: Delivered orders cannot revert to pre-fulfillment states
+    if (currentStatus === "DELIVERED" && ["PAYMENT_PENDING", "PLACED", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "OUT_FOR_DELIVERY"].includes(target)) {
+      throw new Error("Invalid status transition: Delivered orders cannot revert to earlier fulfillment states.");
+    }
+
+    // Rule 3: Cancelled orders cannot transition to active fulfillment states
+    if (currentStatus === "CANCELLED" && target !== "CANCELLED" && target !== "REFUNDED") {
+      throw new Error("Invalid status transition: Cancelled orders cannot be moved to active fulfillment states.");
+    }
+
+    return true;
+  },
+
+  /**
+   * Updates an order's status in Firestore with backend workflow validation
+   */
+  async updateOrderStatus(orderId, newStatus, updatedBy = "ADMIN") {
+    if (!orderId || !newStatus) throw new Error("Order ID and new status are required.");
+
+    const docRef = doc(fireDB, "orders", orderId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      throw new Error("Order not found in database.");
+    }
+
+    const currentOrder = { id: docSnap.id, ...docSnap.data() };
+    
+    // Backend validation (Source of Truth)
+    this.validateStatusTransition(currentOrder, newStatus);
+
+    const now = Timestamp.now();
+    const historyEntry = {
+      status: newStatus,
+      timestamp: now,
+      updatedBy: updatedBy || "ADMIN",
+    };
+
+    const updatePayload = {
+      orderStatus: newStatus,
+      status: newStatus,
+      updatedAt: now,
+      statusHistory: arrayUnion(historyEntry),
+    };
+
+    if (newStatus === "DELIVERED") {
+      updatePayload.deliveredAt = now;
+      updatePayload["paymentStatus"] = "Success";
+      updatePayload["payment.status"] = "Success";
+    } else if (newStatus === "CANCELLED") {
+      updatePayload.cancelledAt = now;
+    }
+
+    await updateDoc(docRef, updatePayload);
+    return updatePayload;
+  },
+
   /**
    * Fetches orders from Firestore.
    * If the user is an admin, fetches all orders.
@@ -56,6 +144,34 @@ export const orderService = {
   async createOrder(orderInfo) {
     const docRef = await addDoc(collection(fireDB, "orders"), orderInfo);
     return docRef;
+  },
+
+  /**
+   * Fetches orders using Firestore cursor-based pagination
+   */
+  async getPaginatedOrders({ pageSize = 10, lastDoc = null, statusFilter = null }) {
+    const { limit, startAfter, orderBy } = await import('firebase/firestore');
+    const constraints = [orderBy("createdAt", "desc")];
+    if (statusFilter && statusFilter !== 'ALL') {
+      constraints.push(where("orderStatus", "==", statusFilter));
+    }
+    constraints.push(limit(pageSize));
+    if (lastDoc) {
+      constraints.push(startAfter(lastDoc));
+    }
+    const q = query(collection(fireDB, "orders"), ...constraints);
+    const snap = await getDocs(q);
+    const orders = [];
+    snap.forEach((docSnap) => {
+      orders.push({
+        docId: docSnap.id,
+        id: docSnap.id,
+        ...docSnap.data(),
+        docSnap
+      });
+    });
+    const lastVisible = snap.docs[snap.docs.length - 1] || null;
+    return { orders, lastDoc: lastVisible, hasMore: snap.docs.length === pageSize };
   },
 
   /**

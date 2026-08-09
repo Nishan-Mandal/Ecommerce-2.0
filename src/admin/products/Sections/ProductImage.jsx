@@ -81,7 +81,7 @@ function ProductImages({
                         className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
 
-                    <div className="flex flex-col items-center justify-center text-center">
+                    <div className="flex flex-col items-center justify-center text-center pointer-events-none">
                         <FaCloudUploadAlt
                             className="text-primary mb-2"
                             size={32}
@@ -92,17 +92,18 @@ function ProductImages({
                         <p className="text-[10px] text-text-muted mt-0.5">
                             or click anywhere to browse local files
                         </p>
-                        <div className="mt-3 flex items-center gap-2 z-20">
+                        <div className="mt-3 flex items-center gap-2">
                             <span className="px-3 py-1 rounded bg-primary text-compli text-[10px] font-semibold">
                                 Browse Disk
                             </span>
                             <button
                                 type="button"
                                 onClick={(e) => {
+                                    e.preventDefault();
                                     e.stopPropagation();
                                     setIsMediaModalOpen(true);
                                 }}
-                                className="px-3 py-1 rounded bg-bg-surface border border-border-base hover:border-primary text-text-base text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                                className="px-3 py-1 rounded bg-bg-surface border border-border-base hover:border-primary text-text-base text-[10px] font-bold flex items-center gap-1 cursor-pointer pointer-events-auto relative z-20"
                             >
                                 <FaImages size={10} /> Library
                             </button>

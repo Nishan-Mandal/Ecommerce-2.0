@@ -3,6 +3,7 @@ import { FaClock, FaTimesCircle, FaCheckCircle } from "react-icons/fa";
 
 export default function OrderFulfillmentSection({
   currentStatus,
+  paymentStatus,
   statusSteps,
   currentStepIndex,
   updating,
@@ -11,6 +12,12 @@ export default function OrderFulfillmentSection({
   formatDate,
   onUpdateStatus
 }) {
+  const isPaidOrAdvanced =
+    currentStepIndex >= 2 ||
+    ["CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(currentStatus) ||
+    String(paymentStatus || "").toUpperCase().includes("PAID") ||
+    String(paymentStatus || "").toUpperCase().includes("SUCCESS");
+
   return (
     <div className="bg-bg-surface p-5 rounded-2xl border border-border-base shadow-xs space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border-base/70">
@@ -28,23 +35,29 @@ export default function OrderFulfillmentSection({
           <select
             value={currentStatus}
             onChange={(e) => onUpdateStatus(e.target.value)}
-            disabled={updating}
-            className="px-3.5 py-1.5 text-xs font-extrabold rounded-xl border border-border-base bg-bg-base text-text-base focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-2xs"
+            disabled={updating || currentStatus === "CANCELLED" || currentStatus === "DELIVERED"}
+            className="px-3.5 py-1.5 text-xs font-extrabold rounded-xl border border-border-base bg-bg-base text-text-base focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-2xs disabled:opacity-60"
           >
-            {statusSteps.map((step) => (
-              <option key={step} value={step}>
-                {step.replace(/_/g, " ")}
-              </option>
-            ))}
-            <option value="CANCELLED">CANCELLED</option>
+            {statusSteps
+              .filter((step, idx) => {
+                // Prevent reverting paid/confirmed orders back to PAYMENT_PENDING (0) or PLACED (1)
+                if (isPaidOrAdvanced && (step === "PAYMENT_PENDING" || step === "PLACED")) return false;
+                return true;
+              })
+              .map((step) => (
+                <option key={step} value={step}>
+                  {step.replace(/_/g, " ")}
+                </option>
+              ))}
+            {currentStatus !== "DELIVERED" && <option value="CANCELLED">CANCELLED</option>}
           </select>
         </div>
       </div>
 
       {/* Timeline Stepper */}
       {currentStatus === "CANCELLED" ? (
-        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-extrabold flex items-center gap-2.5">
-          <FaTimesCircle size={18} className="shrink-0" />
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-black flex items-center gap-2.5">
+          <FaTimesCircle size={18} className="shrink-0 text-rose-500" />
           <span>This order was CANCELLED on {formatDate(cancelledAt || updatedAt)}.</span>
         </div>
       ) : (

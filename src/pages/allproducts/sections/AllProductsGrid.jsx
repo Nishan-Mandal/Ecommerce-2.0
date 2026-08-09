@@ -6,6 +6,7 @@ import CommonProductCard from '../../../components/Common/ProductCard';
  * Renders the products header counters, the sort select options, and loops cards.
  */
 export default function AllProductsGrid({
+  loading = false,
   filteredAndSorted = [],
   totalProductsCount = 0,
   sortBy,
@@ -46,7 +47,6 @@ export default function AllProductsGrid({
             </span>
           </div>
 
-
           {/* Mobile Filters Toggle Button */}
           <button
             onClick={onMobileFilterToggle}
@@ -55,21 +55,19 @@ export default function AllProductsGrid({
             <span className="material-symbols-outlined text-sm font-bold">filter_alt</span>
             <span>Filters</span>
           </button>
-
-          <div className="flex items-center gap-2">
-            {/* <span className="whitespace-nowrap hidden sm:inline">Sort by:</span> */}
-
-
-          </div>
-
         </div>
 
       </div>
 
-      {/* Products */}
-      {filteredAndSorted.length === 0 ? (
-        <div className="py-16 sm:py-20  rounded-2xl border border-border-base bg-bg-surface text-center">
-
+      {/* Products Grid or Skeleton Loader */}
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 2xl:gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="h-64 rounded-2xl bg-border-base/40 animate-pulse" />
+          ))}
+        </div>
+      ) : filteredAndSorted.length === 0 ? (
+        <div className="py-16 sm:py-20 rounded-2xl border border-border-base bg-bg-surface text-center">
           <span className="material-symbols-outlined text-5xl text-text-muted">
             sentiment_dissatisfied
           </span>
@@ -77,10 +75,9 @@ export default function AllProductsGrid({
           <p className="mt-3 text-sm sm:text-base font-medium text-text-muted">
             No products match your criteria.
           </p>
-
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-4 gap-1 sm:gap-2 lg:gap-4 2xl:gap-8 space-y-2 ">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 2xl:gap-6">
           {filteredAndSorted.map((item, index) => (
             <CommonProductCard
               key={index}
@@ -91,7 +88,6 @@ export default function AllProductsGrid({
           ))}
         </div>
       )}
-
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { authService } from '../services/auth/authService.js';
 import { userService } from '../services/user/userService.js';
+import { clearDraftsForUser } from '../hooks/common/useDraftManager.js';
 
 const AuthContext = createContext();
 
@@ -104,10 +105,15 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     setLoading(true);
     try {
+      // Clear all localStorage drafts belonging to this admin before logout
+      const currentUid = user?.user?.uid;
+      if (currentUid) clearDraftsForUser(currentUid);
+
       await authService.logout();
       setUser(null);
       setUserName('');
       localStorage.removeItem('user');
+      window.location.reload();
     } finally {
       setLoading(false);
     }

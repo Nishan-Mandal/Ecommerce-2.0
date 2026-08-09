@@ -95,8 +95,16 @@ const OrderInvoice = ({ orderData: propOrder }) => {
     storeAddressObj.pincode
   ].filter(Boolean).join(", ") || "Main Street, City Hub";
 
-  const storePhone = siteConfig?.phones?.[0] || "";
-  const storeEmail = siteConfig?.emails?.[0] || "";
+  const rawPhoneObj = siteConfig?.phones?.[0];
+  const storePhone = typeof rawPhoneObj === "object" && rawPhoneObj !== null
+    ? (rawPhoneObj.number || rawPhoneObj.phone || "")
+    : String(rawPhoneObj || "");
+
+  const rawEmailObj = siteConfig?.emails?.[0];
+  const storeEmail = typeof rawEmailObj === "object" && rawEmailObj !== null
+    ? (rawEmailObj.email || "")
+    : String(rawEmailObj || "");
+
   const website = "www.needmate.com";
 
   // Map order data safely
@@ -171,16 +179,27 @@ const OrderInvoice = ({ orderData: propOrder }) => {
               body {
                 background: white !important;
                 color: black !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+              body * {
+                visibility: hidden !important;
+              }
+              #invoice-printable-area, #invoice-printable-area * {
+                visibility: visible !important;
+              }
+              #invoice-printable-area {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 20px !important;
+                margin: 0 !important;
               }
               .print\\:hidden {
                 display: none !important;
-              }
-              #invoice-printable-area {
-                box-shadow: none !important;
-                border: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                width: 100% !important;
               }
             }
           `
@@ -351,15 +370,19 @@ const OrderInvoice = ({ orderData: propOrder }) => {
                     itemTotal = rawPrice * itemQty;
                   }
 
-                  const variant = item.variantName || item.selectedVariant || "";
+                  const variant = item.variantName || (
+                    item.selectedVariant && typeof item.selectedVariant === "object"
+                      ? Object.entries(item.selectedVariant).map(([k, v]) => `${k}: ${v}`).join(" | ")
+                      : (typeof item.selectedVariant === "string" ? item.selectedVariant : "")
+                  );
 
                   return (
                     <tr key={idx} className="h-10">
                       <td className="p-3 text-center border-r border-gray-300 font-bold">{idx + 1}</td>
                       <td className="p-3 border-r border-gray-300">
                         <p className="font-bold text-gray-900">{itemTitle}</p>
-                        {variant && typeof variant === "string" && (
-                          <p className="text-[10px] text-gray-500 font-medium">{variant}</p>
+                        {Boolean(variant) && (
+                          <p className="text-[10px] text-gray-500 font-medium">{String(variant)}</p>
                         )}
                       </td>
                       <td className="p-3 text-center border-r border-gray-300 font-bold">{itemQty}</td>

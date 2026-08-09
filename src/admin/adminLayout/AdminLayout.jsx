@@ -39,26 +39,34 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
     ];
 
     const handleNavClick = (id) => {
-        if (id === 'coupons') {
-            navigate('/coupons');
-            return;
-        }
-        if (id === 'reviews') {
-            navigate('/review');
-            return;
-        }
-        if (id === 'configure') {
-            navigate('/configure');
-            return;
-        }
-        if (id === 'store') {
-            navigate('/');
-            return;
-        }
-        if (location.pathname === '/dashboard') {
-            if (onViewChange) onViewChange(id);
-        } else {
-            navigate('/dashboard', { state: { activeView: id } });
+        switch (id) {
+            case 'overview':
+                navigate('/dashboard');
+                break;
+            case 'products':
+                navigate('/products');
+                break;
+            case 'orders':
+                navigate('/orders');
+                break;
+            case 'users':
+                navigate('/users');
+                break;
+            case 'coupons':
+                navigate('/coupons');
+                break;
+            case 'reviews':
+                navigate('/reviews');
+                break;
+            case 'configure':
+                navigate('/configure');
+                break;
+            case 'store':
+                navigate('/');
+                break;
+            default:
+                navigate('/dashboard');
+                break;
         }
     };
 

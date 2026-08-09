@@ -58,32 +58,40 @@ function Footer() {
                 <div className="mt-4 flex flex-col lg:flex-row items-center justify-between gap-6 text-[13px] text-text-muted">
 
                     {/* Brand and Address */}
-                    <div className="space-y-1 text-center lg:text-left">
+                    <div className="space-y-2 text-center lg:text-left">
                         <Link to="/" className="inline-block">
                             <h2 className="text-2xl font-black tracking-tight text-primary">
                                 {companyName || "HN Enterprise"}
                             </h2>
                         </Link>
-                        <p className="font-semibold text-xs text-text-muted">
+                        
+                        {config.companyTagline && (
+                            <div className="my-1">
+                                <span className="inline-flex items-center gap-1.5   bg-primary/10   text-primary font-bold text-xs tracking-wide shadow-2xs">
+                                    
+                                    {config.companyTagline}
+                                </span>
+                            </div>
+                        )}
+
+                        <p className="font-semibold text-xs text-text-muted pt-0.5">
                             © {new Date().getFullYear()} {companyName || "HN Enterprise"}. All rights reserved.
                         </p>
 
                         {(fullAddress || address?.mapUrl) && (
-                            <div className="flex gap-1.5 items-start justify-center lg:justify-start pt-1">
-                                <span className="material-symbols-outlined text-sm text-primary mt-0.5 shrink-0">location_on</span>
-                                {address?.mapUrl ? (
+                            <div className="flex gap-1.5 items-center justify-center lg:justify-start pt-1">
+                                <span className="material-symbols-outlined text-sm text-primary shrink-0">location_on</span>
+                                {fullAddress && <span className="font-medium text-xs text-text-muted leading-relaxed">{fullAddress}</span>}
+                                {address?.mapUrl && (
                                     <a
                                         href={address.mapUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="font-medium text-xs text-text-muted hover:text-primary hover:underline max-w-xs leading-relaxed transition-colors flex items-center gap-1 group"
-                                        title="Open in Google Maps"
+                                        className="text-primary hover:text-primary-hover transition cursor-pointer inline-flex items-center"
+                                        title="Open Location in Maps"
                                     >
-                                        <span>{fullAddress || "View Store Location"}</span>
-                                        <span className="material-symbols-outlined text-[12px] text-primary group-hover:translate-x-0.5 transition-transform">open_in_new</span>
+                                        <span className="material-symbols-outlined text-sm">open_in_new</span>
                                     </a>
-                                ) : (
-                                    <p className="font-medium text-xs text-text-muted max-w-xs leading-relaxed">{fullAddress}</p>
                                 )}
                             </div>
                         )}

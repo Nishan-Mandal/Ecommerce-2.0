@@ -8,6 +8,9 @@ import Blog from "../pages/blog/Blog";
 import Dashboard from "../admin/dashboard/Dashboard";
 import ProductDetails from "../pages/ProductDetails/ProductDetails";
 import { useAuth } from "../context/AuthContext";
+import Orders from "../admin/orders/Orders";
+import Products from "../admin/products/Products";
+import AdminUsersPage from "../admin/User/AdminUsersPage";
 import AddProduct from "../admin/products/AddProduct";
 import UpdateProduct from "../admin/products/UpdateProduct";
 import Allproducts from '../pages/allproducts/Allproducts';
@@ -94,11 +97,15 @@ export default function AppRoutes() {
       <Route element={<AdminRoute />}>
         <Route element={<Admin />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/users" element={<AdminUsersPage />} />
           <Route path="/addproduct" element={<AddProduct />} />
           <Route path="/updateproduct" element={<UpdateProduct />} />
           <Route path="/coupons" element={<Coupons />} />
           <Route path="/coupons/add" element={<CouponFormPage />} />
           <Route path="/coupons/edit" element={<CouponFormPage />} />
+          <Route path="/reviews" element={<Review />} />
           <Route path="/review" element={<Review />} />
           <Route path="/configure" element={<Configure />} />
           <Route path="/admin/order/:id" element={<AdminOrderDetail />} />

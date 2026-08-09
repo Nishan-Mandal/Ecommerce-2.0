@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useCheckout } from "../../hooks/checkout/useCheckout";
 import AddressSection from "./sections/AddressSection";
@@ -108,6 +108,7 @@ export default function CheckoutPage() {
               onSelectAddress={checkout.setSelectedAddressId}
               onAddAddress={checkout.handleAddAddress}
               onUpdateAddress={checkout.handleUpdateAddress}
+              onSetDefault={checkout.handleSetDefaultAddress}
               onOpenForm={checkout.openEditAddress}
               onCloseForm={checkout.closeAddressForm}
               onDelete={checkout.handleDeleteAddress}

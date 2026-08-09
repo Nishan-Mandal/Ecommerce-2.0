@@ -79,106 +79,61 @@ function ProductsGrid() {
             .filter((p) => !filterType || p.category?.includes(filterType))
             .filter((p) => !filterPrice || p.price?.includes(filterPrice));
 
-    // If admin has configured collections, render those; otherwise fall back
-    const useDynamicCollections = !collectionsLoading && collections.length > 0;
-
-    if (useDynamicCollections) {
+    if (collectionsLoading) {
         return (
-            <section className="py-12">
-                <div className="container mx-auto px-4 space-y-20">
-                    {collections.map((col) => {
-                        // Resolve full product objects from the productIds list
-                        const collectionProducts = col.productIds
-                            .map((id) => products.find((p) => p.id === id))
-                            .filter(Boolean);
-
-                        const filtered = applySearchFilters(collectionProducts);
-                        if (filtered.length === 0) return null;
-
-                        return (
-                            <div key={col.collectionId}>
-                                <div className="mb-8 flex items-end justify-between">
-                                    <div>
-                                        {col.subtitle && (
-                                            <p className="text-sm font-bold uppercase tracking-[3px] text-primary">
-                                                {col.subtitle}
-                                            </p>
-                                        )}
-                                        <h2 className="mt-1 text-3xl font-extrabold text-text-base">
-                                            {col.title}
-                                        </h2>
-                                    </div>
-                                    <Link to="/allproducts" className="text-sm font-bold text-primary hover:text-primary-hover transition-colors">
-                                        View All →
-                                    </Link>
-                                </div>
-                                <div className={
-                                    col.layout === "horizontal-scroll"
-                                        ? "flex overflow-x-auto gap-4 sm:gap-6 pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent"
-                                        : "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"
-                                }>
-                                    {filtered.map((item, i) => (
-                                        <div 
-                                            key={item.id || i} 
-                                            className={col.layout === "horizontal-scroll" ? "w-[230px] sm:w-[240px] md:w-[280px] shrink-0" : ""}
-                                        >
-                                            <ProductCard item={item} addCart={addCart} />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        );
-                    })}
+            <section className="py-6 sm:py-8 lg:py-12">
+                <div className="space-y-8 animate-pulse">
+                    <div className="h-6 w-48 bg-border-base/50 rounded-lg"></div>
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                            <div key={n} className="h-64 bg-border-base/30 rounded-2xl"></div>
+                        ))}
+                    </div>
                 </div>
             </section>
         );
     }
 
-    // Fallback: original category-based hardcoded sections
-    const customProducts = applySearchFilters(products.filter((p) => p.category?.includes("Custom")));
-    const readyMade = applySearchFilters(products.filter((p) => p.category?.includes("ReadyMade") && !p.category?.includes("Premium")));
-    const premium = applySearchFilters(products.filter((p) => p.category?.includes("ReadyMade-Premium")));
-
-    const fallbackSections = [
-        { label: "New Arrival", title: "Custom Collection", items: customProducts },
-        { label: "Trending", title: "Ready Made Collection", items: readyMade },
-        { label: "Premium", title: "Premium Collection", items: premium },
-    ];
+    if (!collections || collections.length === 0) {
+        return null;
+    }
 
     return (
-        <section className="py-8 sm:py-2 lg:py-12">
-            <div className="space-y-4">
+        <section className="py-6 sm:py-8 lg:py-12">
+            <div className="space-y-8 sm:space-y-12">
+                {collections.map((col) => {
+                    const collectionProducts = (col.productIds || [])
+                        .map((id) => products.find((p) => p.id === id))
+                        .filter(Boolean);
 
-                {fallbackSections
-                    .filter((s) => s.items.length > 0)
-                    .map((sec) => (
-                        <div key={sec.title}>
+                    const filtered = applySearchFilters(collectionProducts);
+                    if (filtered.length === 0) return null;
 
+                    return (
+                        <div key={col.collectionId || col.id}>
                             {/* Section Header */}
-                            <div className="mb-5 sm:mb-6 lg:mb-8 flex items-end justify-between gap-4 ">
-
+                            <div className="mb-4 sm:mb-6 flex items-end justify-between gap-4">
                                 <div>
-                                    {/* <p className="text-[10px] sm:text-xs lg:text-sm font-bold uppercase tracking-[2px] sm:tracking-[3px] text-primary">
-                                        {sec.label}
-                                    </p> */}
-
-                                    <h2 className="mt-1 sm:mt-2 text-lg sm:text-xl lg:text-2xl font-extrabold text-text-base">
-                                        {sec.title}
+                                    {col.subtitle && (
+                                        <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[2px] text-primary">
+                                            {col.subtitle}
+                                        </p>
+                                    )}
+                                    <h2 className="mt-1 text-lg sm:text-xl lg:text-2xl font-extrabold text-text-base">
+                                        {col.title}
                                     </h2>
                                 </div>
-
                                 <Link
                                     to="/allproducts"
                                     className="text-xs sm:text-sm font-bold text-primary hover:text-primary-hover whitespace-nowrap transition-colors"
                                 >
                                     View All →
                                 </Link>
-
                             </div>
 
-                            {/* Products */}
-                            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-1 sm:gap-2 lg:gap-3">
-                                {sec.items.map((item, i) => (
+                            {/* Auto-fitting Responsive UI Grid */}
+                            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+                                {filtered.map((item, i) => (
                                     <ProductCard
                                         key={item.id || i}
                                         item={item}
@@ -186,10 +141,9 @@ function ProductsGrid() {
                                     />
                                 ))}
                             </div>
-
                         </div>
-                    ))}
-
+                    );
+                })}
             </div>
         </section>
     );

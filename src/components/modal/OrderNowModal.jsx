@@ -9,6 +9,7 @@ import { deleteFromCart } from '../../redux/cartSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import Loader from '../../components/loader/Loader'
 import useAuth from '../../hooks/auth/useAuth';
+import { getFriendlyErrorMessage } from '../../utils/firebaseErrorHandler.js';
 
 function OrderNowModal() {
     const { user, setIsLoginOpen } = useAuth();
@@ -182,12 +183,11 @@ function OrderNowModal() {
                                 toast.success('Payment Successful! Custom Order Placed.');
                                 closeModal();
                             } catch (err) {
-                                console.error("Error creating order:", err);
-                                toast.error("Failed to record order.");
+                                toast.error(getFriendlyErrorMessage(err, "Failed to record order."));
                             }
                         },
                         onFailure: (errMsg) => {
-                            toast.error(errMsg || 'Payment cancelled or failed.');
+                            toast.error(getFriendlyErrorMessage(errMsg, "Payment cancelled or failed."));
                         }
                     });
                 }
@@ -200,7 +200,7 @@ function OrderNowModal() {
             }
             setLoading(false);
         } catch (error) {
-            console.log(error);
+            toast.error(getFriendlyErrorMessage(error, "Failed to place order. Please try again."));
             setLoading(false);
         }
     }

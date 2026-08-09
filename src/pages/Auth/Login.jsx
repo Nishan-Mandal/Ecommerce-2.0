@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/auth/useAuth';
 import Loader from '../../components/loader/Loader';
 import { FaEnvelope, FaPhoneAlt, FaLock, FaKey, FaArrowLeft, FaCheckCircle } from 'react-icons/fa';
+import { getFriendlyErrorMessage } from '../../utils/firebaseErrorHandler.js';
 
 /**
  * Login Component (Adaptive Modal or Page)
@@ -59,8 +60,7 @@ function Login() {
                 navigate(from, { replace: true });
             }
         } catch (error) {
-            console.error("Email login error:", error);
-            toast.error(error.message || 'Signin Failed');
+            toast.error(getFriendlyErrorMessage(error, 'Signin Failed. Please check your credentials and try again.'));
         }
     };
 
@@ -81,8 +81,7 @@ function Login() {
             setTimer(30);
             toast.success(`OTP sent to +91 ${cleanPhone}`);
         } catch (error) {
-            console.error("Send OTP error:", error);
-            toast.error(error.message || "Failed to send OTP. Please retry.");
+            toast.error(getFriendlyErrorMessage(error, "Failed to send OTP. Please retry."));
         } finally {
             setOtpSending(false);
         }
@@ -105,8 +104,7 @@ function Login() {
                 navigate(from, { replace: true });
             }
         } catch (error) {
-            console.error("Verify OTP error:", error);
-            toast.error(error.message || "Invalid OTP code.");
+            toast.error(getFriendlyErrorMessage(error, "Invalid OTP code. Please try again."));
         } finally {
             setOtpVerifying(false);
         }

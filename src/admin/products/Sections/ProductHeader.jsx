@@ -1,10 +1,7 @@
 import React from "react";
-import {
-    FaBoxOpen,
-    FaSave,
-    FaCheckCircle,
-    FaEyeSlash
-} from "react-icons/fa";
+import { FaBoxOpen, FaSave } from "react-icons/fa";
+import StatusBadge from "../../Components/common/StatusBadge.jsx";
+import ToggleButton from "../../../components/common/ToggleButton.jsx";
 
 function ProductHeader({
     title = "Add Product",
@@ -39,14 +36,7 @@ function ProductHeader({
 
                             {/* Live / Draft Badge Indicator */}
                             {products && (
-                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border inline-flex items-center gap-1.5 ${
-                                    isLive
-                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                                }`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${isLive ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-                                    {isLive ? "Live" : "Draft"}
-                                </span>
+                                <StatusBadge status={isLive ? "LIVE" : "DRAFT"} size="sm" />
                             )}
                         </div>
 
@@ -60,19 +50,16 @@ function ProductHeader({
                 <div className="flex items-center gap-2.5 shrink-0">
                     {/* Top Status Switch Button */}
                     {products && setProducts && (
-                        <button
-                            type="button"
-                            onClick={() => setProducts({ ...products, isActive: products.isActive === false ? true : false })}
-                            className={`px-3 py-1.5 text-xs font-black rounded-xl transition-all duration-200 cursor-pointer flex items-center gap-2 border shadow-xs active:scale-95 ${
-                                isLive
-                                    ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-emerald-600/20"
-                                    : "bg-slate-800 hover:bg-slate-900 text-white border-slate-800 dark:bg-slate-200 dark:text-slate-900 shadow-slate-800/20"
-                            }`}
-                            title={isLive ? "Click to set Draft mode" : "Click to set Live (Published)"}
-                        >
-                            <span className={`w-2 h-2 rounded-full ${isLive ? "bg-white animate-pulse" : "bg-slate-400"}`} />
-                            <span>{isLive ? "Status: Live" : "Status: Draft"}</span>
-                        </button>
+                        <div className="flex items-center justify-center px-2 pr-3 border-r border-border-base/60">
+                            <ToggleButton
+                                checked={isLive}
+                                onChange={(checked) => setProducts({ ...products, isActive: checked })}
+                                label={isLive ? "Live" : "Draft"}
+                                labelPosition="side"
+                                size="md"
+                                color="success"
+                            />
+                        </div>
                     )}
 
                     {/* Save Button */}

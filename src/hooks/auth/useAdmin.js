@@ -6,6 +6,9 @@ import { Timestamp } from 'firebase/firestore';
 import { uploadService } from '../../services/upload/uploadService.js';
 import { mediaService } from '../../services/media/mediaService.js';
 import { generateVariantCombinations } from '../../utils/variantUtils.js';
+import { useDraftManager } from '../common/useDraftManager.js';
+import { useAuth as useAuthCtx } from '../../context/AuthContext.jsx';
+import { getFriendlyErrorMessage } from '../../utils/firebaseErrorHandler.js';
 
 /**
  * Helper to flatten and sanitize arrays before sending to Firestore
@@ -78,12 +81,14 @@ const sanitizeProductForFirestore = (data) => {
  */
 export default function useAdmin() {
   const navigate = useNavigate();
+  const { user } = useAuthCtx();
+  const userId = user?.user?.uid ?? null;
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [variantUploadingIndex, setVariantUploadingIndex] = useState(null);
 
-  const [productForm, setProductForm] = useState({
+  const initialFormState = {
     id: '',
     brand: '',
     title: '',
@@ -99,10 +104,33 @@ export default function useAdmin() {
     images: [],
     variants: [],
     variantTypes: [],
+  };
+
+  const {
+    formState: productForm,
+    setFormState: setProductForm,
+    loadValues: loadProductValues,
+    hasDraft,
+    draftMeta,
+    isDirty,
+    recheckDraft,
+    restoreDraft,
+    discardDraft,
+    clearDraft: clearProductDraft,
+    resetForm,
+  } = useDraftManager({
+    storageKey: 'draft_product_create',
+    defaultValues: initialFormState,
+    userId,
+    schemaVersion: 1,
+    expiryHours: 24,
   });
 
+  const isEditing = Boolean(productForm?.id);
+
   const edithandle = (item) => {
-    setProductForm({
+    // Use loadProductValues (not setProductForm) to avoid marking isDirty
+    loadProductValues({
       id: item.id || '',
       brand: item.brand || '',
       title: item.title || '',
@@ -128,6 +156,66 @@ export default function useAdmin() {
       return Boolean(desc.short || (desc.sections && desc.sections.length > 0));
     }
     return false;
+  };
+
+  const uploadPendingImages = async (formState) => {
+    const pendingMap = formState.pendingFiles || new Map();
+    const finalImages = [];
+    setUploading(true);
+
+    let uploadedCount = 0;
+    const totalFiles = pendingMap.size || 1;
+
+    for (const url of formState.images || []) {
+      if (typeof url === 'string' && url.startsWith('blob:') && pendingMap.has(url)) {
+        const file = pendingMap.get(url);
+        try {
+          const downloadURL = await uploadService.uploadProductImage(file, (p) => {
+            setUploadProgress(Math.round(((uploadedCount + p / 100) / totalFiles) * 100));
+          });
+          await mediaService.saveMedia(downloadURL, file.name);
+          finalImages.push(downloadURL);
+          uploadedCount++;
+        } catch (err) {
+          console.error("Error uploading pending image:", err);
+        }
+      } else if (typeof url === 'string' && !url.startsWith('blob:')) {
+        finalImages.push(url);
+      }
+    }
+
+    // Process variant images if any are local blob URLs
+    const finalVariants = [];
+    for (const variant of formState.variants || []) {
+      const vImages = [];
+      for (const vUrl of variant.images || []) {
+        if (typeof vUrl === 'string' && vUrl.startsWith('blob:') && pendingMap.has(vUrl)) {
+          const file = pendingMap.get(vUrl);
+          try {
+            const downloadURL = await uploadService.uploadProductImage(file);
+            await mediaService.saveMedia(downloadURL, file.name);
+            vImages.push(downloadURL);
+          } catch (err) {
+            console.error("Error uploading pending variant image:", err);
+          }
+        } else if (typeof vUrl === 'string' && !vUrl.startsWith('blob:')) {
+          vImages.push(vUrl);
+        }
+      }
+      finalVariants.push({ ...variant, images: vImages });
+    }
+
+    setUploading(false);
+    setUploadProgress(0);
+
+    const primaryUrl = finalImages[0] || (formState.imageUrl && !formState.imageUrl.startsWith('blob:') ? formState.imageUrl : '');
+
+    return {
+      ...formState,
+      imageUrl: primaryUrl,
+      images: finalImages,
+      variants: finalVariants
+    };
   };
 
   const addProduct = async () => {
@@ -159,15 +247,18 @@ export default function useAdmin() {
 
     setLoading(true);
     try {
+      // Upload pending images only now after validation passed
+      const preparedForm = await uploadPendingImages(productForm);
+
       const rawData = {
-        ...productForm,
-        isActive: productForm.isActive !== false,
-        hasVariants: Boolean(productForm.hasVariants),
-        price: productForm.hasVariants ? null : Number(productForm.price) || 0,
-        originalPrice: productForm.hasVariants ? null : (productForm.originalPrice ? Number(productForm.originalPrice) : null),
-        inStock: productForm.hasVariants ? null : Number(productForm.inStock) || 0,
-        variantTypes: productForm.hasVariants ? (productForm.variantTypes || []) : [],
-        variants: productForm.hasVariants ? (productForm.variants || []) : [],
+        ...preparedForm,
+        isActive: preparedForm.isActive !== false,
+        hasVariants: Boolean(preparedForm.hasVariants),
+        price: preparedForm.hasVariants ? null : Number(preparedForm.price) || 0,
+        originalPrice: preparedForm.hasVariants ? null : (preparedForm.originalPrice ? Number(preparedForm.originalPrice) : null),
+        inStock: preparedForm.hasVariants ? null : Number(preparedForm.inStock) || 0,
+        variantTypes: preparedForm.hasVariants ? (preparedForm.variantTypes || []) : [],
+        variants: preparedForm.hasVariants ? (preparedForm.variants || []) : [],
         time: Timestamp.now(),
         date: new Date().toLocaleString("en-US", {
           month: "short",
@@ -192,12 +283,13 @@ export default function useAdmin() {
       }
 
       toast.success("Product Added successfully");
+      // Clear draft BEFORE navigating to prevent stale draft on return
+      clearProductDraft();
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate('/products');
       }, 1000);
     } catch (error) {
-      console.error("Error adding product: ", error);
-      toast.error("Failed to add product: " + (error.message || "Invalid data structure"));
+      toast.error(getFriendlyErrorMessage(error, "Failed to add product. Please try again."));
     } finally {
       setLoading(false);
       resetForm();
@@ -233,26 +325,28 @@ export default function useAdmin() {
 
     setLoading(true);
     try {
+      // Upload pending images only now after validation passed
+      const preparedForm = await uploadPendingImages(productForm);
+
       const rawData = {
-        ...productForm,
-        isActive: productForm.isActive !== false,
-        hasVariants: Boolean(productForm.hasVariants),
-        price: productForm.hasVariants ? null : Number(productForm.price) || 0,
-        originalPrice: productForm.hasVariants ? null : (productForm.originalPrice ? Number(productForm.originalPrice) : null),
-        inStock: productForm.hasVariants ? null : Number(productForm.inStock) || 0,
-        variantTypes: productForm.hasVariants ? (productForm.variantTypes || []) : [],
-        variants: productForm.hasVariants ? (productForm.variants || []) : [],
+        ...preparedForm,
+        isActive: preparedForm.isActive !== false,
+        hasVariants: Boolean(preparedForm.hasVariants),
+        price: preparedForm.hasVariants ? null : Number(preparedForm.price) || 0,
+        originalPrice: preparedForm.hasVariants ? null : (preparedForm.originalPrice ? Number(preparedForm.originalPrice) : null),
+        inStock: preparedForm.hasVariants ? null : Number(preparedForm.inStock) || 0,
+        variantTypes: preparedForm.hasVariants ? (preparedForm.variantTypes || []) : [],
+        variants: preparedForm.hasVariants ? (preparedForm.variants || []) : [],
       };
 
       const updateData = sanitizeProductForFirestore(rawData);
       await productService.updateProduct(productForm.id, updateData);
       toast.success("Product Updated successfully");
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate('/products');
       }, 800);
     } catch (error) {
-      console.error("Error updating product: ", error);
-      toast.error("Failed to update product: " + (error.message || "Invalid data structure"));
+      toast.error(getFriendlyErrorMessage(error, "Failed to update product. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -266,8 +360,7 @@ export default function useAdmin() {
       await productService.updateProduct(item.id, { isActive: newStatus });
       toast.success(`Product "${item.title || 'Item'}" marked as ${newStatus ? 'Live' : 'Draft'}!`);
     } catch (error) {
-      console.error("Error toggling active status: ", error);
-      toast.error("Failed to update product status");
+      toast.error(getFriendlyErrorMessage(error, "Failed to update product status."));
     } finally {
       setLoading(false);
     }
@@ -279,63 +372,33 @@ export default function useAdmin() {
       await productService.deleteProduct(item.id);
       toast.success('Product Deleted successfully');
     } catch (error) {
-      console.error("Error deleting product: ", error);
-      toast.error("Failed to delete product");
+      toast.error(getFriendlyErrorMessage(error, "Failed to delete product."));
     } finally {
       setLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setProductForm({
-      id: '',
-      brand: '',
-      title: '',
-      isActive: true,
-      hasVariants: false,
-      price: '',
-      originalPrice: '',
-      inStock: '',
-      imageUrl: '',
-      category: '',
-      description: '',
-      tags: [],
-      images: [],
-      variants: [],
-      variantTypes: [],
+  // Event handlers for state mutations with deferred uploads
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const newBlobUrls = files.map(f => ({ file: f, url: URL.createObjectURL(f) }));
+
+    setProductForm((prev) => {
+      const currentImages = prev.images || [];
+      const updatedImages = [...currentImages, ...newBlobUrls.map(b => b.url)];
+      const pendingMap = new Map(prev.pendingFiles || []);
+      newBlobUrls.forEach(b => pendingMap.set(b.url, b.file));
+
+      return {
+        ...prev,
+        images: updatedImages,
+        imageUrl: prev.imageUrl || updatedImages[0] || '',
+        pendingFiles: pendingMap
+      };
     });
-  };
-
-  // Event handlers for state mutations
-  const handleImageUpload = async (e) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setUploading(true);
-    setUploadProgress(0);
-
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const downloadURL = await uploadService.uploadProductImage(file, setUploadProgress);
-        await mediaService.saveMedia(downloadURL, file.name);
-        setProductForm((prev) => {
-          const newImages = [...(prev.images || []), downloadURL];
-          return {
-            ...prev,
-            images: newImages,
-            imageUrl: prev.imageUrl || downloadURL
-          };
-        });
-      }
-      toast.success("Images uploaded successfully!");
-    } catch (err) {
-      console.error(err);
-      toast.error("Some uploads failed");
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
-    }
+    toast.info(`${files.length} image(s) selected (will upload on save).`);
   };
 
   const handleImageDelete = async (indexToDelete) => {
@@ -347,57 +410,51 @@ export default function useAdmin() {
       if (prev.imageUrl === imageUrlToDelete) {
         newPrimaryUrl = newImages.length > 0 ? newImages[0] : '';
       }
+      const pendingMap = new Map(prev.pendingFiles || []);
+      if (pendingMap.has(imageUrlToDelete)) {
+        pendingMap.delete(imageUrlToDelete);
+      }
       return {
         ...prev,
         images: newImages,
-        imageUrl: newPrimaryUrl
+        imageUrl: newPrimaryUrl,
+        pendingFiles: pendingMap
       };
     });
 
-    try {
-      await uploadService.deleteProductImage(imageUrlToDelete);
-      toast.success("Image deleted");
-    } catch (err) {
-      console.warn("Storage deletion warning:", err);
+    if (typeof imageUrlToDelete === 'string' && !imageUrlToDelete.startsWith('blob:')) {
+      try {
+        await uploadService.deleteProductImage(imageUrlToDelete);
+        toast.success("Image deleted");
+      } catch (err) {
+        console.warn("Storage deletion warning:", err);
+      }
     }
   };
 
-  const handleVariantImageUpload = async (variantIndex, e) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const handleVariantImageUpload = (variantIndex, e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    setVariantUploadingIndex(variantIndex);
-    setUploadProgress(0);
+    const newBlobUrls = files.map(f => ({ file: f, url: URL.createObjectURL(f) }));
 
-    try {
-      const uploadedUrls = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const downloadURL = await uploadService.uploadProductImage(file, setUploadProgress);
-        await mediaService.saveMedia(downloadURL, file.name);
-        uploadedUrls.push(downloadURL);
-      }
+    setProductForm((prev) => {
+      const newVariants = [...(prev.variants || [])];
+      const existingImages = newVariants[variantIndex].images || [];
+      newVariants[variantIndex] = {
+        ...newVariants[variantIndex],
+        images: [...existingImages, ...newBlobUrls.map(b => b.url)]
+      };
+      const pendingMap = new Map(prev.pendingFiles || []);
+      newBlobUrls.forEach(b => pendingMap.set(b.url, b.file));
 
-      setProductForm((prev) => {
-        const newVariants = [...(prev.variants || [])];
-        const existingImages = newVariants[variantIndex].images || [];
-        newVariants[variantIndex] = {
-          ...newVariants[variantIndex],
-          images: [...existingImages, ...uploadedUrls]
-        };
-        return {
-          ...prev,
-          variants: newVariants
-        };
-      });
-      toast.success("Variant images uploaded successfully!");
-    } catch (err) {
-      console.error(err);
-      toast.error("Variant image upload failed");
-    } finally {
-      setVariantUploadingIndex(null);
-      setUploadProgress(0);
-    }
+      return {
+        ...prev,
+        variants: newVariants,
+        pendingFiles: pendingMap
+      };
+    });
+    toast.info(`${files.length} variant image(s) selected (will upload on save).`);
   };
 
   const handleVariantImageDelete = async (variantIndex, imageIndexToDelete) => {
@@ -490,6 +547,13 @@ export default function useAdmin() {
     }));
   };
 
+  const deleteAllVariants = () => {
+    setProductForm(prev => ({
+      ...prev,
+      variants: []
+    }));
+  };
+
   const addVariantType = () => {
     setProductForm(prev => ({
       ...prev,
@@ -535,10 +599,11 @@ export default function useAdmin() {
   };
 
   const handleCancel = (isModal, onClose) => {
+    resetForm();
     if (isModal && onClose) {
       onClose();
     } else {
-      navigate('/dashboard', { state: { activeView: 'products' } });
+      navigate('/products');
     }
   };
 
@@ -548,6 +613,12 @@ export default function useAdmin() {
     uploadProgress,
     productForm,
     setProductForm,
+    hasDraft,
+    draftMeta,
+    isDirty,
+    recheckDraft,
+    restoreDraft,
+    discardDraft,
     edithandle,
     addProduct,
     updateProduct,
@@ -561,6 +632,7 @@ export default function useAdmin() {
     addManualVariant,
     handleVariantChange,
     deleteVariant,
+    deleteAllVariants,
     addVariantType,
     deleteVariantType,
     handleVariantTypeNameChange,

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
  * ProductCard
  * Renders a premium, interactive product catalog item.
  * Features hover transformations, dynamic rating stars, category labels, and cart add triggers.
+ * Enforces uniform height and alignment across grid layouts.
  */
 function ProductCard({ item, index, addCart }) {
     const navigate = useNavigate();
@@ -18,10 +19,10 @@ function ProductCard({ item, index, addCart }) {
         <div
             onClick={() => navigate(`/productdetails/${item.id}`)}
             key={index}
-            className="group flex flex-col cursor-pointer overflow-hidden rounded-2xl bg-bg-surface border border-border-base/40 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-2.5"
+            className="group flex flex-col h-full cursor-pointer overflow-hidden rounded-2xl bg-bg-surface border border-border-base/40 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-2.5"
         >
             {/* Image Container */}
-            <div className="relative aspect-[4/3] w-full overflow-hidden bg-bg-base/30 rounded-xl flex items-center justify-center p-2">
+            <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-bg-base/30 rounded-xl flex items-center justify-center p-2">
                 <img
                     src={imageUrl}
                     alt={title}
@@ -30,38 +31,39 @@ function ProductCard({ item, index, addCart }) {
 
                 {/* Floating Category Tag */}
                 {category && (
-                    <span className="absolute top-2 left-2 bg-bg-surface/90 backdrop-blur px-2 py-0.5 rounded-md text-[8px] sm:text-[9px] font-bold uppercase tracking-wide text-primary shadow-xs border border-border-base/10">
+                    <span className="absolute top-2 left-2 bg-bg-surface/90 backdrop-blur px-2 py-0.5 rounded-md text-[8px] sm:text-[9px] font-bold uppercase tracking-wide text-primary shadow-xs border border-border-base/10 whitespace-nowrap max-w-[65%] truncate">
                         {category}
                     </span>
                 )}
 
                 {/* Floating Rating Badge */}
-                <div className="absolute top-2 right-2 bg-bg-surface/90 backdrop-blur px-1.5 py-0.5 rounded-md text-[9px] font-bold text-amber-500 flex items-center gap-0.5 shadow-xs border border-border-base/10">
+                <div className="absolute top-2 right-2 bg-bg-surface/90 backdrop-blur px-1.5 py-0.5 rounded-md text-[9px] font-bold text-amber-500 flex items-center gap-0.5 shadow-xs border border-border-base/10 shrink-0">
                     <span
                         className="material-symbols-outlined text-[11px]"
                         style={{ fontVariationSettings: "'FILL' 1" }}
                     >
                         star
                     </span>
-                    <span>{averageRating ? averageRating.toFixed(1) : "4.8"}</span>
+                    <span>{averageRating ? Number(averageRating).toFixed(1) : "4.8"}</span>
                 </div>
             </div>
 
             {/* Content Container */}
-            <div className="flex flex-col flex-grow pt-2.5 space-y-1.5">
+            <div className="flex flex-col flex-1 justify-between pt-2.5 space-y-1.5">
+                <div className="space-y-1.5">
+                    {/* Title (fixed uniform 2-line height for perfect horizontal alignment) */}
+                    <h2 className="text-xs sm:text-sm font-bold text-text-base line-clamp-2 group-hover:text-primary transition-colors duration-200 h-9 sm:h-10 leading-snug flex items-start overflow-hidden">
+                        {title}
+                    </h2>
 
-                {/* Title */}
-                <h2 className="text-xs sm:text-sm font-bold text-text-base line-clamp-2 group-hover:text-primary transition-colors duration-200 min-h-[2rem] sm:min-h-[2.5rem] leading-snug">
-                    {title}
-                </h2>
+                    {/* Description (fixed uniform 2-line height for perfect horizontal alignment) */}
+                    <p className="text-[10px] sm:text-[11px] text-text-muted line-clamp-2 leading-relaxed h-8 sm:h-9 overflow-hidden">
+                        {descText || "Experience premium build quality and exceptional performance."}
+                    </p>
+                </div>
 
-                {/* Description */}
-                <p className="text-[10px] sm:text-[11px] text-text-muted line-clamp-2 leading-relaxed">
-                    {descText || "Experience premium build quality and exceptional cooling performance designed for modern homes."}
-                </p>
-
-                {/* Price and Cart Action */}
-                <div className="flex items-center justify-between pt-2 mt-auto border-t border-border-base/30">
+                {/* Price and Cart Action (pinned to bottom) */}
+                <div className="flex items-center justify-between pt-2.5 mt-auto border-t border-border-base/30 shrink-0">
                     <div>
                         <span className="block text-[8px] sm:text-[9px] uppercase tracking-wider text-text-muted font-bold">
                             Price
@@ -83,7 +85,6 @@ function ProductCard({ item, index, addCart }) {
                         </span>
                     </button>
                 </div>
-
             </div>
         </div>
     );

@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import useAuth from "../../hooks/auth/useAuth";
 import { userService } from "../../services/user/userService";
 import { orderService } from "../../services/order/orderService";
+import { getFriendlyErrorMessage } from "../../utils/firebaseErrorHandler.js";
 import {
     FaUser, FaMapMarkerAlt, FaShoppingBag, FaWallet,
     FaSpinner, FaShieldAlt, FaChevronRight
@@ -102,8 +103,7 @@ function User() {
                 const userOrders = await orderService.getOrdersByUser(uid, user?.user?.email);
                 setOrders(userOrders || []);
             } catch (err) {
-                console.error("Failed to load user profile/orders", err);
-                toast.error("Failed to load profile details");
+                toast.error(getFriendlyErrorMessage(err, "Failed to load profile details. Please try again."));
             } finally {
                 setLoading(false);
             }
@@ -119,8 +119,7 @@ function User() {
             await userService.updateUserProfile(uid, profile);
             toast.success("Profile updated successfully!");
         } catch (err) {
-            console.error("Failed to update profile", err);
-            toast.error("Failed to update profile");
+            toast.error(getFriendlyErrorMessage(err, "Failed to update profile. Please try again."));
         } finally {
             setSaving(false);
         }

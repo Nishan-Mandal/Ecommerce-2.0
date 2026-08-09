@@ -33,13 +33,6 @@ function Dashboard() {
     const [activities, setActivities] = useState([]);
 
     const adminHook = useAdmin();
-    const { activeView, setActiveView } = useOutletContext();
-
-    useEffect(() => {
-        if (location.state?.activeView) {
-            setActiveView(location.state.activeView);
-        }
-    }, [location.state, setActiveView]);
 
     const fetchUsers = async () => {
         setUsersLoading(true);
@@ -119,116 +112,87 @@ function Dashboard() {
     const isOverviewLoading = productsLoading && ordersLoading && usersLoading;
 
     return (
-        <>
-            {activeView === "overview" && (
-                isOverviewLoading ? (
-                    <DashboardSkeleton />
-                ) : (
-                    <section className="space-y-6 lg:space-y-8 mt-1">
+        isOverviewLoading ? (
+            <DashboardSkeleton />
+        ) : (
+            <section className="space-y-6 lg:space-y-8 mt-1 px-4 md:px-0">
 
-                        {/* Quick Action Buttons Strip */}
-                        <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 sm:p-5">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div>
-                                    <h2 className="text-base font-black text-text-base flex items-center gap-2">
-                                        <span>Quick Actions</span>
-                                    </h2>
-                                    <p className="text-xs text-text-muted mt-0.5">
-                                        Fast shortcuts to manage inventory, coupons, orders, and customers
-                                    </p>
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-2.5">
-                                    {/* Add Product Button */}
-                                    <button
-                                        onClick={handleAddClick}
-                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover text-compli rounded-xl font-bold text-xs transition cursor-pointer shadow-xs active:scale-95"
-                                    >
-                                        <FaPlus size={12} />
-                                        <span>Add Product</span>
-                                    </button>
-
-                                    {/* Add Coupon Button */}
-                                    <button
-                                        onClick={() => navigate('/coupons')}
-                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-xs active:scale-95"
-                                    >
-                                        <FaTicketAlt size={12} />
-                                        <span>Add Coupon</span>
-                                    </button>
-
-                                    {/* See Orders Button */}
-                                    <button
-                                        onClick={() => setActiveView("orders")}
-                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-xs active:scale-95"
-                                    >
-                                        <FaShoppingCart size={12} />
-                                        <span>See Orders</span>
-                                    </button>
-
-                                    {/* Manage Users Button */}
-                                    <button
-                                        onClick={() => setActiveView("users")}
-                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-bg-surface hover:bg-bg-base text-text-base border border-border-base rounded-xl font-bold text-xs transition cursor-pointer shadow-2xs active:scale-95"
-                                    >
-                                        <FaUsers size={12} />
-                                        <span>Users</span>
-                                    </button>
-                                </div>
-                            </div>
+                {/* Quick Action Buttons Strip */}
+                <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 sm:p-5">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h2 className="text-base font-black text-text-base flex items-center gap-2">
+                                <span>Quick Actions</span>
+                            </h2>
+                            <p className="text-xs text-text-muted mt-0.5">
+                                Fast shortcuts to manage inventory, coupons, orders, and customers
+                            </p>
                         </div>
-                        {/* Top KPI Metrics Cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                            {dashboardMetrics.map((metric, index) => (
-                                <DashboardCard
-                                    key={index}
-                                    title={metric.title}
-                                    value={metric.value}
-                                    icon={metric.icon}
-                                />
-                            ))}
+
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            {/* Add Product Button */}
+                            <button
+                                onClick={handleAddClick}
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover text-compli rounded-xl font-bold text-xs transition cursor-pointer shadow-xs active:scale-95"
+                            >
+                                <FaPlus size={12} />
+                                <span>Add Product</span>
+                            </button>
+
+                            {/* Add Coupon Button */}
+                            <button
+                                onClick={() => navigate('/coupons/add')}
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-xs active:scale-95"
+                            >
+                                <FaTicketAlt size={12} />
+                                <span>Add Coupon</span>
+                            </button>
+
+                            {/* See Orders Button */}
+                            <button
+                                onClick={() => navigate('/orders')}
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition cursor-pointer shadow-xs active:scale-95"
+                            >
+                                <FaShoppingCart size={12} />
+                                <span>See Orders</span>
+                            </button>
+
+                            {/* Manage Users Button */}
+                            <button
+                                onClick={() => navigate('/users')}
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-bg-surface hover:bg-bg-base text-text-base border border-border-base rounded-xl font-bold text-xs transition cursor-pointer shadow-2xs active:scale-95"
+                            >
+                                <FaUsers size={12} />
+                                <span>Users</span>
+                            </button>
                         </div>
-                        {/* Recharts Analytics Charts */}
-                        <DashboardAnalytics orders={orders} products={products} />
+                    </div>
+                </div>
+                {/* Top KPI Metrics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                    {dashboardMetrics.map((metric, index) => (
+                        <DashboardCard
+                            key={index}
+                            title={metric.title}
+                            value={metric.value}
+                            icon={metric.icon}
+                        />
+                    ))}
+                </div>
+                {/* Recharts Analytics Charts */}
+                <DashboardAnalytics orders={orders} products={products} />
 
-                        {/* 2-Column Grid: Recent Orders & Audit Activity Feed */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                            <div className="lg:col-span-7">
-                                <RecentOrdersTable orders={orders} onViewAll={() => setActiveView("orders")} />
-                            </div>
-                            <div className="lg:col-span-5">
-                                <RecentActivityFeed activities={activities} />
-                            </div>
-                        </div>
-                    </section>
-                )
-            )}
-
-            {activeView === "products" && (
-                <Products
-                    mode={mode}
-                    formatDate={formatDate}
-                />
-            )}
-
-            {activeView === "orders" && (
-                <Orders
-                    mode={mode}
-                    order={orders}
-                    formatDate={formatDate}
-                />
-            )}
-
-            {activeView === "users" && (
-                <UserDetailTable
-                    mode={mode}
-                    user={users}
-                    loading={usersLoading}
-                    onRefresh={fetchUsers}
-                    formatDate={formatDate}
-                />
-            )}
-        </>
+                {/* 2-Column Grid: Recent Orders & Audit Activity Feed */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                    <div className="lg:col-span-7">
+                        <RecentOrdersTable orders={orders} onViewAll={() => navigate("/orders")} />
+                    </div>
+                    <div className="lg:col-span-5">
+                        <RecentActivityFeed activities={activities} />
+                    </div>
+                </div>
+            </section>
+        )
     );
 }
 

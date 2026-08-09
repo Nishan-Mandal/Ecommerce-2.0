@@ -10,6 +10,7 @@ import {
 import ProductVariants from "./Sections/ProductVariants";
 import VariantTable from "./Sections/VariantTable";
 import ProductActions from "./Sections/ProductAction";
+import DraftRecoveryDialog from "../Components/common/DraftRecoveryDialog";
 
 function ProductForm(props) {
     const {
@@ -24,6 +25,12 @@ function ProductForm(props) {
 
         handleCancel,
         addProduct,
+
+        // Draft recovery
+        hasDraft,
+        draftMeta,
+        restoreDraft,
+        discardDraft,
 
         handleImageUpload,
         handleImageDelete,
@@ -40,11 +47,15 @@ function ProductForm(props) {
         addManualVariant,
 
         deleteVariant,
+        deleteAllVariants,
         handleVariantChange,
         handleVariantImageUpload,
         handleVariantImageDelete,
         variantUploadingIndex,
     } = props;
+
+    // Only show the draft banner when: a draft exists AND this is not an edit (no id)
+    const showDraftBanner = hasDraft && !products?.id;
 
     return (
         <div className="w-full max-w-screen-2xl mx-auto py-2 space-y-6 lg:space-y-8">
@@ -58,6 +69,16 @@ function ProductForm(props) {
                 products={products}
                 setProducts={setProducts}
             />
+
+            {/* Draft Recovery Banner */}
+            {showDraftBanner && (
+                <DraftRecoveryDialog
+                    formName="Product"
+                    draftMeta={draftMeta}
+                    onRestore={restoreDraft}
+                    onDiscard={discardDraft}
+                />
+            )}
 
             {/* SECTION 1: Product Media */}
             <div id="section-media">
@@ -90,12 +111,14 @@ function ProductForm(props) {
                 {products.hasVariants && (
                     <ProductVariants
                         products={products}
+                        setProducts={setProducts}
                         addVariantType={addVariantType}
                         deleteVariantType={deleteVariantType}
                         handleVariantTypeNameChange={handleVariantTypeNameChange}
                         handleVariantTypeValuesChange={handleVariantTypeValuesChange}
                         generateCombinations={generateCombinations}
                         addManualVariant={addManualVariant}
+                        deleteAllVariants={deleteAllVariants}
                     />
                 )}
             </div>
@@ -112,6 +135,7 @@ function ProductForm(props) {
                         products={products}
                         setProducts={setProducts}
                         deleteVariant={deleteVariant}
+                        deleteAllVariants={deleteAllVariants}
                         handleVariantChange={handleVariantChange}
                         handleVariantImageUpload={handleVariantImageUpload}
                         handleVariantImageDelete={handleVariantImageDelete}
