@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FaCartPlus } from 'react-icons/fa';
+import { useQuery } from '@tanstack/react-query';
+import { productService } from '../../services/product/productService';
 import useAdmin from '../../hooks/auth/useAdmin';
-import useProducts from '../../hooks/product/useProducts';
+import useProductsQuery from '../../hooks/product/useProductsQuery';
+import useDebounce from '../../hooks/common/useDebounce';
 import ProductDetailTable from './ProductDetailTable';
 import ProductForm from './ProductForm';
 import Header from "../Components/Header";
@@ -12,13 +15,7 @@ import UnsavedChangesDialog from '../Components/common/UnsavedChangesDialog';
 /**
  * Products Component
  * Main entry point for catalog management: handles viewing list, adding new, and updating products.
- *
- * Navigation Guard (BrowserRouter-compatible):
- *  Since useBlocker requires createBrowserRouter (data router), we implement a manual
- *  interception pattern:
- *   1. When a location change is detected while isDirty, we navigate back to the form.
- *   2. The pending destination is stored in a ref.
- *   3. The UnsavedChangesDialog lets the user Stay or Discard & Leave.
+ * Uses TanStack Query + Firestore cursor pagination for server-side filtering and zero duplicate reads.
  */
 function Products({ mode, formatDate: propFormatDate }) {
     const formatDate = propFormatDate || ((dateValue) => {
@@ -34,15 +31,40 @@ function Products({ mode, formatDate: propFormatDate }) {
 
     const location = useLocation();
     const navigate = useNavigate();
-    const { products, loading } = useProducts();
     const adminHook = useAdmin();
     const [view, setView] = useState('list'); // 'list' | 'add' | 'edit'
 
     // Filter states
     const [search, setSearch] = useState('');
+    const debouncedSearch = useDebounce(search, 300);
     const [categoryFilter, setCategoryFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [stockFilter, setStockFilter] = useState('ALL');
+    const [pageSize, setPageSize] = useState(10);
+
+    // Query Hook for paginated server-side products
+    const {
+        products,
+        hasMore,
+        isLoading,
+        isFetching,
+        pageIndex,
+        goNext,
+        goPrev,
+        refetch,
+    } = useProductsQuery({
+        category: categoryFilter,
+        statusFilter,
+        stockFilter,
+        pageSize,
+    });
+
+    // Fetch and cache all distinct store categories via TanStack Query
+    const { data: storeCategories = [] } = useQuery({
+        queryKey: ['categories', 'all'],
+        queryFn: () => productService.getCategories(),
+        staleTime: 10 * 60 * 1000,
+    });
 
     // ── Navigation guard state ─────────────────────────────────────────────────
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -60,7 +82,6 @@ function Products({ mode, formatDate: propFormatDate }) {
 
     // ── Route sync + navigation interception ──────────────────────────────────
     useEffect(() => {
-        // If we're mid-interception (we just navigated back to the form), skip processing
         if (interceptingRef.current) {
             interceptingRef.current = false;
             return;
@@ -71,22 +92,15 @@ function Products({ mode, formatDate: propFormatDate }) {
         const isLeavingForm = (prevView === 'add' || prevView === 'edit') &&
             currPath !== '/addproduct' && currPath !== '/updateproduct';
 
-        // ── Intercept navigation away from dirty form ──────────────────────────
         if (isLeavingForm && isDirtyRef.current) {
-            // Remember where the user wanted to go
             pendingNavRef.current = { pathname: currPath, state: location.state };
-
-            // Navigate back to the form (silently, without re-triggering full interception)
             interceptingRef.current = true;
             const formPath = prevView === 'add' ? '/addproduct' : '/updateproduct';
             navigate(formPath, { replace: true });
-
-            // Show the confirmation dialog
             setShowUnsavedDialog(true);
             return;
         }
 
-        // ── Normal route sync ──────────────────────────────────────────────────
         if (currPath === '/addproduct') {
             setView('add');
             prevViewRef.current = 'add';
@@ -97,7 +111,6 @@ function Products({ mode, formatDate: propFormatDate }) {
             setView('edit');
             prevViewRef.current = 'edit';
         } else {
-            // Clean leave (not dirty)
             if (prevView === 'add') adminHook.resetForm();
             setView('list');
             prevViewRef.current = 'list';
@@ -105,14 +118,11 @@ function Products({ mode, formatDate: propFormatDate }) {
     }, [location.pathname, location.state]);
 
     // ── Navigation guard handlers ──────────────────────────────────────────────
-
-    /** User chose to stay on the form */
     const handleStay = useCallback(() => {
         setShowUnsavedDialog(false);
         pendingNavRef.current = null;
     }, []);
 
-    /** User confirmed leaving — discard draft and proceed */
     const handleDiscardAndLeave = useCallback(() => {
         const target = pendingNavRef.current;
         adminHook.discardDraft();
@@ -126,12 +136,13 @@ function Products({ mode, formatDate: propFormatDate }) {
 
     // ── Form button handlers ───────────────────────────────────────────────────
     const handleAddClick = () => navigate('/addproduct');
-
-    const handleEditClick = (item) => navigate('/updateproduct', { state: { product: item } });
+    const handleEditClick = (item) => {
+        const { docSnap, ...cleanItem } = item || {};
+        navigate('/updateproduct', { state: { product: cleanItem } });
+    };
 
     const handleCancel = useCallback(() => {
         if (isDirtyRef.current) {
-            // Trigger the guard manually (don't navigate yet, show dialog first)
             pendingNavRef.current = { pathname: '/products' };
             setShowUnsavedDialog(true);
         } else {
@@ -182,34 +193,20 @@ function Products({ mode, formatDate: propFormatDate }) {
         );
     }
 
-    // ── Product list view ──────────────────────────────────────────────────────
-    const categories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
-
+    // Client-side text search within the currently loaded server-side page
     const filteredProducts = products.filter(p => {
-        const searchLower = search.toLowerCase();
-        const matchSearch = !search ||
-            p.title?.toLowerCase().includes(searchLower) ||
+        if (!debouncedSearch) return true;
+        const searchLower = debouncedSearch.toLowerCase().trim();
+        return p.title?.toLowerCase().includes(searchLower) ||
             p.brand?.toLowerCase().includes(searchLower) ||
             p.category?.toLowerCase().includes(searchLower);
-
-        const matchCategory = categoryFilter === 'ALL' || p.category === categoryFilter;
-
-        const isLive = p.isActive !== false;
-        const matchStatus = statusFilter === 'ALL' ||
-            (statusFilter === 'LIVE' && isLive) ||
-            (statusFilter === 'DRAFT' && !isLive);
-
-        const stockCount = p.hasVariants && Array.isArray(p.variants) && p.variants.length > 0
-            ? p.variants.reduce((acc, v) => acc + Number(v.inStock || v.quantity || 0), 0)
-            : Number(p.inStock ?? p.stock ?? 0);
-
-        const matchStock = stockFilter === 'ALL' ||
-            (stockFilter === 'OUT_OF_STOCK' && stockCount <= 0) ||
-            (stockFilter === 'LOW_STOCK' && stockCount > 0 && stockCount <= 5) ||
-            (stockFilter === 'IN_STOCK' && stockCount > 5);
-
-        return matchSearch && matchCategory && matchStatus && matchStock;
     });
+
+
+
+    const categoryOptions = Array.from(
+        new Set([...storeCategories, ...products.map(p => p.category).filter(Boolean)])
+    ).sort();
 
     const filtersConfig = [
         {
@@ -226,7 +223,7 @@ function Products({ mode, formatDate: propFormatDate }) {
             onChange: setCategoryFilter,
             options: [
                 { value: "ALL", label: "All Categories" },
-                ...categories.map(c => ({ value: c, label: c }))
+                ...categoryOptions.map(c => ({ value: c, label: c }))
             ]
         },
         {
@@ -253,20 +250,28 @@ function Products({ mode, formatDate: propFormatDate }) {
             <FilterBar
                 search={search}
                 setSearch={setSearch}
-                searchPlaceholder="Search products by title, brand, or category..."
+                searchPlaceholder="Search within this page by title, brand, or category..."
                 filters={filtersConfig}
             />
             <ProductDetailTable
                 mode={mode}
                 product={filteredProducts}
-                loading={loading}
+                loading={isLoading}
                 onEditClick={handleEditClick}
                 deleteProduct={adminHook.deleteProduct}
                 toggleActiveStatus={adminHook.toggleProductActiveStatus}
                 formatDate={formatDate}
+                pageIndex={pageIndex}
+                hasMore={hasMore}
+                isFetching={isFetching}
+                onPrev={goPrev}
+                onNext={goNext}
+                onRefresh={refetch}
+                pageSize={pageSize}
+                onPageSizeChange={setPageSize}
             />
         </div>
     );
 }
 
-export default Products;
+export default Products;

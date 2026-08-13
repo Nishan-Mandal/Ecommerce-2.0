@@ -5,6 +5,7 @@ import {
   FaExclamationCircle, FaTimesCircle, FaTruck, FaClock, FaImage 
 } from "react-icons/fa";
 import Pagination from "../../../components/common/Pagination";
+import { InvoiceDownloadButton } from "../../../invoice/index";
 
 function formatDate(dateVal) {
   if (!dateVal) return "N/A";
@@ -172,6 +173,7 @@ export default function OrdersTab({ orders = [] }) {
                       <span className="opacity-40">•</span>
                       <span className="uppercase font-bold tracking-wider text-[9px] text-text-muted">{gatewayDisplay}</span>
                     </p>
+                    
                   </div>
 
                   <div className="flex items-center gap-3 shrink-0">
@@ -181,6 +183,7 @@ export default function OrdersTab({ orders = [] }) {
                     <div>
                       {renderStatusBadge(o.orderStatus || o.status, o.paymentStatus || o.payment?.status)}
                     </div>
+                     <InvoiceDownloadButton order={o} />
                   </div>
                 </div>
 

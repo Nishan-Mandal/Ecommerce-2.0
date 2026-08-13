@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useFilter } from '../../context/FilterContext'
 import { useTheme } from '../../context/ThemeContext'
-import useProducts from '../../hooks/product/useProducts'
+import useProductsInfinite from '../../hooks/product/useProductsInfinite'
+import useDebounce from '../../hooks/common/useDebounce'
+import { productService } from '../../services/product/productService'
 import { useDispatch, useSelector } from 'react-redux'
 import { addToCart } from '../../redux/cartSlice'
 import { toast } from 'react-toastify'
@@ -10,65 +13,93 @@ import AllProductsBanner from './sections/AllProductsBanner';
 import AllProductsSidebar from './sections/AllProductsSidebar';
 import AllProductsGrid from './sections/AllProductsGrid';
 
-
 function Allproducts() {
     const navigate = useNavigate();
-    const { products, loading } = useProducts();
     const { searchkey, setSearchkey, filterType, setFilterType, filterPrice, setFilterPrice } = useFilter();
+    const debouncedSearchkey = useDebounce(searchkey, 300);
     const { mode } = useTheme();
     const [sortBy, setSortBy] = useState('Featured');
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-    const dispatch = useDispatch()
+    const dispatch = useDispatch();
     const cartItems = useSelector((state) => state.cart);
+
+    // Fetch and cache distinct store categories via TanStack Query
+    const { data: storeCategories = [] } = useQuery({
+        queryKey: ['categories', 'all'],
+        queryFn: () => productService.getCategories(),
+        staleTime: 10 * 60 * 1000,
+    });
+
+    // Infinite Query Hook for scalable Firestore product loading
+    const {
+        allProducts,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading: loading,
+    } = useProductsInfinite({
+        category: filterType,
+        maxPrice: filterPrice,
+        sortBy,
+        pageSize: 12,
+    });
 
     const addCart = (product) => {
         const { time, ...serializableProduct } = product;
         dispatch(addToCart(serializableProduct));
         toast.success('Added to cart!');
-    }
+    };
 
     useEffect(() => {
         localStorage.setItem('cart', JSON.stringify(cartItems));
-    }, [cartItems])
+    }, [cartItems]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
         setFilterType('');
         setFilterPrice('');
-    }, [])
+    }, []);
 
-    const uniqueCategory = [...new Set(products.map((item) => item.category))];
-    const uniquePrices = [...new Set(products.map((item) => item.price))].sort((a, b) => a - b);
+    // Dynamically derive categories & price boundaries from database
+    const dynamicCategories = Array.from(
+        new Set([...storeCategories, ...allProducts.map(p => p.category).filter(Boolean)])
+    ).sort();
 
-    // Apply filtering and sorting dynamically
-    const filteredAndSorted = [...products]
-        .filter((obj) => {
-            if (!searchkey || !searchkey.trim()) return true;
-            const rawQuery = searchkey.toLowerCase().trim();
-            const searchTerms = rawQuery.split(',').map(t => t.trim()).filter(Boolean);
 
-            const title = (obj.title || '').toLowerCase();
-            const brand = (obj.brand || '').toLowerCase();
-            const category = (obj.category || '').toLowerCase();
-            const tags = Array.isArray(obj.tags)
-                ? obj.tags.map(t => String(t).toLowerCase()).join(' ')
-                : String(obj.tags || '').toLowerCase();
+    const numericPrices = allProducts
+        .map(p => Number(p.price || p.minPrice))
+        .filter(p => !isNaN(p) && p > 0);
 
-            const combinedText = `${title} ${brand} ${category} ${tags}`;
+    const maxProductPrice = numericPrices.length > 0 ? Math.max(...numericPrices) : 100000;
+    const uniquePrices = Array.from(
+        new Set([
+            Math.round(maxProductPrice * 0.1),
+            Math.round(maxProductPrice * 0.25),
+            Math.round(maxProductPrice * 0.5),
+            Math.round(maxProductPrice * 0.75),
+            maxProductPrice
+        ].filter(p => p > 0))
+    ).sort((a, b) => a - b);
 
-            return searchTerms.some(term => combinedText.includes(term));
-        })
-        .filter((obj) => obj.category.includes(filterType))
-        .filter((obj) => {
-            if (!filterPrice) return true;
-            return Number(obj.price) <= Number(filterPrice);
-        })
-        .sort((a, b) => {
-            if (sortBy === 'Price: Low to High') return a.price - b.price;
-            if (sortBy === 'Price: High to Low') return b.price - a.price;
-            return 0;
-        });
+
+    // Client-side text search filtering on currently loaded server pages
+    const filteredAndSorted = allProducts.filter((obj) => {
+        if (!debouncedSearchkey || !debouncedSearchkey.trim()) return true;
+        const rawQuery = debouncedSearchkey.toLowerCase().trim();
+        const searchTerms = rawQuery.split(',').map(t => t.trim()).filter(Boolean);
+
+        const title = (obj.title || '').toLowerCase();
+        const brand = (obj.brand || '').toLowerCase();
+        const category = (obj.category || '').toLowerCase();
+        const tags = Array.isArray(obj.tags)
+            ? obj.tags.map(t => String(t).toLowerCase()).join(' ')
+            : String(obj.tags || '').toLowerCase();
+
+        const combinedText = `${title} ${brand} ${category} ${tags}`;
+
+        return searchTerms.some(term => combinedText.includes(term));
+    });
 
     return (
         <div className="min-h-screen bg-bg-base text-text-base transition-colors duration-300">
@@ -92,7 +123,7 @@ function Allproducts() {
                         setFilterType={setFilterType}
                         filterPrice={filterPrice}
                         setFilterPrice={setFilterPrice}
-                        uniqueCategory={uniqueCategory}
+                        uniqueCategory={dynamicCategories}
                         uniquePrices={uniquePrices}
                         isMobileOpen={isMobileFilterOpen}
                         onClose={() => setIsMobileFilterOpen(false)}
@@ -102,11 +133,14 @@ function Allproducts() {
                     <AllProductsGrid
                         loading={loading}
                         filteredAndSorted={filteredAndSorted}
-                        totalProductsCount={products.length}
+                        totalProductsCount={allProducts.length}
                         sortBy={sortBy}
                         setSortBy={setSortBy}
                         addCart={addCart}
                         onMobileFilterToggle={() => setIsMobileFilterOpen(true)}
+                        fetchNextPage={fetchNextPage}
+                        hasNextPage={hasNextPage}
+                        isFetchingNextPage={isFetchingNextPage}
                     />
 
                 </div>
@@ -116,4 +150,4 @@ function Allproducts() {
     );
 }
 
-export default Allproducts
+export default Allproducts;

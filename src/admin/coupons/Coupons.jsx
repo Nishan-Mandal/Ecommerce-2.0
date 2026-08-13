@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaPlus } from "react-icons/fa";
 import CouponStats from "./sections/CouponsStats";
@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import Header from "../Components/Header";
 import FilterBar from "../Components/FilterBar";
 import { couponService } from "../../services/coupon/couponService";
+import useCouponsQuery from "../../hooks/coupon/useCouponsQuery";
 
 function Coupons() {
     const navigate = useNavigate();
@@ -15,30 +16,13 @@ function Coupons() {
     const [selectedCoupon, setSelectedCoupon] = useState(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
-    const [loading, setLoading] = useState(true);
 
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [typeFilter, setTypeFilter] = useState("ALL");
 
-    const [coupons, setCoupons] = useState([]);
-
-    const loadCoupons = async () => {
-        setLoading(true);
-        try {
-            const data = await couponService.getCoupons();
-            setCoupons(data || []);
-        } catch (err) {
-            console.error("Error loading coupons:", err);
-            toast.error("Failed to load coupons");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadCoupons();
-    }, []);
+    // TanStack Query hook for coupons
+    const { coupons, isLoading: loading, invalidate } = useCouponsQuery();
 
     const handleToggleStatus = async (couponToToggle) => {
         if (!couponToToggle) return;
@@ -47,20 +31,13 @@ function Coupons() {
 
         const newStatus = !(couponToToggle.isActive !== false);
 
-        // Optimistic UI update
-        setCoupons((prev) =>
-            prev.map((c) =>
-                (c.couponId === targetId || c.id === targetId) ? { ...c, isActive: newStatus } : c
-            )
-        );
-
         try {
             await couponService.toggleCouponStatus(targetId, newStatus);
             toast.success(`Coupon "${couponToToggle.code}" marked as ${newStatus ? 'Active' : 'Inactive'}!`);
+            invalidate();
         } catch (err) {
             console.error("Failed to toggle coupon status:", err);
             toast.error("Failed to update status");
-            loadCoupons(); // revert on error
         }
     };
 
@@ -80,7 +57,7 @@ function Coupons() {
             toast.success("Coupon deleted successfully!");
             setIsDeleteModalOpen(false);
             setSelectedCoupon(null);
-            loadCoupons();
+            invalidate();
         } catch (err) {
             console.error("Error deleting coupon:", err);
             toast.error("Failed to delete coupon");

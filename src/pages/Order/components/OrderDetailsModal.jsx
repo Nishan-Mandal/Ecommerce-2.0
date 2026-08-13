@@ -1,5 +1,6 @@
 import React from "react";
 import { FaTimes, FaMapMarkerAlt, FaCreditCard, FaTruck, FaReceipt, FaCheckCircle, FaClock, FaBoxOpen } from "react-icons/fa";
+import { InvoiceDownloadButton } from "../../../invoice/index";
 
 function OrderDetailsModal({ open, onClose, order }) {
   if (!open || !order) return null;
@@ -188,11 +189,13 @@ function OrderDetailsModal({ open, onClose, order }) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-border-base bg-bg-base/50 flex justify-end">
+        <div className="px-6 py-3 border-t border-border-base bg-bg-base/50 flex items-center justify-between gap-3">
+          <InvoiceDownloadButton order={order} />
+
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover transition cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-bg-surface border border-border-base font-bold text-xs hover:bg-bg-base text-text-base transition cursor-pointer"
           >
             Close Details
           </button>

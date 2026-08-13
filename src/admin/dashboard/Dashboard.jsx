@@ -1,66 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { FaShoppingCart, FaBoxes, FaUsers, FaRupeeSign, FaPlus, FaTicketAlt } from 'react-icons/fa';
 import { useNavigate, useLocation, useOutletContext } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../context/ThemeContext';
-import useProducts from '../../hooks/product/useProducts';
-import useOrders from '../../hooks/order/useOrders';
 import useAdmin from '../../hooks/auth/useAdmin';
-import { userService } from '../../services/user/userService';
+import useProductsQuery from '../../hooks/product/useProductsQuery';
+import { dashboardService } from '../../services/dashboard/dashboardService';
+import { orderService } from '../../services/order/orderService';
+import { activityService } from '../../services/activity/activityService';
+import { queryKeys } from '../../utils/queryKeys';
 
 import DashboardCard from './DashboardCard';
 import DashboardAnalytics from './components/DashboardAnalytics';
 import RecentActivityFeed from './components/RecentActivityFeed';
 import RecentOrdersTable from './components/RecentOrdersTable';
-import Products from '../products/Products';
-import Orders from '../orders/Orders';
-import UserDetailTable from '../User/UserDetailTable';
 import DashboardSkeleton from '../../components/loader/SkeletonLoader/DashboardSkeleton';
-import { activityService } from '../../services/activity/activityService';
 
 /**
  * Dashboard Component
  * Renders the main admin management view.
- * Redesigned for high density, clear layouts, Recharts analytics, audit logs, and quick action shortcuts.
+ * Uses Firestore getCountFromServer() aggregation queries for ZERO-DOCUMENT-READ KPI metrics.
  */
 function Dashboard() {
     const navigate = useNavigate();
-    const location = useLocation();
     const { mode } = useTheme();
-    const { products, loading: productsLoading } = useProducts();
-    const { orders, loading: ordersLoading } = useOrders();
-    const [users, setUsers] = useState([]);
-    const [usersLoading, setUsersLoading] = useState(true);
-    const [activities, setActivities] = useState([]);
-
     const adminHook = useAdmin();
 
-    const fetchUsers = async () => {
-        setUsersLoading(true);
-        try {
-            const data = await userService.getUsers();
-            setUsers(data || []);
-        } catch (err) {
-            console.error("Error loading users: ", err);
-        } finally {
-            setUsersLoading(false);
-        }
-    };
+    // 1. Fetch zero-read aggregation counts via TanStack Query
+    const { data: stats = { totalProducts: 0, totalOrders: 0, totalUsers: 0 }, isLoading: isStatsLoading } = useQuery({
+        queryKey: queryKeys.dashboard.stats,
+        queryFn: () => dashboardService.getStats(),
+        staleTime: 2 * 60 * 1000, // 2 minutes cache
+    });
 
-    useEffect(() => {
-        const fetchActivities = async () => {
-            try {
-                const data = await activityService.getRecentActivities(10);
-                setActivities(data);
-            } catch (err) {
-                console.warn("Error loading activities: ", err);
-            }
-        };
+    // 2. Fetch recent products for catalog distribution chart
+    const { products = [] } = useProductsQuery({ pageSize: 50 });
 
-        fetchUsers();
-        fetchActivities();
-    }, []);
+    // 3. Fetch recent 50 orders for revenue and recent orders feed (prevents full collection reads)
+    const { data: recentOrdersData, isLoading: isOrdersLoading } = useQuery({
+        queryKey: queryKeys.orders.recent,
+        queryFn: () => orderService.getPaginatedOrders({ pageSize: 50 }),
+        staleTime: 60 * 1000,
+    });
+    const orders = recentOrdersData?.orders || [];
 
-    // Calculate total revenue from valid orders
+    // 4. Fetch recent activities for audit feed
+    const { data: activities = [] } = useQuery({
+        queryKey: ['activities', 'recent'],
+        queryFn: () => activityService.getRecentActivities(10),
+        staleTime: 60 * 1000,
+    });
+
+    // Calculate total revenue from recent valid orders
     const totalRevenue = orders.reduce((acc, allorder) => {
         const status = (allorder.orderStatus || allorder.status || '').toUpperCase();
         const paymentStat = (allorder.paymentStatus || allorder.payment?.status || '').toUpperCase();
@@ -77,29 +68,20 @@ function Dashboard() {
         navigate('/addproduct');
     };
 
-    // Helper to format dates safely
-    const formatDate = (dateValue) => {
-        if (!dateValue) return 'N/A';
-        if (typeof dateValue.toDate === 'function') {
-            return dateValue.toDate().toLocaleString();
-        }
-        return String(dateValue);
-    };
-
     const dashboardMetrics = [
         {
             title: "Total Products",
-            value: products.length,
+            value: stats.totalProducts,
             icon: <FaBoxes size={18} />,
         },
         {
             title: "Total Orders",
-            value: orders.length,
+            value: stats.totalOrders,
             icon: <FaShoppingCart size={18} />,
         },
         {
             title: "Total Users",
-            value: users.length,
+            value: stats.totalUsers,
             icon: <FaUsers size={18} />,
         },
         {
@@ -109,7 +91,8 @@ function Dashboard() {
         },
     ];
 
-    const isOverviewLoading = productsLoading && ordersLoading && usersLoading;
+    const isOverviewLoading = isStatsLoading && isOrdersLoading;
+
 
     return (
         isOverviewLoading ? (

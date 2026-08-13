@@ -1,9 +1,10 @@
 import React from 'react';
 import CommonProductCard from '../../../components/Common/ProductCard';
+import ProductCardSkeleton from '../../../components/loader/SkeletonLoader/ProductCardSkeleton';
 
 /**
  * AllProductsGrid
- * Renders the products header counters, the sort select options, and loops cards.
+ * Renders the products header counters, the sort select options, cards, and Load More button.
  */
 export default function AllProductsGrid({
   loading = false,
@@ -12,7 +13,10 @@ export default function AllProductsGrid({
   sortBy,
   setSortBy,
   addCart,
-  onMobileFilterToggle
+  onMobileFilterToggle,
+  fetchNextPage,
+  hasNextPage = false,
+  isFetchingNextPage = false,
 }) {
   return (
     <div className="lg:col-span-9 w-full space-y-6 ">
@@ -21,8 +25,7 @@ export default function AllProductsGrid({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border-base">
 
         <p className="text-xs sm:text-sm font-semibold text-text-muted">
-          <span className="text-primary">{filteredAndSorted.length}</span> Out of{" "}
-          <span className="text-primary">{totalProductsCount}</span>
+          Showing <span className="text-primary font-bold">{filteredAndSorted.length}</span> products
         </p>
 
         {/* Sort and Filters */}
@@ -31,9 +34,9 @@ export default function AllProductsGrid({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="appearance-none w-full sm:w-32 border border-border-base rounded-xl px-2 py-2 pr-10 bg-bg-surface text-text-base text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+              className="appearance-none w-full sm:w-44 border border-border-base rounded-xl px-3 py-2 pr-10 bg-bg-surface text-text-base text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
             >
-              <option value="Featured">Sort By</option>
+              <option value="Featured">Sort: Featured</option>
               <option value="Price: Low to High">
                 Price: Low to High
               </option>
@@ -62,9 +65,7 @@ export default function AllProductsGrid({
       {/* Products Grid or Skeleton Loader */}
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 2xl:gap-6">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="h-64 rounded-2xl bg-border-base/40 animate-pulse" />
-          ))}
+          <ProductCardSkeleton count={8} />
         </div>
       ) : filteredAndSorted.length === 0 ? (
         <div className="py-16 sm:py-20 rounded-2xl border border-border-base bg-bg-surface text-center">
@@ -77,15 +78,38 @@ export default function AllProductsGrid({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 2xl:gap-6">
-          {filteredAndSorted.map((item, index) => (
-            <CommonProductCard
-              key={index}
-              item={item}
-              index={index}
-              addCart={addCart}
-            />
-          ))}
+        <div className="space-y-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 2xl:gap-6 gap-2 sm:gap-3 lg:gap-4">
+            {filteredAndSorted.map((item, index) => (
+              <CommonProductCard
+                key={item.id || index}
+                item={item}
+                index={index}
+                addCart={addCart}
+              />
+            ))}
+          </div>
+
+          {/* Load More Button */}
+          {hasNextPage && fetchNextPage && (
+            <div className="flex justify-center pt-4">
+              <button
+                type="button"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="px-8 py-3 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold text-sm shadow-md transition-all active:scale-95 disabled:opacity-60 cursor-pointer flex items-center gap-2"
+              >
+                {isFetchingNextPage ? (
+                  <>
+                    <span className="animate-spin text-base">↻</span>
+                    <span>Loading Products...</span>
+                  </>
+                ) : (
+                  <span>Load More Products</span>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

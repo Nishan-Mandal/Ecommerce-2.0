@@ -5,24 +5,22 @@ import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { useSiteConfig } from '../../../context/SiteConfigContext';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-
-// Local fallback banners
-import banner3 from "../../../assets/banner3.png";
-import banner5 from "../../../assets/banner5.png";
-import banner4 from "../../../assets/banner4.png";
-
-const FALLBACK_BANNERS = [
-    { bannerId: "f1", imageUrl: banner3, ctaUrl: null },
-    { bannerId: "f2", imageUrl: banner5, ctaUrl: null },
-    { bannerId: "f3", imageUrl: banner4, ctaUrl: null },
-];
+import HeroSkeleton from '../../../components/loader/SkeletonLoader/HeroSkeleton';
 
 function HeroSection() {
     const { banners, loading } = useSiteConfig();
     const [currentSlide, setCurrentSlide] = useState(0);
     const sliderRef = useRef(null);
 
-    const displayBanners = loading || !banners || banners.length === 0 ? FALLBACK_BANNERS : banners;
+    if (loading) {
+        return <HeroSkeleton />;
+    }
+
+    if (!banners || banners.length === 0) {
+        return null;
+    }
+
+    const displayBanners = banners;
 
     const settings = {
         infinite: true,

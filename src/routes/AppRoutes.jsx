@@ -105,6 +105,7 @@ export default function AppRoutes() {
           <Route path="/coupons" element={<Coupons />} />
           <Route path="/coupons/add" element={<CouponFormPage />} />
           <Route path="/coupons/edit" element={<CouponFormPage />} />
+          <Route path="/coupons/edit/:id" element={<CouponFormPage />} />
           <Route path="/reviews" element={<Review />} />
           <Route path="/review" element={<Review />} />
           <Route path="/configure" element={<Configure />} />

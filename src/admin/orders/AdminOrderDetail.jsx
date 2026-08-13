@@ -15,6 +15,7 @@ import OrderCustomerInfoSection from "./sections/OrderCustomerInfoSection";
 import OrderPaymentSummarySection from "./sections/OrderPaymentSummarySection";
 import OrderLogisticsSection from "./sections/OrderLogisticsSection";
 import OrderMetadataSection from "./sections/OrderMetadataSection";
+import OrderInvoiceAdminSection from "./sections/OrderInvoiceAdminSection";
 import { OrderCancelModal, OrderTrackingModal } from "./sections/OrderModals";
 
 // Allowed Status Flow
@@ -340,6 +341,11 @@ export default function AdminOrderDetail() {
 
         {/* Right Sticky Sidebar (30%) */}
         <div className="space-y-6 lg:sticky lg:top-6">
+          <OrderInvoiceAdminSection
+            order={order}
+            onRefresh={fetchOrder}
+          />
+
           <OrderCustomerInfoSection
             customerName={customerName}
             customerPhone={customerPhone}

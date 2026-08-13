@@ -36,6 +36,7 @@ export const DEFAULT_CONFIG = {
     companyTagline: "",
     companyLogo: "",
     faviconUrl: "",
+    invoiceTemplate: "classic",
     address: { line1: "", line2: "", city: "", state: "", pincode: "", country: "India", mapUrl: "" },
     phones: [],
     emails: [],

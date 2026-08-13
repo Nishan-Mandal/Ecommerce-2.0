@@ -147,31 +147,59 @@ export const orderService = {
   },
 
   /**
-   * Fetches orders using Firestore cursor-based pagination
+   * Fetches orders using Firestore cursor-based pagination with resilient filter fallbacks
    */
   async getPaginatedOrders({ pageSize = 10, lastDoc = null, statusFilter = null }) {
     const { limit, startAfter, orderBy } = await import('firebase/firestore');
-    const constraints = [orderBy("createdAt", "desc")];
+    const whereConstraints = [];
+
     if (statusFilter && statusFilter !== 'ALL') {
-      constraints.push(where("orderStatus", "==", statusFilter));
+      whereConstraints.push(where("orderStatus", "==", statusFilter));
     }
-    constraints.push(limit(pageSize));
+    
+    const fullConstraints = [
+      ...whereConstraints,
+      orderBy("createdAt", "desc"),
+      limit(pageSize + 1)
+    ];
+
     if (lastDoc) {
-      constraints.push(startAfter(lastDoc));
+      fullConstraints.push(startAfter(lastDoc));
     }
-    const q = query(collection(fireDB, "orders"), ...constraints);
-    const snap = await getDocs(q);
-    const orders = [];
-    snap.forEach((docSnap) => {
-      orders.push({
-        docId: docSnap.id,
-        id: docSnap.id,
-        ...docSnap.data(),
-        docSnap
-      });
-    });
-    const lastVisible = snap.docs[snap.docs.length - 1] || null;
-    return { orders, lastDoc: lastVisible, hasMore: snap.docs.length === pageSize };
+
+    let snap;
+    try {
+      const q = query(collection(fireDB, "orders"), ...fullConstraints);
+      snap = await getDocs(q);
+    } catch (err) {
+      console.warn("Order query index notice. Falling back to filter-preserving query:", err);
+      try {
+        const simpleQ = query(collection(fireDB, "orders"), ...whereConstraints, limit(pageSize + 1));
+        snap = await getDocs(simpleQ);
+      } catch (err2) {
+        snap = await getDocs(query(collection(fireDB, "orders"), limit(100)));
+      }
+    }
+
+    const docs = snap.docs;
+
+    let orders = docs.map((docSnap) => ({
+      docId: docSnap.id,
+      id: docSnap.id,
+      ...docSnap.data(),
+      docSnap
+    }));
+
+    if (statusFilter && statusFilter !== 'ALL') {
+      orders = orders.filter(o => (o.orderStatus || o.status) === statusFilter);
+    }
+
+    const hasMore = orders.length > pageSize;
+    const pageOrders = hasMore ? orders.slice(0, pageSize) : orders;
+    const lastVisible = pageOrders.length > 0 ? pageOrders[pageOrders.length - 1].docSnap : null;
+    const cleanOrders = pageOrders.map(({ docSnap, ...rest }) => rest);
+
+    return { orders: cleanOrders, lastDoc: lastVisible, hasMore };
   },
 
   /**

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import OrderProductItem from "./OrderProductItem";
 import { FaCopy, FaCheck, FaInfoCircle, FaCalendarAlt, FaCreditCard, FaTruck, FaClock, FaTimesCircle, FaCheckCircle, FaPalette } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { InvoiceDownloadButton } from "../../../invoice/index";
 
 function OrderCard({ order, onViewDetails }) {
   const [copied, setCopied] = useState(false);
@@ -200,6 +201,8 @@ function OrderCard({ order, onViewDetails }) {
         </div>
 
         <div className="flex items-center gap-2">
+          <InvoiceDownloadButton order={order} />
+
           <button
             type="button"
             onClick={() => onViewDetails && onViewDetails(order)}

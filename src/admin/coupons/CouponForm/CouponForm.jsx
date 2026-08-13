@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { fireDB } from "../../../firebase/FirebaseConfig";
@@ -39,17 +39,34 @@ const initBlankCoupon = () => ({
  * Fetches product catalog and categories dynamically for CouponScope.
  */
 function CouponFormPage() {
+    const { id } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
 
     const existingCoupon = location.state?.coupon ?? null;
-    const isEditing = Boolean(existingCoupon?.couponId || existingCoupon?.id);
+    const [fetchedCoupon, setFetchedCoupon] = useState(null);
+    const activeCoupon = existingCoupon || fetchedCoupon;
+    const isEditing = Boolean(id || activeCoupon?.couponId || activeCoupon?.id);
 
     const [coupon, setCoupon, clearCouponDraft, resetCouponForm] = useFormAutoSave(
         isEditing ? null : 'draft_coupon_form',
-        existingCoupon ?? initBlankCoupon(),
+        activeCoupon ?? initBlankCoupon(),
         { debounceMs: 400 }
     );
+
+    useEffect(() => {
+        if (!existingCoupon && id) {
+            couponService.getCouponById(id)
+                .then((c) => {
+                    if (c) {
+                        setFetchedCoupon(c);
+                        setCoupon(c);
+                    }
+                })
+                .catch((err) => console.error("Error fetching coupon by ID:", err));
+        }
+    }, [existingCoupon, id]);
+
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [saving, setSaving] = useState(false);

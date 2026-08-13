@@ -39,18 +39,18 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Short Summary */}
       <div>
-        <label className="block font-semibold text-text-base mb-1">
+        <label className="block font-semibold text-text-base mb-1.5 text-xs">
           Short Overview / Summary (Optional)
         </label>
         <textarea
-          rows={2}
+          rows={4}
           value={descriptionState.short}
           onChange={(e) => updateShort(e.target.value)}
           placeholder="Brief 1-2 sentence overview of the product..."
-          className="w-full rounded-lg border border-border-base bg-bg-base px-3 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full rounded-xl border border-border-base bg-bg-base px-3.5 py-2.5 text-xs text-text-base leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y min-h-[90px]"
         />
       </div>
 
@@ -64,30 +64,30 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
             <button
               type="button"
               onClick={() => updateSections(addTextSection(descriptionState.sections))}
-              className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer"
             >
-              <FaAlignLeft size={10} /> + Text Section
+              <FaAlignLeft size={11} /> + Text Section
             </button>
             <button
               type="button"
               onClick={() => updateSections(addTableSection(descriptionState.sections))}
-              className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer"
             >
-              <FaTable size={10} /> + Table Section
+              <FaTable size={11} /> + Table Section
             </button>
           </div>
         </div>
 
         {descriptionState.sections.length === 0 ? (
-          <div className="p-4 border-2 border-dashed border-border-base rounded-xl text-center text-text-muted text-xs">
-            No description sections added. Click "+ Text Section" or "+ Table Section" above.
+          <div className="p-6 border-2 border-dashed border-border-base/70 rounded-xl text-center text-text-muted text-xs bg-bg-base/40">
+            No description sections added. Click <span className="font-semibold text-primary">"+ Text Section"</span> or <span className="font-semibold text-primary">"+ Table Section"</span> above.
           </div>
         ) : (
           descriptionState.sections.map((section, idx) => (
-            <div key={idx} className="border border-border-base rounded-xl p-3.5 bg-bg-surface space-y-3 shadow-2xs">
+            <div key={idx} className="border border-border-base rounded-xl p-4 bg-bg-surface space-y-3.5 shadow-xs">
               {/* Section Header */}
-              <div className="flex items-center justify-between gap-2 border-b border-border-base/50 pb-2">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase text-primary">
+              <div className="flex items-center justify-between gap-2 border-b border-border-base/60 pb-2.5">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase text-primary tracking-wide">
                   {section.type === "TEXT" ? <FaAlignLeft size={11} /> : <FaTable size={11} />}
                   {section.type} SECTION #{idx + 1}
                 </span>
@@ -97,24 +97,27 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
                     type="button"
                     onClick={() => updateSections(moveSection(descriptionState.sections, idx, -1))}
                     disabled={idx === 0}
-                    className="p-1 rounded text-text-muted hover:text-text-base disabled:opacity-30 cursor-pointer"
+                    className="p-1.5 rounded-md text-text-muted hover:text-text-base hover:bg-bg-base disabled:opacity-30 cursor-pointer transition"
+                    title="Move Up"
                   >
-                    <FaArrowUp size={10} />
+                    <FaArrowUp size={11} />
                   </button>
                   <button
                     type="button"
                     onClick={() => updateSections(moveSection(descriptionState.sections, idx, 1))}
                     disabled={idx === descriptionState.sections.length - 1}
-                    className="p-1 rounded text-text-muted hover:text-text-base disabled:opacity-30 cursor-pointer"
+                    className="p-1.5 rounded-md text-text-muted hover:text-text-base hover:bg-bg-base disabled:opacity-30 cursor-pointer transition"
+                    title="Move Down"
                   >
-                    <FaArrowDown size={10} />
+                    <FaArrowDown size={11} />
                   </button>
                   <button
                     type="button"
                     onClick={() => updateSections(removeSection(descriptionState.sections, idx))}
-                    className="p-1 rounded text-red-500 hover:bg-red-50 cursor-pointer ml-1"
+                    className="p-1.5 rounded-md text-red-500 hover:bg-red-50 cursor-pointer ml-1 transition"
+                    title="Delete Section"
                   >
-                    <FaTrash size={10} />
+                    <FaTrash size={11} />
                   </button>
                 </div>
               </div>
@@ -126,7 +129,7 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
                   value={section.title || ""}
                   onChange={(e) => updateSections(updateSectionField(descriptionState.sections, idx, "title", e.target.value))}
                   placeholder="Section Title (e.g. Overview or Technical Specifications)"
-                  className="w-full rounded-lg border border-border-base bg-bg-base px-2.5 py-1 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full rounded-xl border border-border-base bg-bg-base px-3 py-2 text-xs font-bold text-text-base focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
 
@@ -134,11 +137,11 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
               {section.type === "TEXT" && (
                 <div>
                   <textarea
-                    rows={4}
+                    rows={5}
                     value={section.content || ""}
                     onChange={(e) => updateSections(updateSectionField(descriptionState.sections, idx, "content", e.target.value))}
                     placeholder="Write detailed section content here..."
-                    className="w-full rounded-lg border border-border-base bg-bg-base p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full rounded-xl border border-border-base bg-bg-base p-3 text-xs text-text-base leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y min-h-[120px]"
                   />
                 </div>
               )}

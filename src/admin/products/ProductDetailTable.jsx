@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import WarningModal from '../../components/modal/WarningModal';
 import TableSkeleton from '../../components/loader/SkeletonLoader/TableSkeleton';
 import Pagination from '../../components/common/Pagination';
+import CursorPagination from '../../components/common/CursorPagination';
 import DataTable from '../Components/common/DataTable';
 import ProductMobileCard from './tableComponents/ProductMobileCard';
 import getProductTableColumns  from './tableComponents/ProductColumns';
@@ -11,18 +12,39 @@ import getProductTableColumns  from './tableComponents/ProductColumns';
  * Main product management table panel: renders desktop data table, mobile cards, pagination, and delete warning modal.
  * Uses modular section components and utilities to keep the component clean and maintainable.
  */
-function ProductDetailTable({ mode, product = [], loading = false, onAddClick, onEditClick, deleteProduct, toggleActiveStatus, formatDate }) {
+function ProductDetailTable({ 
+    mode, 
+    product = [], 
+    loading = false, 
+    onAddClick, 
+    onEditClick, 
+    deleteProduct, 
+    toggleActiveStatus, 
+    formatDate,
+    // Cursor Pagination Props
+    pageIndex,
+    hasMore,
+    isFetching,
+    onPrev,
+    onNext,
+    onRefresh,
+    pageSize = 10,
+    onPageSizeChange,
+}) {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedProductToDelete, setSelectedProductToDelete] = useState(null);
 
-    // Pagination state
+    // Fallback client-side pagination state (when cursor props are not provided)
     const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [internalPageSize, setInternalPageSize] = useState(10);
 
-    // Reset to page 1 if products list length changes
+    const isCursorPaginated = typeof pageIndex === 'number';
+
     useEffect(() => {
-        setCurrentPage(1);
-    }, [product.length]);
+        if (!isCursorPaginated) {
+            setCurrentPage(1);
+        }
+    }, [product.length, isCursorPaginated]);
 
     const handleDeleteClick = (item) => {
         setSelectedProductToDelete(item);
@@ -38,12 +60,13 @@ function ProductDetailTable({ mode, product = [], loading = false, onAddClick, o
     };
 
     if (loading) {
-        return <TableSkeleton rows={pageSize} columns={8} />;
+        return <TableSkeleton rows={pageSize || internalPageSize} columns={8} />;
     }
 
-    // Paginated subset
-    const startIndex = (currentPage - 1) * pageSize;
-    const paginatedProducts = product.slice(startIndex, startIndex + pageSize);
+    // Determine rendered items & startIndex
+    const activePageSize = pageSize || internalPageSize;
+    const startIndex = isCursorPaginated ? pageIndex * activePageSize : (currentPage - 1) * activePageSize;
+    const displayProducts = isCursorPaginated ? product : product.slice(startIndex, startIndex + activePageSize);
 
     // Column definitions generated via utility helper
     const columns = getProductTableColumns({
@@ -59,7 +82,7 @@ function ProductDetailTable({ mode, product = [], loading = false, onAddClick, o
             {/* Reusable Data Table */}
             <DataTable
                 columns={columns}
-                data={paginatedProducts}
+                data={displayProducts}
                 emptyMessage="No products available."
                 mobileCardRender={(item, idx) => (
                     <ProductMobileCard
@@ -74,17 +97,30 @@ function ProductDetailTable({ mode, product = [], loading = false, onAddClick, o
                 )}
             />
 
-            {/* Universal Pagination */}
-            <Pagination
-                currentPage={currentPage}
-                totalItems={product.length}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={(newSize) => {
-                    setPageSize(newSize);
-                    setCurrentPage(1);
-                }}
-            />
+            {/* Pagination Controls */}
+            {isCursorPaginated ? (
+                <CursorPagination
+                    pageIndex={pageIndex}
+                    hasMore={hasMore}
+                    isFetching={isFetching}
+                    onPrev={onPrev}
+                    onNext={onNext}
+                    onRefresh={onRefresh}
+                    pageSize={pageSize}
+                    onPageSizeChange={onPageSizeChange}
+                />
+            ) : (
+                <Pagination
+                    currentPage={currentPage}
+                    totalItems={product.length}
+                    pageSize={internalPageSize}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={(newSize) => {
+                        setInternalPageSize(newSize);
+                        setCurrentPage(1);
+                    }}
+                />
+            )}
 
             {/* Confirmation delete modal */}
             <WarningModal
@@ -103,3 +139,4 @@ function ProductDetailTable({ mode, product = [], loading = false, onAddClick, o
 }
 
 export default ProductDetailTable;
+

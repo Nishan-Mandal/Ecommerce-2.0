@@ -5,11 +5,12 @@ import { toast } from 'react-toastify';
 import { addToCart } from '../../../redux/cartSlice';
 import { useFilter } from '../../../context/FilterContext';
 import ProductCard from '../../../components/Common/ProductCard';
-import useProducts from '../../../hooks/product/useProducts';
+import ProductCardSkeleton from '../../../components/loader/SkeletonLoader/ProductCardSkeleton';
+import useProductsQuery from '../../../hooks/product/useProductsQuery';
 import { configureService } from '../../../services/configure/configureService';
 
 function ProductsGrid() {
-    const { products } = useProducts();
+    const { products, isLoading: productsLoading } = useProductsQuery({ pageSize: 50 });
     const { searchkey, filterType, filterPrice, setFilterType, setFilterPrice } = useFilter();
     const dispatch = useDispatch();
     const cartItems = useSelector((state) => state.cart);
@@ -79,15 +80,19 @@ function ProductsGrid() {
             .filter((p) => !filterType || p.category?.includes(filterType))
             .filter((p) => !filterPrice || p.price?.includes(filterPrice));
 
-    if (collectionsLoading) {
+    if (collectionsLoading || productsLoading) {
         return (
-            <section className="py-6 sm:py-8 lg:py-12">
-                <div className="space-y-8 animate-pulse">
-                    <div className="h-6 w-48 bg-border-base/50 rounded-lg"></div>
+            <section className="py-6 sm:py-8 lg:py-12 space-y-8 sm:space-y-12">
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-2 animate-pulse">
+                            <div className="h-3 w-24 bg-border-base/40 rounded" />
+                            <div className="h-6 w-48 bg-border-base/50 rounded-lg" />
+                        </div>
+                        <div className="h-4 w-16 bg-border-base/30 rounded animate-pulse" />
+                    </div>
                     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
-                        {[1, 2, 3, 4, 5].map((n) => (
-                            <div key={n} className="h-64 bg-border-base/30 rounded-2xl"></div>
-                        ))}
+                        <ProductCardSkeleton count={5} />
                     </div>
                 </div>
             </section>

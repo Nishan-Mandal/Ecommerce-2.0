@@ -413,4 +413,34 @@ export const userService = {
     const targetRef = result?.docRef || doc(fireDB, "users", userId);
     await deleteDoc(targetRef);
   },
+
+  /**
+   * Fetches paginated users using Firestore cursor queries
+   */
+  async getPaginatedUsers({ pageSize = 10, lastDoc = null }) {
+    const { limit, startAfter } = await import('firebase/firestore');
+    const constraints = [limit(pageSize + 1)];
+
+    if (lastDoc) {
+      constraints.push(startAfter(lastDoc));
+    }
+
+    const q = query(collection(fireDB, "users"), ...constraints);
+    const snap = await getDocs(q);
+
+    const docs = snap.docs;
+    const hasMore = docs.length > pageSize;
+    const pageDocs = hasMore ? docs.slice(0, pageSize) : docs;
+
+    const users = pageDocs.map((docSnap) => ({
+      docId: docSnap.id,
+      id: docSnap.id,
+      ...docSnap.data(),
+      docSnap
+    }));
+
+    const lastVisible = pageDocs[pageDocs.length - 1] || null;
+    return { users, lastDoc: lastVisible, hasMore };
+  },
 };
+
