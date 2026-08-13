@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/auth/useAuth';
 import Loader from '../../components/loader/Loader';
 import { FaUser, FaEnvelope, FaPhoneAlt, FaLock, FaKey, FaArrowLeft } from 'react-icons/fa';
+import { getFriendlyErrorMessage } from '../../utils/firebaseErrorHandler.js';
 
 /**
  * Signup Component (Adaptive Modal or Page)
@@ -65,8 +66,7 @@ function Signup() {
                 navigate(from, { replace: true });
             }
         } catch (error) {
-            console.error("Email signup error:", error);
-            toast.error(error.message || "Registration failed.");
+            toast.error(getFriendlyErrorMessage(error, "Registration failed. Please try again."));
         }
     };
 
@@ -90,8 +90,7 @@ function Signup() {
             setTimer(30);
             toast.success(`OTP sent to +91 ${cleanPhone}`);
         } catch (error) {
-            console.error("Send OTP signup error:", error);
-            toast.error(error.message || "Failed to send OTP code.");
+            toast.error(getFriendlyErrorMessage(error, "Failed to send OTP code. Please try again."));
         } finally {
             setOtpSending(false);
         }
@@ -114,8 +113,7 @@ function Signup() {
                 navigate(from, { replace: true });
             }
         } catch (error) {
-            console.error("Verify OTP signup error:", error);
-            toast.error(error.message || "Invalid OTP code.");
+            toast.error(getFriendlyErrorMessage(error, "Invalid OTP code. Please try again."));
         } finally {
             setOtpVerifying(false);
         }

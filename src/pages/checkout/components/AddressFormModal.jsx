@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 const INPUT_CLS = "w-full px-4 py-3 rounded-xl border border-border-base bg-bg-base text-text-base placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary transition text-sm";
 const LABEL_CLS = "block text-xs font-semibold text-text-muted mb-1 uppercase tracking-wide";
@@ -119,12 +119,15 @@ export default function AddressFormModal({ isOpen, onClose, onSubmit, initialDat
             </div>
           </div>
 
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <div className={`relative w-10 h-6 rounded-full transition-colors ${form.isDefault ? "bg-primary" : "bg-border-base"}`} onClick={() => setForm((p) => ({ ...p, isDefault: !p.isDefault }))}>
+          <div
+            className="flex items-center gap-3 cursor-pointer select-none py-1"
+            onClick={() => setForm((p) => ({ ...p, isDefault: !p.isDefault }))}
+          >
+            <div className={`relative w-10 h-6 rounded-full transition-colors ${form.isDefault ? "bg-primary" : "bg-border-base"}`}>
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.isDefault ? "translate-x-5" : "translate-x-1"}`} />
             </div>
-            <span className="text-sm text-text-muted">Set as default address</span>
-          </label>
+            <span className="text-sm font-medium text-text-base">Set as default address</span>
+          </div>
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-3 rounded-xl border border-border-base text-text-muted font-semibold hover:bg-bg-base transition">Cancel</button>

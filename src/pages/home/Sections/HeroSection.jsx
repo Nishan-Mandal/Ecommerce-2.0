@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { useSiteConfig } from '../../../context/SiteConfigContext';
-
-// Local fallback banners
-import banner3 from "../../../assets/banner3.png";
-import banner5 from "../../../assets/banner5.png";
-import banner4 from "../../../assets/banner4.png";
-
-const FALLBACK_BANNERS = [
-    { bannerId: "f1", imageUrl: banner3, ctaUrl: null },
-    { bannerId: "f2", imageUrl: banner5, ctaUrl: null },
-    { bannerId: "f3", imageUrl: banner4, ctaUrl: null },
-];
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import HeroSkeleton from '../../../components/loader/SkeletonLoader/HeroSkeleton';
 
 function HeroSection() {
     const { banners, loading } = useSiteConfig();
     const [currentSlide, setCurrentSlide] = useState(0);
+    const sliderRef = useRef(null);
 
-    const displayBanners = loading || !banners || banners.length === 0 ? FALLBACK_BANNERS : banners;
+    if (loading) {
+        return <HeroSkeleton />;
+    }
+
+    if (!banners || banners.length === 0) {
+        return null;
+    }
+
+    const displayBanners = banners;
 
     const settings = {
         infinite: true,
@@ -34,9 +34,9 @@ function HeroSection() {
     };
 
     return (
-        <div className="relative w-full overflow-hidden rounded-2xl lg:rounded-3xl border border-border-base/10 ">
+        <div className="relative w-full overflow-hidden rounded-2xl lg:rounded-3xl border border-border-base/10 group">
 
-            <Slider {...settings}>
+            <Slider ref={sliderRef} {...settings}>
                 {displayBanners.map((banner, index) => (
                     <div key={banner.bannerId || index}>
 
@@ -48,9 +48,6 @@ function HeroSection() {
                                 alt={banner.title || `Slide ${index + 1}`}
                                 className="absolute inset-0 w-full h-full object-cover"
                             />
-
-                            {/* Overlay */}
-                           
 
                             {/* Content */}
                             {(banner.title || banner.subtitle || banner.ctaLabel) && (
@@ -94,13 +91,35 @@ function HeroSection() {
                 ))}
             </Slider>
 
+            {/* Left & Right Sliding Arrow Buttons */}
+            {displayBanners.length > 1 && (
+                <>
+                    <button
+                        type="button"
+                        onClick={() => sliderRef.current?.slickPrev()}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer shadow-lg active:scale-95"
+                        title="Previous Banner"
+                    >
+                        <FaChevronLeft size={14} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => sliderRef.current?.slickNext()}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer shadow-lg active:scale-95"
+                        title="Next Banner"
+                    >
+                        <FaChevronRight size={14} />
+                    </button>
+                </>
+            )}
+
             {/* Indicators */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2 bg-black/35 backdrop-blur-md px-3 py-2 rounded-full">
 
                 {displayBanners.map((_, i) => (
                     <button
                         key={i}
-                        onClick={() => setCurrentSlide(i)}
+                        onClick={() => sliderRef.current?.slickGoTo(i)}
                         className={`transition-all duration-300 rounded-full ${i === currentSlide
                                 ? "w-8 h-2 bg-white"
                                 : "w-2 h-2 bg-white/40 hover:bg-white/70"

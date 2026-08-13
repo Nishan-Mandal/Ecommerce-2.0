@@ -24,6 +24,27 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+/**
+ * Helper to guarantee that exactly one address in the list has isDefault = true.
+ * If multiple are marked as default, only the first remains default.
+ * If none are marked as default, the first address (index 0) becomes default.
+ */
+export function ensureSingleDefaultAddress(addresses) {
+  if (!Array.isArray(addresses) || addresses.length === 0) {
+    return [];
+  }
+
+  let defaultIndex = addresses.findIndex((a) => Boolean(a.isDefault));
+  if (defaultIndex === -1) {
+    defaultIndex = 0;
+  }
+
+  return addresses.map((addr, index) => ({
+    ...addr,
+    isDefault: index === defaultIndex,
+  }));
+}
+
 const getUserDocRef = async (uid) => {
   if (!uid) return null;
   // 1. Try direct doc lookup by UID
@@ -127,7 +148,7 @@ export const userService = {
       }
 
       if (savedAddrs.length > 0) {
-        return savedAddrs;
+        return ensureSingleDefaultAddress(savedAddrs);
       }
 
       const [ordersSnap, altSnap] = await Promise.all([
@@ -153,7 +174,7 @@ export const userService = {
                 state: info.state || "",
                 pincode: info.pincode || "",
                 addressType: info.addressType || "HOME",
-                isDefault: true,
+                isDefault: orderAddrs.length === 0,
               };
               if (!orderAddrs.some((a) => a.phone === addrObj.phone && a.street === addrObj.street)) {
                 orderAddrs.push(addrObj);
@@ -167,8 +188,9 @@ export const userService = {
       processSnap(altSnap);
 
       if (orderAddrs.length > 0 && targetRef) {
-        await setDoc(targetRef, { addresses: orderAddrs }, { merge: true }).catch(() => {});
-        return orderAddrs;
+        const sanitized = ensureSingleDefaultAddress(orderAddrs);
+        await setDoc(targetRef, { addresses: sanitized }, { merge: true }).catch(() => {});
+        return sanitized;
       }
     } catch (err) {
       console.warn("Error fetching addresses:", err);
@@ -193,15 +215,32 @@ export const userService = {
       });
     }
 
+    const existingAddrs = Array.isArray(result?.data?.addresses) ? [...result.data.addresses] : [];
+    const newAddressId = `addr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const shouldBeDefault = Boolean(address.isDefault) || existingAddrs.length === 0;
+
     const newAddress = {
       ...address,
-      addressId: `addr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      addressId: newAddressId,
+      isDefault: shouldBeDefault,
       createdAt: new Date().toISOString(),
     };
-    await updateDoc(targetRef, {
-      addresses: arrayUnion(newAddress),
-    });
-    return newAddress;
+
+    let rawList = existingAddrs.map((a) => ({
+      ...a,
+      isDefault: shouldBeDefault ? false : Boolean(a.isDefault),
+    }));
+    rawList.push(newAddress);
+
+    const updatedAddrs = ensureSingleDefaultAddress(
+      shouldBeDefault
+        ? rawList.map(a => ({ ...a, isDefault: a.addressId === newAddressId }))
+        : rawList
+    );
+
+    await updateDoc(targetRef, { addresses: updatedAddrs });
+    const finalNewAddr = updatedAddrs.find(a => a.addressId === newAddressId) || newAddress;
+    return { newAddress: finalNewAddr, addresses: updatedAddrs };
   },
 
   /**
@@ -214,25 +253,41 @@ export const userService = {
     if (!targetRef) {
       targetRef = doc(fireDB, "users", uid);
     }
-    const addresses = Array.isArray(result?.data?.addresses) ? [...result.data.addresses] : [];
-    const existingIndex = addresses.findIndex(
+    const rawAddrs = Array.isArray(result?.data?.addresses) ? [...result.data.addresses] : [];
+    const existingIndex = rawAddrs.findIndex(
       (a) => a.addressId === addressId || a.id === addressId || `addr_profile_${result?.docId}` === addressId
     );
 
+    const targetAddrId = addressId && !addressId.startsWith("addr_profile_") && !addressId.startsWith("addr_past_")
+      ? addressId
+      : `addr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+    const isExplicitlyDefault = Boolean(updatedFields.isDefault);
+
     const updatedObj = {
-      ...(existingIndex >= 0 ? addresses[existingIndex] : {}),
+      ...(existingIndex >= 0 ? rawAddrs[existingIndex] : {}),
       ...updatedFields,
-      addressId: addressId && !addressId.startsWith("addr_profile_") && !addressId.startsWith("addr_past_")
-        ? addressId
-        : `addr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      addressId: targetAddrId,
+      isDefault: isExplicitlyDefault,
       updatedAt: new Date().toISOString(),
     };
 
-    if (existingIndex >= 0) {
-      addresses[existingIndex] = updatedObj;
-    } else {
-      addresses.push(updatedObj);
+    let rawList = rawAddrs.map((a, i) => {
+      if (i === existingIndex || a.addressId === addressId) {
+        return updatedObj;
+      }
+      return isExplicitlyDefault ? { ...a, isDefault: false } : a;
+    });
+
+    if (existingIndex < 0) {
+      rawList.push(updatedObj);
     }
+
+    let addresses = ensureSingleDefaultAddress(
+      isExplicitlyDefault
+        ? rawList.map(a => ({ ...a, isDefault: a.addressId === targetAddrId }))
+        : rawList
+    );
 
     const updatePayload = { addresses };
 
@@ -255,7 +310,8 @@ export const userService = {
       await setDoc(targetRef, updatePayload, { merge: true });
     });
 
-    return updatedObj;
+    const finalUpdatedObj = addresses.find(a => a.addressId === targetAddrId) || updatedObj;
+    return { updatedAddress: finalUpdatedObj, addresses };
   },
 
   /**
@@ -267,15 +323,37 @@ export const userService = {
     if (!result) throw new Error("User profile not found");
     
     const existingAddrs = Array.isArray(result.data.addresses) ? result.data.addresses : [];
-    const updatedAddrs = existingAddrs.filter(
+    const filteredAddrs = existingAddrs.filter(
       (a) => a.addressId !== addressId && a.id !== addressId && `addr_profile_${result.docId}` !== addressId
     );
+
+    const updatedAddrs = ensureSingleDefaultAddress(filteredAddrs);
 
     const updatePayload = {
       addresses: updatedAddrs,
     };
 
     await updateDoc(result.docRef, updatePayload);
+    return updatedAddrs;
+  },
+
+  /**
+   * Sets a specific address as default, ensuring all other addresses have isDefault = false
+   */
+  async setDefaultAddress(uid, addressId) {
+    if (!uid || !addressId) throw new Error("UID and addressId required");
+    const result = await getUserDocRef(uid);
+    if (!result) throw new Error("User profile not found");
+
+    const existingAddrs = Array.isArray(result.data.addresses) ? result.data.addresses : [];
+    const updatedAddrs = existingAddrs.map((a) => ({
+      ...a,
+      isDefault: a.addressId === addressId || a.id === addressId || `addr_profile_${result.docId}` === addressId,
+    }));
+
+    const finalAddrs = ensureSingleDefaultAddress(updatedAddrs);
+    await updateDoc(result.docRef, { addresses: finalAddrs });
+    return finalAddrs;
   },
 
   /**
@@ -335,4 +413,34 @@ export const userService = {
     const targetRef = result?.docRef || doc(fireDB, "users", userId);
     await deleteDoc(targetRef);
   },
+
+  /**
+   * Fetches paginated users using Firestore cursor queries
+   */
+  async getPaginatedUsers({ pageSize = 10, lastDoc = null }) {
+    const { limit, startAfter } = await import('firebase/firestore');
+    const constraints = [limit(pageSize + 1)];
+
+    if (lastDoc) {
+      constraints.push(startAfter(lastDoc));
+    }
+
+    const q = query(collection(fireDB, "users"), ...constraints);
+    const snap = await getDocs(q);
+
+    const docs = snap.docs;
+    const hasMore = docs.length > pageSize;
+    const pageDocs = hasMore ? docs.slice(0, pageSize) : docs;
+
+    const users = pageDocs.map((docSnap) => ({
+      docId: docSnap.id,
+      id: docSnap.id,
+      ...docSnap.data(),
+      docSnap
+    }));
+
+    const lastVisible = pageDocs[pageDocs.length - 1] || null;
+    return { users, lastDoc: lastVisible, hasMore };
+  },
 };
+

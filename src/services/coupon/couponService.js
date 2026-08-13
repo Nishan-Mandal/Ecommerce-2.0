@@ -25,6 +25,14 @@ export const couponService = {
     }));
   },
 
+  /** Fetch single coupon by ID */
+  async getCouponById(couponId) {
+    if (!couponId) return null;
+    const snap = await getDoc(doc(fireDB, "coupons", couponId));
+    if (!snap.exists()) return null;
+    return { couponId: snap.id, id: snap.id, ...snap.data() };
+  },
+
   /** Fetch single coupon by code */
   async getCouponByCode(code) {
     if (!code) return null;

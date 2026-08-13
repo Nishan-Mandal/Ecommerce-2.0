@@ -1,5 +1,6 @@
 import React from "react";
 import { FaArrowLeft, FaSyncAlt, FaPrint, FaCopy, FaCheck } from "react-icons/fa";
+import StatusBadge from "../../Components/common/StatusBadge.jsx";
 
 export default function OrderDetailHeaderSection({
   orderId,
@@ -81,14 +82,19 @@ export default function OrderDetailHeaderSection({
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
-            <span className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border flex items-center gap-1.5 ${statusBadgeStyles[currentStatus] || "bg-gray-100 text-gray-700"}`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-              <span>{currentStatus.replace(/_/g, " ")}</span>
-            </span>
+            <StatusBadge status={currentStatus} size="lg" />
 
-            <span className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border ${paymentBadgeStyles[paymentStatus] || "bg-gray-100 text-gray-700"}`}>
-              Payment: {paymentStatus}
-            </span>
+            <StatusBadge
+              status={
+                String(paymentStatus).toUpperCase().includes("SUCCESS") || String(paymentStatus).toUpperCase().includes("PAID")
+                  ? "DELIVERED"
+                  : String(paymentStatus).toUpperCase().includes("FAIL")
+                  ? "CANCELLED"
+                  : "PAYMENT_PENDING"
+              }
+              label={`Payment: ${paymentStatus}`}
+              size="lg"
+            />
           </div>
         </div>
       </div>

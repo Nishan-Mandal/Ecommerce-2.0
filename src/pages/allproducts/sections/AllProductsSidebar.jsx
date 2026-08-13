@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { FaSearch, FaTimes } from 'react-icons/fa';
 import SearchBar from '../../../components/Common/SearchBar';
 
 /**
@@ -17,6 +18,12 @@ export default function AllProductsSidebar({
   isMobileOpen = false,
   onClose
 }) {
+  const [categorySearch, setCategorySearch] = useState('');
+
+  const filteredCategories = uniqueCategory.filter(cat =>
+    cat.toLowerCase().includes(categorySearch.toLowerCase().trim())
+  );
+
   return (
     <aside className={`w-full bg-bg-surface border border-border-base lg:rounded-2xl lg:shadow-sm p-4 sm:p-5 space-y-5 lg:col-span-3 lg:sticky lg:top-28 transition-all duration-300 z-50 lg:z-auto ${
       isMobileOpen 
@@ -49,35 +56,71 @@ export default function AllProductsSidebar({
       </div>
 
       {/* Categories */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted">
-          Category
-        </h3>
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted">
+            Category
+          </h3>
+          {uniqueCategory.length > 0 && (
+            <span className="text-[10px] font-bold text-text-muted px-2 py-0.5 rounded-full bg-bg-base border border-border-base">
+              {uniqueCategory.length}
+            </span>
+          )}
+        </div>
 
-        <div className="flex flex-wrap lg:flex-col gap-2">
+        {/* Quick Category Search */}
+        {uniqueCategory.length > 5 && (
+          <div className="relative">
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[10px] pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search category..."
+              value={categorySearch}
+              onChange={(e) => setCategorySearch(e.target.value)}
+              className="w-full h-8 pl-8 pr-7 rounded-lg border border-border-base bg-bg-base text-xs font-medium text-text-base focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition"
+            />
+            {categorySearch && (
+              <button
+                type="button"
+                onClick={() => setCategorySearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-base"
+              >
+                <FaTimes className="text-[10px]" />
+              </button>
+            )}
+          </div>
+        )}
 
+        {/* Scrollable Category Container */}
+        <div className="max-h-48 grid grid-cols-2 gap-2 overflow-y-auto pr-1 space-y-1.5 scrollbar-thin scrollbar-thumb-border-base">
           <button
-            onClick={() => setFilterType("")}
-            className={`px-4 py-2 rounded-full text-xs font-medium border transition ${filterType === ""
-                ? "bg-primary text-compli border-primary"
-                : "border-border-base hover:bg-bg-base text-text-muted"
-              }`}
-          >
-            All
-          </button>
+              onClick={() => setFilterType("")}
+              className={`w-full text-left px-3 text-ellipsis rounded-lg text-xs font-semibold border transition cursor-pointer truncate ${filterType === ""
+                  ? "bg-primary text-compli border-primary"
+                  : "border-border-base/70 bg-bg-surface hover:bg-bg-base text-text-base"
+                }`}
+            >
+             All Categories
+            </button>
 
-          {uniqueCategory.map((cat, idx) => (
+          {filteredCategories.map((cat, idx) => (
             <button
               key={idx}
               onClick={() => setFilterType(cat)}
-              className={`px-4 py-2 rounded-full text-xs font-medium border transition ${filterType === cat
+              className={`w-full text-left px-3 py-1.5 text-ellipsis rounded-lg text-xs font-semibold border transition cursor-pointer truncate ${filterType === cat
                   ? "bg-primary text-compli border-primary"
-                  : "border-border-base hover:bg-bg-base text-text-muted"
+                  : "border-border-base/70 bg-bg-surface hover:bg-bg-base text-text-base"
                 }`}
             >
               {cat}
             </button>
           ))}
+
+          {filteredCategories.length === 0 && (
+            <p className="text-[11px] text-text-muted text-center py-2">
+              No matching category
+            </p>
+          )}
         </div>
       </div>
 

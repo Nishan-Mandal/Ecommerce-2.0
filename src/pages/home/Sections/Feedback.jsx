@@ -3,6 +3,7 @@ import { useTheme } from "../../../context/ThemeContext";
 import Loader from "../../../components/loader/Loader";
 import { feedbackService } from "../../../services/feedback/feedbackService";
 import { toast } from "react-toastify";
+import { getFriendlyErrorMessage } from "../../../utils/firebaseErrorHandler.js";
 
 /**
  * Feedback Component
@@ -32,8 +33,7 @@ const Feedback = () => {
       toast.success("Feedback sent successfully");
       setMessage("");
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to send feedback");
+      toast.error(getFriendlyErrorMessage(error, "Failed to send feedback. Please try again."));
     } finally {
       setLoading(false);
     }

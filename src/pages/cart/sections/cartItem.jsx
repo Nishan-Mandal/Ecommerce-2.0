@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import QuantitySelector from '../../../components/Common/QuantitySelector';
 
 /**
@@ -16,9 +17,9 @@ export default function CartItem({ item, onUpdateQuantity, onRemove }) {
   return (
     <div className="group bg-bg-surface p-3 shadow-lg rounded-[20px] flex flex-col sm:flex-row gap-6 items-center transition-all duration-300 border border-border-base/50 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
       {/* Product Thumbnail */}
-      <div className="w-24 h-24 flex-shrink-0 bg-bg-base/20 rounded-xl overflow-hidden flex items-center justify-center p-2 border border-border-base/20">
+      <Link to={`/productdetails/${item.id}`} className="w-24 h-24 flex-shrink-0 bg-bg-base/20 rounded-xl overflow-hidden flex items-center justify-center p-2 border border-border-base/20 hover:border-primary transition cursor-pointer">
         <img className="max-h-full max-w-full object-contain" alt={displayName} src={displayImage} />
-      </div>
+      </Link>
 
       {/* Product info and actions */}
       <div className="flex-grow w-full">
@@ -27,7 +28,9 @@ export default function CartItem({ item, onUpdateQuantity, onRemove }) {
             <span className="text-[10px] text-text-muted uppercase tracking-wider mb-1 block font-bold">
               {item.category || 'ReadyMade'}
             </span>
-            <h3 className="text-base font-bold text-text-base">{displayName}</h3>
+            <Link to={`/productdetails/${item.id}`} className="text-base font-bold text-text-base hover:text-primary transition cursor-pointer">
+              {displayName}
+            </Link>
             <p className="text-xs text-text-muted mt-1 font-medium">Variant: {displayVariant}</p>
           </div>
           

@@ -9,11 +9,12 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import useProducts from '../../hooks/product/useProducts';
 import useAuth from '../../hooks/auth/useAuth';
+import CartSkeleton from '../../components/loader/SkeletonLoader/CartSkeleton';
 
 function Cart() {
   const navigate = useNavigate();
   const { mode } = useTheme();
-  const { products } = useProducts();
+  const { products, loading: productsLoading } = useProducts();
   const { user, setIsLoginOpen } = useAuth();
 
   const dispatch = useDispatch()
@@ -82,6 +83,10 @@ function Cart() {
   const SUGGESTED_ITEMS = products
     .filter(p => !cart.some(cItem => cItem.id === p.id))
     .slice(0, 2);
+
+  if (productsLoading) {
+    return <CartSkeleton />;
+  }
 
   return (
     <div className="bg-bg-base text-text-base  flex flex-col transition-colors duration-300">  

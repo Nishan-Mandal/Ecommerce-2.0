@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import useAuth from "../../hooks/auth/useAuth";
+import useOrders from "../../hooks/order/useOrders";
 import { userService } from "../../services/user/userService";
-import { orderService } from "../../services/order/orderService";
+import { getFriendlyErrorMessage } from "../../utils/firebaseErrorHandler.js";
 import {
     FaUser, FaMapMarkerAlt, FaShoppingBag, FaWallet,
     FaSpinner, FaShieldAlt, FaChevronRight
@@ -11,6 +13,7 @@ import {
 import ProfileTab from "./tabs/ProfileTab";
 import AddressTab from "./tabs/AddressTab";
 import OrdersTab from "./tabs/OrdersTab";
+import UserProfileSkeleton from "../../components/loader/SkeletonLoader/UserProfileSkeleton";
 
 const MENU_ITEMS = [
     { id: "profile", label: "Profile Information", shortLabel: "Profile", icon: <FaUser size={14} /> },
@@ -30,6 +33,7 @@ function getInitials(name, email) {
 
 function User() {
     const { user } = useAuth();
+    const { orders = [] } = useOrders();
     const location = useLocation();
     const queryTab = new URLSearchParams(location.search).get("tab");
     const initialTab = location.state?.tab || queryTab || "profile";
@@ -42,9 +46,20 @@ function User() {
         }
     }, [location]);
 
-    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [orders, setOrders] = useState([]);
+    const uid = user?.user?.uid;
+
+    // TanStack Query for User Profile — Cached in memory for zero-reload navigation
+    const { data: userProfileData, isLoading: profileLoading } = useQuery({
+        queryKey: ['user', 'profile', uid],
+        queryFn: () => userService.getUserProfile(uid),
+        enabled: Boolean(uid),
+        staleTime: 5 * 60 * 1000, // 5 minutes stale time
+        gcTime: 15 * 60 * 1000,
+        refetchOnWindowFocus: false,
+    });
+
+    const loading = Boolean(uid) && profileLoading && !userProfileData;
 
     // Profile State
     const [profile, setProfile] = useState({
@@ -63,54 +78,33 @@ function User() {
         },
     });
 
-    const uid = user?.user?.uid;
-
     useEffect(() => {
-        if (!uid) {
-            setLoading(false);
-            return;
+        if (userProfileData) {
+            setProfile({
+                name: userProfileData.name || user?.user?.displayName || "",
+                email: userProfileData.email || user?.user?.email || "",
+                phone: userProfileData.phone || user?.user?.phoneNumber || "",
+                role: userProfileData.role || "USER",
+                emailVerified: user?.user?.emailVerified || false,
+                phoneVerified: userProfileData.phoneVerified || false,
+                address: {
+                    street: userProfileData.address?.street || "",
+                    city: userProfileData.address?.city || "",
+                    state: userProfileData.address?.state || "",
+                    pincode: userProfileData.address?.pincode || "",
+                    country: userProfileData.address?.country || "India",
+                },
+            });
+        } else if (user?.user) {
+            setProfile((prev) => ({
+                ...prev,
+                name: user?.user?.displayName || "",
+                email: user?.user?.email || "",
+                phone: user?.user?.phoneNumber || "",
+                emailVerified: user?.user?.emailVerified || false,
+            }));
         }
-
-        const fetchUserData = async () => {
-            try {
-                const userData = await userService.getUserProfile(uid);
-                if (userData) {
-                    setProfile({
-                        name: userData.name || user?.user?.displayName || "",
-                        email: userData.email || user?.user?.email || "",
-                        phone: userData.phone || user?.user?.phoneNumber || "",
-                        role: userData.role || "USER",
-                        emailVerified: user?.user?.emailVerified || false,
-                        phoneVerified: userData.phoneVerified || false,
-                        address: {
-                            street: userData.address?.street || "",
-                            city: userData.address?.city || "",
-                            state: userData.address?.state || "",
-                            pincode: userData.address?.pincode || "",
-                            country: userData.address?.country || "India",
-                        },
-                    });
-                } else {
-                    setProfile((prev) => ({
-                        ...prev,
-                        name: user?.user?.displayName || "",
-                        email: user?.user?.email || "",
-                        phone: user?.user?.phoneNumber || "",
-                        emailVerified: user?.user?.emailVerified || false,
-                    }));
-                }
-                const userOrders = await orderService.getOrdersByUser(uid, user?.user?.email);
-                setOrders(userOrders || []);
-            } catch (err) {
-                console.error("Failed to load user profile/orders", err);
-                toast.error("Failed to load profile details");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchUserData();
-    }, [uid, user]);
+    }, [userProfileData, user]);
 
     const handleSaveProfile = async () => {
         if (!uid) return;
@@ -119,8 +113,7 @@ function User() {
             await userService.updateUserProfile(uid, profile);
             toast.success("Profile updated successfully!");
         } catch (err) {
-            console.error("Failed to update profile", err);
-            toast.error("Failed to update profile");
+            toast.error(getFriendlyErrorMessage(err, "Failed to update profile. Please try again."));
         } finally {
             setSaving(false);
         }
@@ -149,14 +142,7 @@ function User() {
     }, 0);
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-bg-base text-text-muted text-xs">
-                <div className="flex flex-col items-center gap-3">
-                    <FaSpinner className="animate-spin text-2xl text-primary" />
-                    <span className="font-semibold tracking-wide">Loading your profile...</span>
-                </div>
-            </div>
-        );
+        return <UserProfileSkeleton />;
     }
 
     return (

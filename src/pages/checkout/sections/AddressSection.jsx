@@ -3,7 +3,7 @@ import AddressFormModal from "../components/AddressFormModal";
 
 export default function AddressSection({
   addresses, selectedAddressId, addressLoading, addressFormOpen, editingAddress,
-  onSelectAddress, onAddAddress, onUpdateAddress, onOpenForm, onCloseForm, onDelete,
+  onSelectAddress, onAddAddress, onUpdateAddress, onSetDefault, onOpenForm, onCloseForm, onDelete,
 }) {
   return (
     <section className="bg-bg-surface rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] border border-border-base overflow-hidden">
@@ -95,7 +95,17 @@ export default function AddressSection({
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {!addr.isDefault && onSetDefault && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onSetDefault(addr.addressId); }}
+                          title="Set as Default Address"
+                          className="px-2.5 py-1 rounded-lg border border-border-base text-text-muted hover:text-emerald-600 hover:border-emerald-500/40 text-xs font-medium transition-colors"
+                        >
+                          Set Default
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onOpenForm(addr); }}

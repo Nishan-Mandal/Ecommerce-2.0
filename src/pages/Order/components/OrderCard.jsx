@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import OrderProductItem from "./OrderProductItem";
 import { FaCopy, FaCheck, FaInfoCircle, FaCalendarAlt, FaCreditCard, FaTruck, FaClock, FaTimesCircle, FaCheckCircle, FaPalette } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { InvoiceDownloadButton } from "../../../invoice/index";
 
 function OrderCard({ order, onViewDetails }) {
   const [copied, setCopied] = useState(false);
@@ -93,7 +94,13 @@ function OrderCard({ order, onViewDetails }) {
   };
 
   const isCustomOrder = Boolean(order.isCustom || order.itemInfo);
-  const items = Array.isArray(order.products) ? order.products : (Array.isArray(order.items) ? order.items : []);
+  const items = Array.isArray(order.products) && order.products.length > 0
+    ? order.products
+    : (Array.isArray(order.items) && order.items.length > 0
+        ? order.items
+        : (Array.isArray(order.cart) && order.cart.length > 0
+            ? order.cart
+            : (Array.isArray(order.cartItems) ? order.cartItems : [])));
   const grandTotal = order.pricing?.grandTotal || order.totalAmount || 0;
 
   return (
@@ -194,6 +201,8 @@ function OrderCard({ order, onViewDetails }) {
         </div>
 
         <div className="flex items-center gap-2">
+          <InvoiceDownloadButton order={order} />
+
           <button
             type="button"
             onClick={() => onViewDetails && onViewDetails(order)}

@@ -10,8 +10,22 @@ const SiteConfigContext = createContext(DEFAULT_CONFIG);
  * Also updates <title> and <link rel="icon"> whenever config loads or updates.
  */
 export function SiteConfigProvider({ children }) {
-    const [config, setConfig] = useState(DEFAULT_CONFIG);
-    const [banners, setBanners] = useState([]);
+    const [config, setConfig] = useState(() => {
+        try {
+            const cached = sessionStorage.getItem("cached_site_config");
+            if (cached) return JSON.parse(cached);
+        } catch (e) {}
+        return DEFAULT_CONFIG;
+    });
+
+    const [banners, setBanners] = useState(() => {
+        try {
+            const cached = sessionStorage.getItem("cached_site_banners");
+            if (cached) return JSON.parse(cached);
+        } catch (e) {}
+        return [];
+    });
+
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -21,8 +35,15 @@ export function SiteConfigProvider({ children }) {
         ])
             .then(([data, bannerData]) => {
                 setConfig(data);
+                try {
+                    sessionStorage.setItem("cached_site_config", JSON.stringify(data));
+                } catch (e) {}
+
                 const activeBanners = bannerData.filter((b) => b.isActive !== false);
                 setBanners(activeBanners);
+                try {
+                    sessionStorage.setItem("cached_site_banners", JSON.stringify(activeBanners));
+                } catch (e) {}
             })
             .catch((err) => console.error("SiteConfig fetch error:", err))
             .finally(() => setLoading(false));

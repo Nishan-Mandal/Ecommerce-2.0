@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc, arrayUnion, Timestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { fireDB } from "../../firebase/FirebaseConfig";
+import { orderService } from "../../services/order/orderService";
 import { toast } from "react-toastify";
 import { FaExclamationTriangle } from "react-icons/fa";
+import { getFriendlyErrorMessage } from "../../utils/firebaseErrorHandler.js";
 
 import OrderDetailHeaderSection from "./sections/OrderDetailHeaderSection";
 import OrderFulfillmentSection from "./sections/OrderFulfillmentSection";
@@ -13,6 +15,7 @@ import OrderCustomerInfoSection from "./sections/OrderCustomerInfoSection";
 import OrderPaymentSummarySection from "./sections/OrderPaymentSummarySection";
 import OrderLogisticsSection from "./sections/OrderLogisticsSection";
 import OrderMetadataSection from "./sections/OrderMetadataSection";
+import OrderInvoiceAdminSection from "./sections/OrderInvoiceAdminSection";
 import { OrderCancelModal, OrderTrackingModal } from "./sections/OrderModals";
 
 // Allowed Status Flow
@@ -20,6 +23,7 @@ const STATUS_STEPS = [
   "PAYMENT_PENDING",
   "PLACED",
   "CONFIRMED",
+  "PROCESSING",
   "PACKED",
   "SHIPPED",
   "OUT_FOR_DELIVERY",
@@ -161,36 +165,12 @@ export default function AdminOrderDetail() {
   const executeStatusChange = async (newStatus) => {
     setUpdating(true);
     try {
-      const docRef = doc(fireDB, "orders", id);
-      const now = Timestamp.now();
-
-      const historyEntry = {
-        status: newStatus,
-        timestamp: now,
-        updatedBy: "ADMIN",
-      };
-
-      const updatePayload = {
-        orderStatus: newStatus,
-        status: newStatus,
-        updatedAt: now,
-        statusHistory: arrayUnion(historyEntry),
-      };
-
-      if (newStatus === "DELIVERED") {
-        updatePayload.deliveredAt = now;
-        updatePayload["payment.status"] = "Success";
-      } else if (newStatus === "CANCELLED") {
-        updatePayload.cancelledAt = now;
-      }
-
-      await updateDoc(docRef, updatePayload);
-      toast.success(`Order status updated to ${newStatus}`);
+      await orderService.updateOrderStatus(id, newStatus, "ADMIN");
+      toast.success(`Order status updated to ${newStatus.replace(/_/g, " ")}`);
       setShowCancelModal(false);
       fetchOrder();
     } catch (err) {
-      console.error("Error updating order status:", err);
-      toast.error("Failed to update status.");
+      toast.error(getFriendlyErrorMessage(err, "Failed to update status. Please try again."));
     } finally {
       setUpdating(false);
     }
@@ -252,10 +232,10 @@ export default function AdminOrderDetail() {
         <h2 className="text-lg font-bold text-text-base">Order Not Found</h2>
         <p className="text-xs text-text-muted">The requested order ID does not exist or has been deleted.</p>
         <button
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate("/orders")}
           className="px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-sm hover:opacity-90 transition cursor-pointer"
         >
-          Back to Dashboard
+          Back to Orders
         </button>
       </div>
     );
@@ -314,7 +294,13 @@ export default function AdminOrderDetail() {
         paymentBadgeStyles={PAYMENT_BADGE_STYLES}
         formatDate={formatDate}
         copyToClipboard={copyToClipboard}
-        onBack={() => navigate(-1)}
+        onBack={() => {
+          if (window.history.length > 2) {
+            navigate(-1);
+          } else {
+            navigate('/orders', { state: { activeView: 'orders' } });
+          }
+        }}
         onRefresh={fetchOrder}
         onPrint={handlePrintInvoice}
         loading={loading}
@@ -326,6 +312,7 @@ export default function AdminOrderDetail() {
         <div className="lg:col-span-2 space-y-6">
           <OrderFulfillmentSection
             currentStatus={currentStatus}
+            paymentStatus={paymentStatus}
             statusSteps={STATUS_STEPS}
             currentStepIndex={currentStepIndex}
             updating={updating}
@@ -354,6 +341,11 @@ export default function AdminOrderDetail() {
 
         {/* Right Sticky Sidebar (30%) */}
         <div className="space-y-6 lg:sticky lg:top-6">
+          <OrderInvoiceAdminSection
+            order={order}
+            onRefresh={fetchOrder}
+          />
+
           <OrderCustomerInfoSection
             customerName={customerName}
             customerPhone={customerPhone}

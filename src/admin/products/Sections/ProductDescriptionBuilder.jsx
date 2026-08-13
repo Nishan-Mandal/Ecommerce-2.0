@@ -1,167 +1,56 @@
 import React from "react";
 import { FaPlus, FaTrash, FaArrowUp, FaArrowDown, FaTable, FaAlignLeft } from "react-icons/fa";
+import {
+  normalizeDescriptionState,
+  getRowCells,
+  addTextSection,
+  addTableSection,
+  removeSection,
+  moveSection,
+  updateSectionField,
+  addColumn,
+  removeColumn,
+  updateColumnName,
+  addRow,
+  removeRow,
+  updateCell,
+} from "../utils/descriptionUtils";
 
 /**
- * ProductDescriptionBuilder Component
+ * ProductDescriptionBuilder Component (Admin Products Module)
  * Enables admins to construct structured descriptions containing ordered TEXT and TABLE sections.
- * Supports dynamic column & row editing for tables.
+ * Delegates pure data manipulations to ../utils/descriptionUtils.js
  */
 export default function ProductDescriptionBuilder({ value, onChange }) {
-  // Normalize incoming description state to structured format
-  const descriptionState = typeof value === "object" && value !== null
-    ? { short: value.short || "", sections: Array.isArray(value.sections) ? value.sections : [] }
-    : {
-        short: typeof value === "string" ? value : "",
-        sections: typeof value === "string" && value.trim() ? [{ type: "TEXT", title: "Description", content: value }] : []
-      };
+  const descriptionState = normalizeDescriptionState(value);
 
   const updateShort = (shortText) => {
     onChange({
       ...descriptionState,
-      short: shortText
+      short: shortText,
     });
   };
 
   const updateSections = (newSections) => {
     onChange({
       ...descriptionState,
-      sections: newSections
+      sections: newSections,
     });
-  };
-
-  // Section additions
-  const addTextSection = () => {
-    const newSection = {
-      type: "TEXT",
-      title: "",
-      content: ""
-    };
-    updateSections([...descriptionState.sections, newSection]);
-  };
-
-  const addTableSection = () => {
-    const newSection = {
-      type: "TABLE",
-      title: "Specifications",
-      columns: ["Feature", "Value"],
-      rows: [
-        { cells: ["Feature 1", "Value 1"] },
-        { cells: ["Feature 2", "Value 2"] }
-      ]
-    };
-    updateSections([...descriptionState.sections, newSection]);
-  };
-
-  const removeSection = (index) => {
-    const updated = descriptionState.sections.filter((_, i) => i !== index);
-    updateSections(updated);
-  };
-
-  const moveSection = (index, direction) => {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= descriptionState.sections.length) return;
-
-    const sections = [...descriptionState.sections];
-    const temp = sections[index];
-    sections[index] = sections[targetIndex];
-    sections[targetIndex] = temp;
-    updateSections(sections);
-  };
-
-  const updateSectionField = (index, field, val) => {
-    const sections = [...descriptionState.sections];
-    sections[index] = { ...sections[index], [field]: val };
-    updateSections(sections);
-  };
-
-  // Helper to extract cell array from a row (array or object)
-  const getRowCells = (row) => {
-    if (Array.isArray(row)) return row;
-    if (row && typeof row === 'object' && Array.isArray(row.cells)) return row.cells;
-    return [];
-  };
-
-  // Table Helpers
-  const addColumn = (sectionIndex) => {
-    const sections = [...descriptionState.sections];
-    const sec = sections[sectionIndex];
-    const colName = `Column ${sec.columns.length + 1}`;
-    const newCols = [...sec.columns, colName];
-    const newRows = (sec.rows || []).map((row) => {
-      const cells = getRowCells(row);
-      return { cells: [...cells, ""] };
-    });
-    sections[sectionIndex] = { ...sec, columns: newCols, rows: newRows };
-    updateSections(sections);
-  };
-
-  const removeColumn = (sectionIndex, colIndex) => {
-    const sections = [...descriptionState.sections];
-    const sec = sections[sectionIndex];
-    if (sec.columns.length <= 1) return; // Keep at least 1 column
-
-    const newCols = sec.columns.filter((_, i) => i !== colIndex);
-    const newRows = (sec.rows || []).map((row) => {
-      const cells = getRowCells(row);
-      return { cells: cells.filter((_, i) => i !== colIndex) };
-    });
-    sections[sectionIndex] = { ...sec, columns: newCols, rows: newRows };
-    updateSections(sections);
-  };
-
-  const updateColumnName = (sectionIndex, colIndex, name) => {
-    const sections = [...descriptionState.sections];
-    const sec = sections[sectionIndex];
-    const newCols = [...sec.columns];
-    newCols[colIndex] = name;
-    sections[sectionIndex] = { ...sec, columns: newCols };
-    updateSections(sections);
-  };
-
-  const addRow = (sectionIndex) => {
-    const sections = [...descriptionState.sections];
-    const sec = sections[sectionIndex];
-    const emptyCells = new Array(sec.columns.length).fill("");
-    const newRows = [...(sec.rows || []), { cells: emptyCells }];
-    sections[sectionIndex] = { ...sec, rows: newRows };
-    updateSections(sections);
-  };
-
-  const removeRow = (sectionIndex, rowIndex) => {
-    const sections = [...descriptionState.sections];
-    const sec = sections[sectionIndex];
-    const newRows = (sec.rows || []).filter((_, i) => i !== rowIndex);
-    sections[sectionIndex] = { ...sec, rows: newRows };
-    updateSections(sections);
-  };
-
-  const updateCell = (sectionIndex, rowIndex, colIndex, val) => {
-    const sections = [...descriptionState.sections];
-    const sec = sections[sectionIndex];
-    const newRows = (sec.rows || []).map((r, rIdx) => {
-      if (rIdx !== rowIndex) return r;
-      const currentCells = getRowCells(r);
-      const updatedCells = [...currentCells];
-      updatedCells[colIndex] = val;
-      return { cells: updatedCells };
-    });
-    sections[sectionIndex] = { ...sec, rows: newRows };
-    updateSections(sections);
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Short Summary */}
       <div>
-        <label className="block font-semibold text-text-base mb-1">
+        <label className="block font-semibold text-text-base mb-1.5 text-xs">
           Short Overview / Summary (Optional)
         </label>
         <textarea
-          rows={2}
+          rows={4}
           value={descriptionState.short}
           onChange={(e) => updateShort(e.target.value)}
           placeholder="Brief 1-2 sentence overview of the product..."
-          className="w-full rounded-lg border border-border-base bg-bg-base px-3 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full rounded-xl border border-border-base bg-bg-base px-3.5 py-2.5 text-xs text-text-base leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y min-h-[90px]"
         />
       </div>
 
@@ -174,31 +63,31 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={addTextSection}
-              className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+              onClick={() => updateSections(addTextSection(descriptionState.sections))}
+              className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer"
             >
-              <FaAlignLeft size={10} /> + Text Section
+              <FaAlignLeft size={11} /> + Text Section
             </button>
             <button
               type="button"
-              onClick={addTableSection}
-              className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+              onClick={() => updateSections(addTableSection(descriptionState.sections))}
+              className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer"
             >
-              <FaTable size={10} /> + Table Section
+              <FaTable size={11} /> + Table Section
             </button>
           </div>
         </div>
 
         {descriptionState.sections.length === 0 ? (
-          <div className="p-4 border-2 border-dashed border-border-base rounded-xl text-center text-text-muted text-xs">
-            No description sections added. Click "+ Text Section" or "+ Table Section" above.
+          <div className="p-6 border-2 border-dashed border-border-base/70 rounded-xl text-center text-text-muted text-xs bg-bg-base/40">
+            No description sections added. Click <span className="font-semibold text-primary">"+ Text Section"</span> or <span className="font-semibold text-primary">"+ Table Section"</span> above.
           </div>
         ) : (
           descriptionState.sections.map((section, idx) => (
-            <div key={idx} className="border border-border-base rounded-xl p-3.5 bg-bg-surface space-y-3 shadow-2xs">
+            <div key={idx} className="border border-border-base rounded-xl p-4 bg-bg-surface space-y-3.5 shadow-xs">
               {/* Section Header */}
-              <div className="flex items-center justify-between gap-2 border-b border-border-base/50 pb-2">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase text-primary">
+              <div className="flex items-center justify-between gap-2 border-b border-border-base/60 pb-2.5">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase text-primary tracking-wide">
                   {section.type === "TEXT" ? <FaAlignLeft size={11} /> : <FaTable size={11} />}
                   {section.type} SECTION #{idx + 1}
                 </span>
@@ -206,26 +95,29 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => moveSection(idx, -1)}
+                    onClick={() => updateSections(moveSection(descriptionState.sections, idx, -1))}
                     disabled={idx === 0}
-                    className="p-1 rounded text-text-muted hover:text-text-base disabled:opacity-30 cursor-pointer"
+                    className="p-1.5 rounded-md text-text-muted hover:text-text-base hover:bg-bg-base disabled:opacity-30 cursor-pointer transition"
+                    title="Move Up"
                   >
-                    <FaArrowUp size={10} />
+                    <FaArrowUp size={11} />
                   </button>
                   <button
                     type="button"
-                    onClick={() => moveSection(idx, 1)}
+                    onClick={() => updateSections(moveSection(descriptionState.sections, idx, 1))}
                     disabled={idx === descriptionState.sections.length - 1}
-                    className="p-1 rounded text-text-muted hover:text-text-base disabled:opacity-30 cursor-pointer"
+                    className="p-1.5 rounded-md text-text-muted hover:text-text-base hover:bg-bg-base disabled:opacity-30 cursor-pointer transition"
+                    title="Move Down"
                   >
-                    <FaArrowDown size={10} />
+                    <FaArrowDown size={11} />
                   </button>
                   <button
                     type="button"
-                    onClick={() => removeSection(idx)}
-                    className="p-1 rounded text-red-500 hover:bg-red-50 cursor-pointer ml-1"
+                    onClick={() => updateSections(removeSection(descriptionState.sections, idx))}
+                    className="p-1.5 rounded-md text-red-500 hover:bg-red-50 cursor-pointer ml-1 transition"
+                    title="Delete Section"
                   >
-                    <FaTrash size={10} />
+                    <FaTrash size={11} />
                   </button>
                 </div>
               </div>
@@ -235,9 +127,9 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
                 <input
                   type="text"
                   value={section.title || ""}
-                  onChange={(e) => updateSectionField(idx, "title", e.target.value)}
+                  onChange={(e) => updateSections(updateSectionField(descriptionState.sections, idx, "title", e.target.value))}
                   placeholder="Section Title (e.g. Overview or Technical Specifications)"
-                  className="w-full rounded-lg border border-border-base bg-bg-base px-2.5 py-1 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full rounded-xl border border-border-base bg-bg-base px-3 py-2 text-xs font-bold text-text-base focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
 
@@ -245,11 +137,11 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
               {section.type === "TEXT" && (
                 <div>
                   <textarea
-                    rows={4}
+                    rows={5}
                     value={section.content || ""}
-                    onChange={(e) => updateSectionField(idx, "content", e.target.value)}
+                    onChange={(e) => updateSections(updateSectionField(descriptionState.sections, idx, "content", e.target.value))}
                     placeholder="Write detailed section content here..."
-                    className="w-full rounded-lg border border-border-base bg-bg-base p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full rounded-xl border border-border-base bg-bg-base p-3 text-xs text-text-base leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y min-h-[120px]"
                   />
                 </div>
               )}
@@ -267,13 +159,14 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
                                 <input
                                   type="text"
                                   value={col}
-                                  onChange={(e) => updateColumnName(idx, cIdx, e.target.value)}
+                                  onChange={(e) => updateSections(updateColumnName(descriptionState.sections, idx, cIdx, e.target.value))}
+                                  placeholder={`Column ${cIdx + 1}`}
                                   className="w-full bg-white border border-border-base rounded px-1.5 py-0.5 text-xs font-bold text-text-base focus:outline-none focus:ring-1 focus:ring-primary"
                                 />
                                 {section.columns.length > 1 && (
                                   <button
                                     type="button"
-                                    onClick={() => removeColumn(idx, cIdx)}
+                                    onClick={() => updateSections(removeColumn(descriptionState.sections, idx, cIdx))}
                                     className="text-red-500 hover:text-red-700 p-0.5"
                                     title="Delete column"
                                   >
@@ -296,7 +189,7 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
                                   <input
                                     type="text"
                                     value={cells[cIdx] || ""}
-                                    onChange={(e) => updateCell(idx, rIdx, cIdx, e.target.value)}
+                                    onChange={(e) => updateSections(updateCell(descriptionState.sections, idx, rIdx, cIdx, e.target.value))}
                                     placeholder="Cell value..."
                                     className="w-full bg-white border border-border-base/70 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                                   />
@@ -305,7 +198,7 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
                               <td className="p-1.5 text-center">
                                 <button
                                   type="button"
-                                  onClick={() => removeRow(idx, rIdx)}
+                                  onClick={() => updateSections(removeRow(descriptionState.sections, idx, rIdx))}
                                   className="text-red-500 hover:text-red-700 font-bold px-1"
                                   title="Delete row"
                                 >
@@ -323,14 +216,14 @@ export default function ProductDescriptionBuilder({ value, onChange }) {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => addRow(idx)}
+                      onClick={() => updateSections(addRow(descriptionState.sections, idx))}
                       className="px-2.5 py-1 rounded bg-white border border-border-base text-text-base font-bold text-[10px] hover:bg-gray-50 cursor-pointer"
                     >
                       + Add Row
                     </button>
                     <button
                       type="button"
-                      onClick={() => addColumn(idx)}
+                      onClick={() => updateSections(addColumn(descriptionState.sections, idx))}
                       className="px-2.5 py-1 rounded bg-white border border-border-base text-text-base font-bold text-[10px] hover:bg-gray-50 cursor-pointer"
                     >
                       + Add Column

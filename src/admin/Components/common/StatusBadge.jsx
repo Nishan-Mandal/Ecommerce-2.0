@@ -124,6 +124,11 @@ export default function StatusBadge({
 
     // ── Product / Coupon Active Statuses ────────────────────────────────────────
     case 'LIVE':
+      defaultLabel = defaultLabel || 'Live';
+      defaultIcon = defaultIcon || <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />;
+      badgeColorClasses = 'bg-transparent text-emerald-600 dark:text-emerald-400 border border-emerald-500/30';
+      break;
+
     case 'ACTIVE':
       defaultLabel = defaultLabel || 'Active';
       defaultIcon = defaultIcon || <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />;
@@ -131,9 +136,19 @@ export default function StatusBadge({
       break;
 
     case 'DRAFT':
+      defaultLabel = defaultLabel || 'Draft';
+      defaultIcon = defaultIcon || <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />;
+      badgeColorClasses = 'bg-transparent text-amber-600 dark:text-amber-400 border border-amber-500/30';
+      break;
+
     case 'INACTIVE':
+      defaultLabel = defaultLabel || 'Inactive';
+      defaultIcon = defaultIcon || <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />;
+      badgeColorClasses = 'bg-transparent text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700';
+      break;
+
     case 'EXPIRED':
-      defaultLabel = defaultLabel || (normStatus === 'EXPIRED' ? 'Expired' : 'Inactive');
+      defaultLabel = defaultLabel || 'Expired';
       defaultIcon = defaultIcon || <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />;
       badgeColorClasses = 'bg-transparent text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700';
       break;

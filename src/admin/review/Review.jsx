@@ -48,7 +48,7 @@ function Review() {
     });
 
     return (
-        <div className="space-y-6 lg:space-y-5">
+        <div className="space-y-6 lg:space-y-5 px-4 md:px-0">
             {/* Header Action Row */}
             <Header title="Product Reviews Moderation" description="Monitor customer feedback, manage review moderation, and remove inappropriate content." />
 

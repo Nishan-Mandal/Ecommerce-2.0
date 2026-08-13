@@ -8,6 +8,7 @@ import { clearCart } from "../../redux/cartSlice.jsx";
 import { paymentService } from "../../services/payment/paymentService";
 import { userService } from "../../services/user/userService";
 import useAuth from "../auth/useAuth";
+import { getFriendlyErrorMessage } from "../../utils/firebaseErrorHandler.js";
 
 /**
  * Checkout State Machine Stages:
@@ -86,9 +87,11 @@ export function useCheckout() {
   const handleAddAddress = useCallback(async (formData) => {
     const uid = user?.user?.uid || user?.uid;
     if (!uid) return;
-    const newAddr = await userService.addAddress(uid, formData);
-    setAddresses((prev) => [...prev, newAddr]);
-    setSelectedAddressId(newAddr.addressId);
+    const res = await userService.addAddress(uid, formData);
+    const updatedList = res?.addresses || (await userService.getAddresses(uid));
+    setAddresses(updatedList);
+    const addedAddr = res?.newAddress || updatedList.find(a => a.isDefault) || updatedList[0];
+    if (addedAddr) setSelectedAddressId(addedAddr.addressId);
     setAddressFormOpen(false);
     toast.success("Address saved!");
   }, [user]);
@@ -96,28 +99,36 @@ export function useCheckout() {
   const handleUpdateAddress = useCallback(async (addressId, formData) => {
     const uid = user?.user?.uid || user?.uid;
     if (!uid) return;
-    const updated = await userService.updateAddress(uid, addressId, formData);
-    setAddresses((prev) => prev.map((a) => (a.addressId === addressId ? updated : a)));
+    const res = await userService.updateAddress(uid, addressId, formData);
+    const updatedList = res?.addresses || (await userService.getAddresses(uid));
+    setAddresses(updatedList);
     setAddressFormOpen(false);
     setEditingAddress(null);
     toast.success("Address updated!");
   }, [user]);
 
+  const handleSetDefaultAddress = useCallback(async (addressId) => {
+    const uid = user?.user?.uid || user?.uid;
+    if (!uid) return;
+    const updatedList = await userService.setDefaultAddress(uid, addressId);
+    setAddresses(updatedList);
+    setSelectedAddressId(addressId);
+    toast.success("Default address updated!");
+  }, [user]);
+
   const handleDeleteAddress = useCallback(async (addressId) => {
     const uid = user?.user?.uid || user?.uid;
     if (!uid) return;
-    await userService.deleteAddress(uid, addressId);
-    setAddresses((prev) => {
-      const updated = prev.filter((a) => a.addressId !== addressId);
-      if (updated.length === 0) setAddressFormOpen(true);
-      return updated;
-    });
+    const updatedList = await userService.deleteAddress(uid, addressId);
+    const finalAddrs = updatedList || (await userService.getAddresses(uid));
+    setAddresses(finalAddrs);
+    if (finalAddrs.length === 0) setAddressFormOpen(true);
     if (selectedAddressId === addressId) {
-      const remaining = addresses.filter((a) => a.addressId !== addressId);
-      setSelectedAddressId(remaining[0]?.addressId || null);
+      const defaultAddr = finalAddrs.find((a) => a.isDefault) || finalAddrs[0];
+      setSelectedAddressId(defaultAddr ? defaultAddr.addressId : null);
     }
     toast.success("Address removed.");
-  }, [user, selectedAddressId, addresses]);
+  }, [user, selectedAddressId]);
 
   const openEditAddress = useCallback((address) => {
     setEditingAddress(address);
@@ -187,14 +198,14 @@ export function useCheckout() {
         sessionStorage.setItem('appliedCoupon', JSON.stringify(couponObj));
         toast.success(`Coupon "${res.code}" applied! You save ₹${Number(res.discountAmount).toFixed(2)}`);
       } else {
-        const errorMsg = res?.message || "Invalid or expired coupon code.";
+        const errorMsg = getFriendlyErrorMessage(res?.message, "Invalid or expired coupon code.");
         setCouponError(errorMsg);
         toast.error(errorMsg);
         setAppliedCoupon(null);
         sessionStorage.removeItem('appliedCoupon');
       }
     } catch (err) {
-      const errorMsg = err?.message || "Invalid or expired coupon code.";
+      const errorMsg = getFriendlyErrorMessage(err, "Invalid or expired coupon code.");
       setCouponError(errorMsg);
       toast.error(errorMsg);
       setAppliedCoupon(null);
@@ -321,9 +332,10 @@ export function useCheckout() {
             }
           },
           onFailure: (errMsg) => {
+            const cleanMsg = getFriendlyErrorMessage(errMsg, "Payment cancelled or failed.");
             setStage("error");
-            setErrorMessage(errMsg || "Payment cancelled or failed.");
-            toast.error(errMsg || "Payment cancelled.");
+            setErrorMessage(cleanMsg);
+            toast.error(cleanMsg);
           },
         });
         if (!result.success && result.cancelled) setStage("ready");
@@ -353,8 +365,7 @@ export function useCheckout() {
         navigate("/profile?tab=orders");
       }
     } catch (err) {
-      console.error("Checkout error:", err);
-      const msg = err?.message || "Something went wrong. Please try again.";
+      const msg = getFriendlyErrorMessage(err, "Something went wrong during checkout. Please try again.");
       setStage("error");
       setErrorMessage(msg);
       toast.error(msg);
@@ -369,7 +380,7 @@ export function useCheckout() {
     paymentMethod, stage, errorMessage, placedOrderId, cart,
     subtotal, productDiscount, couponDiscount, shippingCharge, estimatedTotal,
     setSelectedAddressId, setAddressFormOpen, setCouponCode, setPaymentMethod,
-    handleAddAddress, handleUpdateAddress, handleDeleteAddress, openEditAddress, closeAddressForm,
+    handleAddAddress, handleUpdateAddress, handleDeleteAddress, handleSetDefaultAddress, openEditAddress, closeAddressForm,
     handleApplyCoupon, handleRemoveCoupon, handleProceedToPayment, handleRetry,
   };
 }

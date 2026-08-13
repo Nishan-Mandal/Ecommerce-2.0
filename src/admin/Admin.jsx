@@ -1,31 +1,26 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import AdminLayout from './adminLayout/AdminLayout';
 
 function Admin() {
-    const [activeView, setActiveView] = useState('overview');
     const location = useLocation();
 
-    // Determine the active view to highlight on the sidebar
+    // Determine the active view to highlight on the sidebar based on exact route path
     const getActiveView = () => {
-        if (location.pathname === '/addproduct' || location.pathname === '/updateproduct') {
-            return 'products';
-        }
-        if (location.pathname.startsWith('/coupons')) {
-            return 'coupons';
-        }
-        if (location.pathname === '/review') {
-            return 'reviews';
-        }
-        if (location.pathname === '/configure') {
-            return 'configure';
-        }
-        return activeView;
+        const path = location.pathname;
+        if (path === '/dashboard') return 'overview';
+        if (path === '/products' || path === '/addproduct' || path === '/updateproduct') return 'products';
+        if (path === '/orders' || path.startsWith('/admin/order')) return 'orders';
+        if (path === '/users') return 'users';
+        if (path.startsWith('/coupons')) return 'coupons';
+        if (path === '/reviews' || path === '/review') return 'reviews';
+        if (path === '/configure') return 'configure';
+        return 'overview';
     };
 
     return (
-        <AdminLayout activeView={getActiveView()} onViewChange={setActiveView}>
-            <Outlet context={{ activeView, setActiveView }} />
+        <AdminLayout activeView={getActiveView()}>
+            <Outlet />
         </AdminLayout>
     );
 }

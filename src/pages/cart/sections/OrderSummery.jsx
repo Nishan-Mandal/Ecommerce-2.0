@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { paymentService } from '../../../services/payment/paymentService';
+import { getFriendlyErrorMessage } from '../../../utils/firebaseErrorHandler.js';
 import { couponService } from '../../../services/coupon/couponService';
 import { validateAndCalculateCoupon } from '../../../utils/couponValidation';
 
@@ -76,14 +77,13 @@ export default function OrderSummary({ subtotal, shippingFee, taxRate, cartItems
         sessionStorage.setItem('appliedCoupon', JSON.stringify(couponObj));
         toast.success(`Coupon ${res.code} applied! Saved ₹${formatCurrency(res.discountAmount)}`);
       } else {
-        toast.error(res?.message || 'Invalid or expired coupon code');
+        toast.error(getFriendlyErrorMessage(res?.message, 'Invalid or expired coupon code'));
         setAppliedCoupon(null);
         setDiscountAmount(0);
         sessionStorage.removeItem('appliedCoupon');
       }
     } catch (err) {
-      console.error("Error validating coupon via Cloud Function:", err);
-      toast.error(err?.message || 'Invalid or expired coupon code');
+      toast.error(getFriendlyErrorMessage(err, 'Invalid or expired coupon code'));
       setAppliedCoupon(null);
       setDiscountAmount(0);
       sessionStorage.removeItem('appliedCoupon');

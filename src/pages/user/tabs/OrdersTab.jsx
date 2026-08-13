@@ -5,6 +5,7 @@ import {
   FaExclamationCircle, FaTimesCircle, FaTruck, FaClock, FaImage 
 } from "react-icons/fa";
 import Pagination from "../../../components/common/Pagination";
+import { InvoiceDownloadButton } from "../../../invoice/index";
 
 function formatDate(dateVal) {
   if (!dateVal) return "N/A";
@@ -157,71 +158,88 @@ export default function OrdersTab({ orders = [] }) {
             const orderIdDisplay = o.id || o.orderId || o.paymentId || "R0pgC" + idx;
             const gatewayDisplay = (o.paymentMode || o.paymentInfo?.method || o.payment?.gateway || "RAZORPAY").toUpperCase();
 
-            // Render first product item or main info
-            const firstItem = items[0] || {};
-            const itemImg = firstItem.productImage || firstItem.imageUrl || firstItem.images?.[0] || "";
-            const itemTitle = firstItem.productName || firstItem.title || firstItem.name || "Product Order Item";
-            const itemQty = Number(firstItem.quantity || firstItem.qty || 1) || 1;
-            const pid = firstItem.productId || firstItem.id || "";
-
             return (
               <div
                 key={o.id || o.orderId || idx}
-                className="bg-bg-surface rounded-xl border border-border-base/70 p-3 sm:p-3.5 shadow-2xs hover:shadow-xs transition-all duration-200"
+                className="bg-bg-surface rounded-xl border border-border-base/70 p-3.5 sm:p-4 shadow-2xs hover:shadow-xs transition-all duration-200 space-y-3"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  {/* Left Product Image & Title Info */}
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-primary/5 border border-primary/10 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
-                      {itemImg ? (
-                        <img src={itemImg} alt={itemTitle} className="w-full h-full object-contain rounded-lg" />
-                      ) : (
-                        <FaImage size={16} className="text-primary/40" />
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1 space-y-0.5">
-                      {pid ? (
-                        <Link to={`/productdetails/${pid}`} className="font-extrabold text-xs sm:text-sm text-text-base hover:text-primary transition-colors line-clamp-1">
-                          {itemTitle}
-                        </Link>
-                      ) : (
-                        <h4 className="font-extrabold text-xs sm:text-sm text-text-base line-clamp-1">{itemTitle}</h4>
-                      )}
-
-                      <p className="text-[10px] text-text-muted font-medium">
-                        Qty: {itemQty} • <span className="font-mono text-text-muted">Order ID: <strong className="font-bold text-text-base">{orderIdDisplay}</strong></span>
-                      </p>
-
-                      <p className="text-[10px] text-text-muted">
-                        Ordered on <strong className="font-semibold text-text-base">{formatDate(o.date || o.createdAt)}</strong> • <span className="uppercase font-bold tracking-wider text-[9px] text-text-muted">{gatewayDisplay}</span>
-                      </p>
-                    </div>
+                {/* Header row: Order Meta & Total Amount + Status */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-border-base/50">
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-text-muted font-medium flex items-center gap-1.5 flex-wrap">
+                      <span>Order ID: <strong className="font-extrabold text-text-base font-mono">{orderIdDisplay}</strong></span>
+                      <span className="opacity-40">•</span>
+                      <span>Ordered on <strong className="font-semibold text-text-base">{formatDate(o.date || o.createdAt)}</strong></span>
+                      <span className="opacity-40">•</span>
+                      <span className="uppercase font-bold tracking-wider text-[9px] text-text-muted">{gatewayDisplay}</span>
+                    </p>
+                    
                   </div>
 
-                  {/* Right Price & Status Badge */}
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1.5 border-t sm:border-t-0 pt-2 sm:pt-0 border-border-base/40 shrink-0">
+                  <div className="flex items-center gap-3 shrink-0">
                     <span className="text-base sm:text-lg font-black text-text-base">
                       ₹{Math.round(totalAmt).toLocaleString("en-IN")}
                     </span>
-
                     <div>
                       {renderStatusBadge(o.orderStatus || o.status, o.paymentStatus || o.payment?.status)}
                     </div>
+                     <InvoiceDownloadButton order={o} />
                   </div>
                 </div>
 
-                {/* Additional Items Preview inside order if multiple products exist */}
-                {items.length > 1 && (
-                  <div className="mt-2 pt-2 border-t border-border-base/40 flex items-center gap-1.5 overflow-x-auto">
-                    <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider shrink-0">+ {items.length - 1} more:</span>
-                    {items.slice(1).map((extra, eIdx) => (
-                      <span key={eIdx} className="px-2 py-0.5 rounded-md bg-bg-base border border-border-base/50 text-[9px] font-bold text-text-base truncate max-w-[120px]">
-                        {extra.productName || extra.title || "Item"}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {/* List of ALL products in this order */}
+                <div className="divide-y divide-border-base/40 space-y-2.5">
+                  {items.map((item, itemIdx) => {
+                    const itemImg = item.productImage || item.imageUrl || item.images?.[0] || "";
+                    const itemTitle = item.productName || item.title || item.name || "Product Order Item";
+                    const itemQty = Number(item.quantity || item.qty || 1) || 1;
+                    const pid = item.productId || item.id || "";
+                    const itemPrice = Number(item.price || item.unitPrice || 0);
+                    const variantText = item.selectedVariant
+                      ? (typeof item.selectedVariant === "object"
+                          ? Object.entries(item.selectedVariant).map(([k, v]) => `${k}: ${v}`).join(", ")
+                          : String(item.selectedVariant))
+                      : (item.variant || item.size || item.color || "");
+
+                    return (
+                      <div key={itemIdx} className={`flex items-center gap-3 ${itemIdx > 0 ? "pt-2.5" : ""}`}>
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-primary/5 border border-primary/10 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                          {itemImg ? (
+                            <img src={itemImg} alt={itemTitle} className="w-full h-full object-contain rounded-lg" />
+                          ) : (
+                            <FaImage size={16} className="text-primary/40" />
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          {pid ? (
+                            <Link to={`/productdetails/${pid}`} className="font-extrabold text-xs sm:text-sm text-text-base hover:text-primary transition-colors line-clamp-1">
+                              {itemTitle}
+                            </Link>
+                          ) : (
+                            <h4 className="font-extrabold text-xs sm:text-sm text-text-base line-clamp-1">{itemTitle}</h4>
+                          )}
+
+                          {variantText && (
+                            <p className="text-[10px] text-text-muted font-medium line-clamp-1">
+                              Variant: <span className="text-text-base font-semibold">{variantText}</span>
+                            </p>
+                          )}
+
+                          <p className="text-[10px] text-text-muted font-medium">
+                            Qty: <strong className="font-bold text-text-base">{itemQty}</strong>
+                            {itemPrice > 0 && (
+                              <>
+                                <span className="mx-1.5 opacity-40">•</span>
+                                Price: <strong className="font-bold text-text-base">₹{Math.round(itemPrice).toLocaleString("en-IN")}</strong>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })

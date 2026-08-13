@@ -112,32 +112,6 @@ function CouponBasicInfo({
 
                 </div>
 
-                {/* Active / Inactive Status Toggle */}
-                <div className="pt-2.5 border-t border-border-base/70 flex items-center justify-between mt-2">
-                    <div>
-                        <label className="block font-bold text-text-base">
-                            Coupon Status
-                        </label>
-                        <p className="text-[10px] text-text-muted mt-0.5">
-                            Active coupons can be applied at checkout. Inactive coupons are disabled.
-                        </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() => setCoupon((prev) => ({ ...prev, isActive: !(prev.isActive !== false) }))}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border inline-flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
-                            coupon.isActive !== false
-                                ? "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300"
-                                : "bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-400"
-                        }`}
-                        title={coupon.isActive !== false ? "Click to set Inactive" : "Click to set Active"}
-                    >
-                        <span className={`w-1.5 h-1.5 rounded-full ${coupon.isActive !== false ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
-                        <span>{coupon.isActive !== false ? "Active" : "Inactive"}</span>
-                    </button>
-                </div>
-
             </div>
 
         </div>

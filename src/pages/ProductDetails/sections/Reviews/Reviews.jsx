@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import ReviewItem from './ReviewCard';
 import { productService } from '../../../../services/product/productService';
 import useAuth from '../../../../hooks/auth/useAuth';
+import { getFriendlyErrorMessage } from '../../../../utils/firebaseErrorHandler.js';
 
 // ── Interactive Star Picker ───────────────────────────────────────────────────
 function StarPicker({ value, onChange }) {
@@ -82,8 +83,7 @@ function WriteReviewForm({ productId, onSubmitted }) {
             // Optimistically surface the new review immediately
             onSubmitted(newReview);
         } catch (err) {
-            console.error(err);
-            toast.error('Failed to submit review. Please try again.');
+            toast.error(getFriendlyErrorMessage(err, 'Failed to submit review. Please try again.'));
         } finally {
             setSubmitting(false);
         }

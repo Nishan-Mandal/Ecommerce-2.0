@@ -3,6 +3,7 @@ import Header from '../Components/Header';
 import FilterBar from '../Components/FilterBar';
 import TableSkeleton from '../../components/loader/SkeletonLoader/TableSkeleton';
 import Pagination from '../../components/common/Pagination';
+import CursorPagination from '../../components/common/CursorPagination';
 import WarningModal from '../../components/modal/WarningModal';
 import StatusBadge from '../Components/common/StatusBadge';
 import DataTable from '../Components/common/DataTable';
@@ -13,17 +14,37 @@ import {
 import { userService } from '../../services/user/userService';
 import { activityService } from '../../services/activity/activityService';
 import { toast } from 'react-toastify';
+import { getFriendlyErrorMessage } from '../../utils/firebaseErrorHandler.js';
+import useUsersQuery from '../../hooks/user/useUsersQuery';
+import useDebounce from '../../hooks/common/useDebounce';
 
 /**
  * UserDetailTable Component
  * Displays client and administrator accounts inside the admin panel.
- * Uses shared DataTable and StatusBadge components for unified UI consistency.
+ * Uses shared DataTable, StatusBadge, and CursorPagination components.
  */
-function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDate }) {
+function UserDetailTable({ mode, user: propUser = [], loading: propLoading = false, onRefresh, formatDate }) {
     const [search, setSearch] = useState('');
+    const debouncedSearch = useDebounce(search, 300);
     const [roleFilter, setRoleFilter] = useState('ALL');
-    const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
+
+    // Query hook for server-side paginated users
+    const {
+        users: queryUsers,
+        hasMore,
+        isLoading: isUsersLoading,
+        isFetching,
+        pageIndex,
+        goNext,
+        goPrev,
+        refetch,
+        invalidate,
+    } = useUsersQuery({ pageSize });
+
+    const isCursorPaginated = propUser.length === 0;
+    const rawUsers = isCursorPaginated ? queryUsers : propUser;
+    const loading = isCursorPaginated ? isUsersLoading : propLoading;
 
     // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -43,10 +64,10 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
         role: 'ADMIN',
     });
 
-    // Filter logic
-    const filteredUsers = user.filter(u => {
-        const searchLower = search.toLowerCase();
-        const matchesSearch = !search ||
+    // Client-side filter logic on current page
+    const filteredUsers = rawUsers.filter(u => {
+        const searchLower = debouncedSearch.toLowerCase().trim();
+        const matchesSearch = !debouncedSearch ||
             u.name?.toLowerCase().includes(searchLower) ||
             u.email?.toLowerCase().includes(searchLower) ||
             u.uid?.toLowerCase().includes(searchLower);
@@ -56,9 +77,14 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
         return matchesSearch && matchesRole;
     });
 
+    // Fallback pagination state for prop user array
+    const [currentPage, setCurrentPage] = useState(1);
     useEffect(() => {
-        setCurrentPage(1);
-    }, [filteredUsers.length]);
+        if (!isCursorPaginated) {
+            setCurrentPage(1);
+        }
+    }, [filteredUsers.length, isCursorPaginated]);
+
 
     const handleCreateAdmin = async (e) => {
         e.preventDefault();
@@ -94,8 +120,7 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
             setAdminForm({ name: '', email: '', password: '', phone: '', role: 'ADMIN' });
             if (onRefresh) onRefresh();
         } catch (err) {
-            console.error("Error creating admin:", err);
-            toast.error(err.message || "Failed to create account profile");
+            toast.error(getFriendlyErrorMessage(err, "Failed to create account profile. Please try again."));
         } finally {
             setSubmitting(false);
         }
@@ -161,8 +186,8 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
         );
     }
 
-    const startIndex = (currentPage - 1) * pageSize;
-    const paginatedUsers = filteredUsers.slice(startIndex, startIndex + pageSize);
+    const startIndex = isCursorPaginated ? pageIndex * pageSize : (currentPage - 1) * pageSize;
+    const displayUsers = isCursorPaginated ? filteredUsers : filteredUsers.slice(startIndex, startIndex + pageSize);
 
     const columns = [
         {
@@ -236,7 +261,6 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
 
     const mobileCardRender = (item, index) => {
         const { name, uid, email, time, role } = item;
-        const isRoleAdmin = (role || 'USER').toUpperCase() === 'ADMIN';
 
         return (
             <div key={index} className="bg-bg-surface p-5 rounded-2xl border border-border-base shadow-xs space-y-4">
@@ -247,21 +271,21 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
                         <button
                             type="button"
                             onClick={() => handleDeleteClick(item)}
-                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition cursor-pointer"
-                            title={isRoleAdmin ? "Remove Admin Profile" : "Delete User"}
+                            className="p-1 text-rose-600 hover:bg-rose-50 rounded-md transition cursor-pointer"
+                            title="Delete Account"
                         >
                             <FaTrash size={12} />
                         </button>
                     </div>
                 </div>
                 
-                <div className="space-y-1.5">
-                    <h3 className="font-bold text-base text-text-base">{name || "Customer Account"}</h3>
-                    <p className="text-sm text-text-muted">{email}</p>
+                <div>
+                    <h3 className="font-extrabold text-text-base text-sm">{name || "Customer"}</h3>
+                    <p className="text-xs text-text-muted">{email}</p>
                 </div>
-                
-                <div className="flex flex-col gap-1.5 text-xs text-text-muted pl-1">
-                    <span className="font-bold text-text-base uppercase tracking-wider text-[10px]">User UID:</span>
+
+                <div className="flex flex-col gap-1">
+                    <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider">User UID</span>
                     <span className="bg-bg-base px-3 py-1.5 rounded-xl border border-border-base font-mono select-all w-fit break-all text-xs font-semibold">
                         {uid || "N/A"}
                     </span>
@@ -288,29 +312,42 @@ function UserDetailTable({ mode, user = [], loading = false, onRefresh, formatDa
             <FilterBar
                 search={search}
                 setSearch={setSearch}
-                searchPlaceholder="Search users by name, email, or UID..."
+                searchPlaceholder="Search within this page by name, email, or UID..."
                 filters={filterConfig}
             />
 
             {/* Reusable Data Table */}
             <DataTable
                 columns={columns}
-                data={paginatedUsers}
+                data={displayUsers}
                 emptyMessage="No registered users found."
                 mobileCardRender={mobileCardRender}
             />
 
-            {/* Universal Pagination */}
-            <Pagination
-                currentPage={currentPage}
-                totalItems={filteredUsers.length}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={(newSize) => {
-                    setPageSize(newSize);
-                    setCurrentPage(1);
-                }}
-            />
+            {/* Pagination Controls */}
+            {isCursorPaginated ? (
+                <CursorPagination
+                    pageIndex={pageIndex}
+                    hasMore={hasMore}
+                    isFetching={isFetching}
+                    onPrev={goPrev}
+                    onNext={goNext}
+                    onRefresh={refetch}
+                    pageSize={pageSize}
+                    onPageSizeChange={setPageSize}
+                />
+            ) : (
+                <Pagination
+                    currentPage={currentPage}
+                    totalItems={filteredUsers.length}
+                    pageSize={pageSize}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={(newSize) => {
+                        setPageSize(newSize);
+                        setCurrentPage(1);
+                    }}
+                />
+            )}
 
             {/* Add New Admin Modal */}
             {isAddModalOpen && (

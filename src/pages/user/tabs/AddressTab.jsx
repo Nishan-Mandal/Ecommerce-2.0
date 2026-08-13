@@ -3,6 +3,7 @@ import { FaHome, FaBriefcase, FaMapPin, FaPlus, FaEdit, FaTrash, FaCheckCircle }
 import { toast } from "react-toastify";
 import { userService } from "../../../services/user/userService";
 import AddressFormModal from "../../checkout/components/AddressFormModal";
+import { getFriendlyErrorMessage } from "../../../utils/firebaseErrorHandler.js";
 
 const TYPE_ICONS = {
   HOME: <FaHome size={11} />,
@@ -45,39 +46,49 @@ export default function AddressTab({ profile, uid: propUid }) {
       return;
     }
     try {
-      const newAddr = await userService.addAddress(uid, formData);
-      setAddresses((prev) => [...prev, newAddr]);
+      const res = await userService.addAddress(uid, formData);
+      const updatedList = res?.addresses || (await userService.getAddresses(uid));
+      setAddresses(updatedList);
       setModalOpen(false);
       toast.success("Address added successfully!");
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to add address.");
+      toast.error(getFriendlyErrorMessage(err, "Failed to add address."));
     }
   };
 
   const handleUpdate = async (addressId, formData) => {
     if (!uid) return;
     try {
-      const updated = await userService.updateAddress(uid, addressId, formData);
-      setAddresses((prev) => prev.map((a) => (a.addressId === addressId ? updated : a)));
+      const res = await userService.updateAddress(uid, addressId, formData);
+      const updatedList = res?.addresses || (await userService.getAddresses(uid));
+      setAddresses(updatedList);
       setModalOpen(false);
       setEditingAddress(null);
       toast.success("Address updated successfully!");
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to update address.");
+      toast.error(getFriendlyErrorMessage(err, "Failed to update address."));
+    }
+  };
+
+  const handleSetDefault = async (addressId) => {
+    if (!uid) return;
+    try {
+      const updatedAddrs = await userService.setDefaultAddress(uid, addressId);
+      setAddresses(updatedAddrs);
+      toast.success("Default address updated!");
+    } catch (err) {
+      toast.error(getFriendlyErrorMessage(err, "Failed to update default address."));
     }
   };
 
   const handleDelete = async (addressId) => {
     if (!uid) return;
     try {
-      await userService.deleteAddress(uid, addressId);
-      setAddresses((prev) => prev.filter((a) => a.addressId !== addressId));
+      const updatedAddrs = await userService.deleteAddress(uid, addressId);
+      setAddresses(updatedAddrs || []);
       toast.success("Address removed.");
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to delete address.");
+      toast.error(getFriendlyErrorMessage(err, "Failed to delete address."));
     }
   };
 
@@ -141,7 +152,7 @@ export default function AddressTab({ profile, uid: propUid }) {
                     {addr.addressType || "HOME"}
                   </span>
                   {addr.isDefault && (
-                    <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50  px-2 py-0.5 rounded-full border border-emerald-200 ">
+                    <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                       <FaCheckCircle size={8} /> Default
                     </span>
                   )}
@@ -158,6 +169,14 @@ export default function AddressTab({ profile, uid: propUid }) {
 
               {/* Action Buttons */}
               <div className="flex items-center gap-1.5 flex-shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-border-base/40">
+                {!addr.isDefault && (
+                  <button
+                    onClick={() => handleSetDefault(addr.addressId)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border-base/70 text-text-muted hover:text-emerald-600 hover:border-emerald-300 transition text-[11px] font-semibold cursor-pointer"
+                  >
+                    Set Default
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setEditingAddress(addr);
