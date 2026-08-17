@@ -1,28 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import UserDetailTable from './UserDetailTable';
-import { userService } from '../../services/user/userService';
 import { useTheme } from '../../context/ThemeContext';
+import useUsersQuery from '../../hooks/user/useUsersQuery';
 
 export default function AdminUsersPage() {
     const { mode } = useTheme();
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [pageSize, setPageSize] = useState(10);
 
-    const fetchUsers = async () => {
-        setLoading(true);
-        try {
-            const data = await userService.getUsers();
-            setUsers(data || []);
-        } catch (err) {
-            console.error("Error loading users:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchUsers();
-    }, []);
+    const {
+        users,
+        hasMore,
+        isLoading,
+        isFetching,
+        pageIndex,
+        goNext,
+        goPrev,
+        refetch,
+        invalidate,
+    } = useUsersQuery({ pageSize });
 
     const formatDate = (dateValue) => {
         if (!dateValue) return 'N/A';
@@ -37,11 +32,18 @@ export default function AdminUsersPage() {
             <UserDetailTable
                 mode={mode}
                 user={users}
-                loading={loading}
-                onRefresh={fetchUsers}
+                loading={isLoading}
+                isFetching={isFetching}
+                pageIndex={pageIndex}
+                hasMore={hasMore}
+                onPrev={goPrev}
+                onNext={goNext}
+                onRefresh={refetch}
+                invalidate={invalidate}
+                pageSize={pageSize}
+                onPageSizeChange={setPageSize}
                 formatDate={formatDate}
             />
-
         </div>
-    )
+    );
 }

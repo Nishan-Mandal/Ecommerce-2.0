@@ -7,7 +7,6 @@ const PLATFORM_LABELS = {
     youtube: "YouTube",
     linkedin: "LinkedIn",
     pinterest: "Pinterest",
-    whatsapp: "WhatsApp",
 };
 
 export default function SocialTab({ draft, updateDraft }) {
@@ -63,10 +62,14 @@ export default function SocialTab({ draft, updateDraft }) {
                         {/* Input URL (collapsible/visible when active) */}
                         {link.isActive && (
                             <input
-                                type="url"
+                                type="text"
                                 value={link.url || ""}
                                 onChange={(e) => update(link.platform, "url", e.target.value)}
-                                placeholder={`https://${link.platform}.com/yourpage`}
+                                placeholder={
+                                    link.platform === "whatsapp"
+                                        ? "e.g. 919876543210 or https://wa.me/919876543210"
+                                        : `https://${link.platform}.com/yourpage`
+                                }
                                 className="w-full h-11 px-4 rounded-xl border border-border-base bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all"
                             />
                         )}

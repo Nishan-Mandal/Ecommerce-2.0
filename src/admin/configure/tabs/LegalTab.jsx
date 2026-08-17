@@ -20,14 +20,16 @@ export default function LegalTab({ draft, updateDraft }) {
   const fixedPages = rawLegal.fixedPages || {};
   const customPages = Array.isArray(rawLegal.customPages) ? rawLegal.customPages : [];
 
-  const updateFixedPdf = (key, pdfUrl) => {
+  const updateFixedPdf = (key, docUrl) => {
     updateDraft({
       legal: {
         ...rawLegal,
         fixedPages: {
           ...fixedPages,
           [key]: {
-            pdfUrl,
+            ...fixedPages[key],
+            docUrl,
+            pdfUrl: docUrl,
             isActive: fixedPages[key]?.isActive ?? true,
           },
         },
@@ -35,15 +37,37 @@ export default function LegalTab({ draft, updateDraft }) {
     });
   };
 
-  const toggleFixedActive = (key) => {
+  const removeFixedPdf = (key) => {
     updateDraft({
       legal: {
         ...rawLegal,
         fixedPages: {
           ...fixedPages,
           [key]: {
-            pdfUrl: fixedPages[key]?.pdfUrl || (typeof rawLegal[key] === 'string' ? '' : ''),
-            isActive: !(fixedPages[key]?.isActive ?? true),
+            ...fixedPages[key],
+            docUrl: "",
+            pdfUrl: "",
+            isActive: fixedPages[key]?.isActive ?? true,
+          },
+        },
+      },
+    });
+    toast.info("Document removed. Default formatted content will be shown.");
+  };
+
+  const toggleFixedActive = (key) => {
+    const pageData = fixedPages[key] || {};
+    const existingDoc = pageData.docUrl || pageData.pdfUrl || (typeof rawLegal[key] === 'string' ? rawLegal[key] : '');
+    updateDraft({
+      legal: {
+        ...rawLegal,
+        fixedPages: {
+          ...fixedPages,
+          [key]: {
+            ...pageData,
+            docUrl: existingDoc,
+            pdfUrl: existingDoc,
+            isActive: !(pageData.isActive ?? true),
           },
         },
       },
@@ -61,10 +85,10 @@ export default function LegalTab({ draft, updateDraft }) {
     try {
       const url = await uploadService.uploadFile(file, "legal");
       updateFixedPdf(key, url);
-      toast.success("PDF uploaded successfully");
+      toast.success("Document uploaded successfully. Remember to click Save Changes below.");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to upload PDF");
+      toast.error("Failed to upload document");
     } finally {
       setUploadingKey(null);
     }
@@ -76,6 +100,7 @@ export default function LegalTab({ draft, updateDraft }) {
       id: Date.now().toString(),
       name: "New Policy Page",
       slug: `custom-page-${customPages.length + 1}`,
+      docUrl: "",
       pdfUrl: "",
       isActive: true,
     };
@@ -114,11 +139,20 @@ export default function LegalTab({ draft, updateDraft }) {
     setUploadingKey(id);
     try {
       const url = await uploadService.uploadFile(file, "legal");
-      updateCustomPage(id, "pdfUrl", url);
-      toast.success("Custom PDF uploaded");
+      const updated = customPages.map((page) => {
+        if (page.id !== id) return page;
+        return { ...page, docUrl: url, pdfUrl: url };
+      });
+      updateDraft({
+        legal: {
+          ...rawLegal,
+          customPages: updated,
+        },
+      });
+      toast.success("Custom document uploaded");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to upload custom PDF");
+      toast.error("Failed to upload custom document");
     } finally {
       setUploadingKey(null);
     }
@@ -142,7 +176,7 @@ export default function LegalTab({ draft, updateDraft }) {
           <FaFilePdf className="text-red-500" /> Legal & Policy Documents
         </h3>
         <p className="text-xs">
-          Upload PDF documents for your store policy pages. Customer panel will render these PDFs directly.
+          Upload PDF documents for your store policy pages. The customer storefront will render these documents directly inside the clean reader.
         </p>
       </div>
 
@@ -152,7 +186,7 @@ export default function LegalTab({ draft, updateDraft }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {FIXED_LEGAL_PAGES.map(({ key, label, path }) => {
             const pageData = fixedPages[key] || {};
-            const pdfUrl = pageData.pdfUrl || (typeof rawLegal[key] === "string" ? "" : "");
+            const docUrl = pageData.docUrl || pageData.pdfUrl || (typeof rawLegal[key] === "string" && rawLegal[key].startsWith("http") ? rawLegal[key] : "");
             const isActive = pageData.isActive ?? true;
             const isUploading = uploadingKey === key;
 
@@ -175,23 +209,33 @@ export default function LegalTab({ draft, updateDraft }) {
                   </button>
                 </div>
 
-                {pdfUrl ? (
+                {docUrl ? (
                   <div className="flex items-center justify-between gap-2 p-2 bg-bg-base border border-border-base/60 rounded-xl">
                     <div className="flex items-center gap-2 truncate">
                       <FaFilePdf className="text-red-500 shrink-0" size={14} />
-                      <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="truncate font-semibold text-primary hover:underline text-[11px]">
-                        View PDF Document
+                      <a href={docUrl} target="_blank" rel="noopener noreferrer" className="truncate font-semibold text-primary hover:underline text-[11px]">
+                        View Document
                       </a>
                     </div>
-                    <label className="text-[10px] font-bold text-text-muted hover:text-text-base cursor-pointer underline shrink-0">
-                      Replace
-                      <input type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFileUpload(key, e.target.files[0])} />
-                    </label>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <label className="text-[10px] font-bold text-text-muted hover:text-text-base cursor-pointer underline">
+                        Replace
+                        <input type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFileUpload(key, e.target.files[0])} />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => removeFixedPdf(key)}
+                        className="text-[10px] font-bold text-rose-500 hover:text-rose-600 cursor-pointer"
+                        title="Remove uploaded document"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-border-base hover:border-primary/50 bg-white rounded-xl cursor-pointer text-text-muted hover:text-primary transition">
                     <FaFileUpload size={14} />
-                    <span className="font-semibold text-[11px]">{isUploading ? "Uploading PDF..." : "Upload PDF File"}</span>
+                    <span className="font-semibold text-[11px]">{isUploading ? "Uploading Document..." : "Upload Document (PDF)"}</span>
                     <input type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFileUpload(key, e.target.files[0])} disabled={isUploading} />
                   </label>
                 )}
@@ -225,6 +269,7 @@ export default function LegalTab({ draft, updateDraft }) {
           <div className="space-y-4">
             {customPages.map((page) => {
               const isUploading = uploadingKey === page.id;
+              const docUrl = page.docUrl || page.pdfUrl || "";
               return (
                 <div key={page.id} className="bg-bg-surface border border-border-base/60 rounded-2xl p-4 space-y-3 shadow-2xs">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -250,57 +295,62 @@ export default function LegalTab({ draft, updateDraft }) {
                             updateCustomPage(page.id, "slug", e.target.value);
                           }}
                           placeholder="warranty-policy"
-                          className="w-full bg-transparent text-xs font-bold font-mono focus:outline-none"
+                          className="w-full text-xs font-mono font-bold focus:outline-none"
                         />
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                    {/* PDF File Picker */}
-                    <div className="flex-1 min-w-[220px]">
-                      {page.pdfUrl ? (
-                        <div className="flex items-center justify-between gap-2 p-2 bg-bg-base border border-border-base/60 rounded-xl">
-                          <div className="flex items-center gap-2 truncate">
-                            <FaFilePdf className="text-red-500 shrink-0" size={14} />
-                            <a href={page.pdfUrl} target="_blank" rel="noopener noreferrer" className="truncate font-semibold text-primary hover:underline text-[11px]">
-                              {page.name} PDF
-                            </a>
-                          </div>
-                          <label className="text-[10px] font-bold text-text-muted hover:text-text-base cursor-pointer underline shrink-0">
-                            Replace
-                            <input type="file" accept="application/pdf" className="hidden" onChange={(e) => uploadCustomPdf(page.id, e.target.files[0])} />
-                          </label>
-                        </div>
-                      ) : (
-                        <label className="flex items-center justify-center gap-2 p-2.5 border-2 border-dashed border-border-base hover:border-primary/50 bg-white rounded-xl cursor-pointer text-text-muted hover:text-primary transition">
-                          <FaFileUpload size={12} />
-                          <span className="font-semibold text-[11px]">{isUploading ? "Uploading PDF..." : "Upload PDF File"}</span>
-                          <input type="file" accept="application/pdf" className="hidden" onChange={(e) => uploadCustomPdf(page.id, e.target.files[0])} disabled={isUploading} />
+                  {/* Upload area or view link */}
+                  {docUrl ? (
+                    <div className="flex items-center justify-between gap-2 p-2 bg-bg-base border border-border-base/60 rounded-xl">
+                      <div className="flex items-center gap-2 truncate">
+                        <FaFilePdf className="text-red-500 shrink-0" size={14} />
+                        <a href={docUrl} target="_blank" rel="noopener noreferrer" className="truncate font-semibold text-primary hover:underline text-[11px]">
+                          View Document
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <label className="text-[10px] font-bold text-text-muted hover:text-text-base cursor-pointer underline">
+                          Replace
+                          <input type="file" accept="application/pdf" className="hidden" onChange={(e) => uploadCustomPdf(page.id, e.target.files[0])} />
                         </label>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => updateCustomPage(page.id, "docUrl", "")}
+                          className="text-[10px] font-bold text-rose-500 hover:text-rose-600 cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
+                  ) : (
+                    <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-border-base hover:border-primary/50 bg-white rounded-xl cursor-pointer text-text-muted hover:text-primary transition">
+                      <FaFileUpload size={14} />
+                      <span className="font-semibold text-[11px]">{isUploading ? "Uploading..." : "Upload Document (PDF)"}</span>
+                      <input type="file" accept="application/pdf" className="hidden" onChange={(e) => uploadCustomPdf(page.id, e.target.files[0])} disabled={isUploading} />
+                    </label>
+                  )}
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => updateCustomPage(page.id, "isActive", !page.isActive)}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition cursor-pointer ${
-                          page.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {page.isActive ? "Active" : "Inactive"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteCustomPage(page.id)}
-                        className="p-2 rounded-xl text-red-500 hover:bg-red-50 transition cursor-pointer"
-                        title="Delete Page"
-                      >
-                        <FaTrash size={12} />
-                      </button>
-                    </div>
+                  {/* Footer actions */}
+                  <div className="flex items-center justify-between pt-2 border-t border-border-base/40">
+                    <button
+                      type="button"
+                      onClick={() => updateCustomPage(page.id, "isActive", !page.isActive)}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold cursor-pointer transition ${
+                        page.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {page.isActive ? "Active" : "Inactive"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => deleteCustomPage(page.id)}
+                      className="text-rose-600 hover:text-rose-700 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                    >
+                      <FaTrash size={10} /> Delete Page
+                    </button>
                   </div>
                 </div>
               );

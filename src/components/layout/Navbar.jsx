@@ -38,12 +38,39 @@ export default function Navbar() {
     }
   }
 
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'kingshukdash123@gmail.com'
+  const isLinkActive = (path) => {
+    if (!path) return false;
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    if (path === '/allproducts') {
+      return location.pathname === '/allproducts' || location.pathname.startsWith('/productdetails');
+    }
+    if (path.includes('/profile?tab=orders')) {
+      return location.pathname === '/profile' && location.search.includes('tab=orders');
+    }
+    if (path === '/dashboard') {
+      return (
+        location.pathname === '/dashboard' ||
+        location.pathname.startsWith('/admin') ||
+        ['/products', '/orders', '/users', '/coupons', '/reviews', '/configure', '/addproduct', '/updateproduct'].includes(location.pathname)
+      );
+    }
+    if (path === '/cart') {
+      return location.pathname === '/cart';
+    }
+    if (path === '/profile') {
+      return location.pathname === '/profile' && !location.search.includes('tab=orders');
+    }
+    return location.pathname === path;
+  };
+
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'kingshukdash123@gmail.com';
   const navlinks = [
     { title: "Home", path: "/" },
     { title: "Products", path: "/allproducts" },
     { title: "Orders", path: "/profile?tab=orders" },
-  ]
+  ];
 
   const isAdmin = user?.user?.email?.toLowerCase() === adminEmail.toLowerCase() || user?.user?.role === 'ADMIN';
 
@@ -53,7 +80,7 @@ export default function Navbar() {
     ...(isAdmin ? [{ label: "Admin", path: "/dashboard", icon: "admin_panel_settings" }] : []),
     { label: "Cart", path: "/cart", icon: "shopping_bag", isCart: true },
     { label: user ? "Profile" : "Login", path: user ? "/profile" : null, onClick: user ? null : () => setIsLoginOpen(true), icon: user ? "person" : "login" }
-  ]
+  ];
 
   // Subscribe to Redux store state for real-time cart updates
   const cartItems = useSelector((state) => state.cart) || [];
@@ -89,22 +116,39 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-8">
-            {navlinks.map((navlink, idx) => (
-              <Link
-                key={idx}
-                to={navlink.path}
-                className="text-sm font-bold text-gray-700 hover:text-primary transition"
-              >
-                {navlink.title}
-              </Link>
-            ))}
+            {navlinks.map((navlink, idx) => {
+              const active = isLinkActive(navlink.path);
+              return (
+                <Link
+                  key={idx}
+                  to={navlink.path}
+                  className={`text-sm transition relative py-1 ${
+                    active
+                      ? "font-semibold text-primary"
+                      : "font-semibold text-gray-700 hover:text-primary"
+                  }`}
+                >
+                  {navlink.title}
+                  {active && (
+                    <span className="absolute -bottom-1.5 left-0 right-0 h-[2.5px] bg-primary rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
 
-            {(user?.user?.email?.toLowerCase() === adminEmail.toLowerCase() || user?.user?.role === 'ADMIN') && (
+            {isAdmin && (
               <Link
                 to="/dashboard"
-                className="text-sm font-semibold text-gray-700 hover:text-primary transition"
+                className={`text-sm transition relative py-1 ${
+                  isLinkActive('/dashboard')
+                    ? "font-black text-primary"
+                    : "font-semibold text-gray-700 hover:text-primary"
+                }`}
               >
                 Admin
+                {isLinkActive('/dashboard') && (
+                  <span className="absolute -bottom-1.5 left-0 right-0 h-[2.5px] bg-primary rounded-full" />
+                )}
               </Link>
             )}
           </div>
@@ -198,15 +242,21 @@ export default function Navbar() {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 lg:hidden z-50">
           <div className="grid h-16" style={{ gridTemplateColumns: `repeat(${mobiliLinks.length}, minmax(0, 1fr))` }}>
             {mobiliLinks.map((item, index) => {
+              const active = item.path ? isLinkActive(item.path) : false;
               const innerContent = (
-                <div className="flex flex-col items-center justify-center relative">
+                <div className={`flex flex-col items-center justify-center relative transition-colors ${
+                  active ? "text-primary font-bold" : "text-gray-600 hover:text-primary"
+                }`}>
                   <span className="material-symbols-outlined">{item.icon}</span>
                   {item.isCart && cartLength > 0 && (
-                    <span className="absolute -top-1 -right-3 bg-primary text-white text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -right-3 bg-primary text-white text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-bold">
                       {cartLength}
                     </span>
                   )}
                   <span className="text-[11px] mt-0.5">{item.label}</span>
+                  {active && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary mt-0.5" />
+                  )}
                 </div>
               );
 
@@ -215,7 +265,7 @@ export default function Navbar() {
                   <Link
                     key={index}
                     to={item.path}
-                    className="flex flex-col items-center justify-center text-gray-600 hover:text-primary transition"
+                    className="flex flex-col items-center justify-center transition"
                   >
                     {innerContent}
                   </Link>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import TableSkeleton from "../../../components/loader/SkeletonLoader/TableSkeleton";
-import Pagination from "../../../components/common/Pagination";
+import Pagination from "../../../components/Common/Pagination";
 import StatusBadge from '../../Components/common/StatusBadge';
 import DataTable from '../../Components/common/DataTable';
 import ToggleButton from '../../../components/Common/ToggleButton';

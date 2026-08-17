@@ -52,10 +52,6 @@ function Allproducts() {
     };
 
     useEffect(() => {
-        localStorage.setItem('cart', JSON.stringify(cartItems));
-    }, [cartItems]);
-
-    useEffect(() => {
         window.scrollTo(0, 0);
         setFilterType('');
         setFilterPrice('');

@@ -55,10 +55,6 @@ function ProductsGrid() {
     }, []);
 
     useEffect(() => {
-        localStorage.setItem('cart', JSON.stringify(cartItems));
-    }, [cartItems]);
-
-    useEffect(() => {
         configureService.getCollections()
             .then((cols) => {
                 const active = cols.filter((c) => c.isActive !== false);

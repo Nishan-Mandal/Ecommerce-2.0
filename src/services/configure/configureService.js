@@ -28,7 +28,6 @@ export const DEFAULT_SOCIAL_LINKS = [
     { platform: "youtube",   icon: "fa-youtube",     url: "", isActive: false },
     { platform: "linkedin",  icon: "fa-linkedin-in", url: "", isActive: false },
     { platform: "pinterest", icon: "fa-pinterest-p", url: "", isActive: false },
-    { platform: "whatsapp",  icon: "fa-whatsapp",    url: "", isActive: false },
 ];
 
 export const DEFAULT_CONFIG = {
@@ -169,5 +168,14 @@ export const configureService = {
         await deleteDoc(doc(COLLECTIONS_COL(), collectionId));
         const config = await this.getSiteConfig();
         await this.saveSiteConfig({ collectionsCount: Math.max(0, (config.collectionsCount || 1) - 1) });
+    },
+
+    /** Batch-update the `order` field for all collections (for drag/button reordering) */
+    async updateCollectionOrders(collections) {
+        const batch = writeBatch(fireDB);
+        collections.forEach((c, i) => {
+            batch.update(doc(COLLECTIONS_COL(), c.collectionId), { order: i });
+        });
+        await batch.commit();
     },
 };

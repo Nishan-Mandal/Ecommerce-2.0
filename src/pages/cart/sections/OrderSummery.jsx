@@ -159,20 +159,24 @@ export default function OrderSummary({ subtotal, shippingFee, taxRate, cartItems
 
           <div className="space-y-3">
             {appliedCoupon ? (
-              <div className="flex items-center justify-between p-3.5 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-xl text-xs shadow-2xs">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-black text-emerald-800 dark:text-emerald-300 text-sm tracking-wider uppercase">{appliedCoupon.code}</span>
-                    <span className="px-1.5 py-0.2 bg-emerald-500 text-white rounded text-[9px] font-black uppercase">Active</span>
+              <div className="flex items-center justify-between p-3.5 bg-emerald-50 border border-emerald-500/40 rounded-xl text-xs shadow-2xs">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-emerald-900 text-sm tracking-wider uppercase">
+                      {appliedCoupon.code}
+                    </span>
+                    <span className="px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[9px] font-black uppercase tracking-wider shadow-2xs">
+                      Active
+                    </span>
                   </div>
-                  <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                    Coupon Applied: <strong className="font-extrabold">-₹{formatCurrency(discountAmount)}</strong>
+                  <p className="text-xs font-bold text-emerald-800">
+                    Coupon Applied: <strong className="font-black text-emerald-950">-₹{formatCurrency(discountAmount)}</strong>
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={handleRemoveCoupon}
-                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-500/30 font-extrabold text-[11px] transition-all cursor-pointer shadow-2xs"
+                  className="px-3 py-1.5 rounded-lg bg-white dark:bg-bg-surface hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 hover:text-rose-700 border border-rose-300 dark:border-rose-700 font-extrabold text-xs transition-all cursor-pointer shadow-2xs shrink-0"
                 >
                   Remove
                 </button>
@@ -295,26 +299,54 @@ export default function OrderSummary({ subtotal, shippingFee, taxRate, cartItems
 
             {/* Promo & Actions */}
             <div className="space-y-3 pt-2">
-              <div className="flex gap-2">
-                <input
-                  className="flex-grow bg-bg-base border border-border-base/40 rounded-xl px-4 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs text-text-base placeholder:text-text-muted/50"
-                  placeholder="Promo Code"
-                  type="text"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleApplyCoupon();
-                  }}
-                  disabled={applying}
-                  className="bg-primary hover:bg-primary-hover text-compli px-4 py-2 rounded-xl font-bold text-xs transition active:scale-95 border border-border-base/40 disabled:opacity-50 cursor-pointer"
-                >
-                  {applying ? "Checking..." : "Apply"}
-                </button>
-              </div>
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/40 dark:border-emerald-600/50 rounded-xl text-xs shadow-2xs">
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-emerald-900 dark:text-emerald-200 text-xs tracking-wider uppercase">
+                        {appliedCoupon.code}
+                      </span>
+                      <span className="px-1.5 py-0.5 bg-emerald-600 dark:bg-emerald-500 text-white rounded text-[8px] font-black uppercase tracking-wider">
+                        Active
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+                      Applied: <strong className="font-black text-emerald-950 dark:text-emerald-100">-₹{formatCurrency(discountAmount)}</strong>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveCoupon();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-bg-surface hover:bg-rose-50 text-rose-600 border border-rose-300 font-extrabold text-[11px] transition cursor-pointer shadow-2xs shrink-0"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    className="flex-grow bg-bg-base border border-border-base/40 rounded-xl px-4 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-xs text-text-base placeholder:text-text-muted/50"
+                    placeholder="Promo Code"
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleApplyCoupon();
+                    }}
+                    disabled={applying}
+                    className="bg-primary hover:bg-primary-hover text-compli px-4 py-2 rounded-xl font-bold text-xs transition active:scale-95 border border-border-base/40 disabled:opacity-50 cursor-pointer"
+                  >
+                    {applying ? "Checking..." : "Apply"}
+                  </button>
+                </div>
+              )}
 
               <button
                 onClick={(e) => {

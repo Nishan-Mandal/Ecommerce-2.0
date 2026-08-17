@@ -79,22 +79,26 @@ export default function OrderSummaryCard({
             {onChangeCoupon && (
               <div className="flex flex-col gap-3">
                 {appliedCoupon ? (
-                  <div className="flex items-center justify-between p-3.5 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-xl text-xs shadow-2xs">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-black text-emerald-800 dark:text-emerald-300 text-sm tracking-wider uppercase">{appliedCoupon.code}</span>
-                        <span className="px-1.5 py-0.2 bg-emerald-500 text-white rounded text-[9px] font-black uppercase">Active</span>
+                  <div className="flex items-center justify-between p-3.5 bg-emerald-50 border border-emerald-500/40 rounded-xl text-xs shadow-2xs">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-emerald-900 text-sm tracking-wider uppercase">
+                          {appliedCoupon.code}
+                        </span>
+                        <span className="px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[9px] font-black uppercase tracking-wider shadow-2xs">
+                          Active
+                        </span>
                       </div>
                       {couponDiscount > 0 && (
-                        <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                          Coupon Applied: <strong className="font-extrabold">-₹{fmt(couponDiscount)}</strong>
+                        <p className="text-xs font-bold text-emerald-800">
+                          Coupon Applied: <strong className="font-black text-emerald-950 dark:text-emerald-100">-₹{fmt(couponDiscount)}</strong>
                         </p>
                       )}
                     </div>
                     <button
                       type="button"
                       onClick={onRemoveCoupon}
-                      className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-500/30 font-extrabold text-[11px] transition-all cursor-pointer shadow-2xs"
+                      className="px-3 py-1.5 rounded-lg bg-white border border-rose-300 font-extrabold text-xs transition-all cursor-pointer shadow-2xs shrink-0"
                     >
                       Remove
                     </button>

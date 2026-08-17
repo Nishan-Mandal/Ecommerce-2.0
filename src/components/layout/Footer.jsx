@@ -22,7 +22,7 @@ function Footer() {
 
     const { companyName, address, phones, emails, socialLinks, legal } = config;
 
-    const activeSocials = (socialLinks || []).filter((s) => s.isActive && s.url);
+    const activeSocials = (socialLinks || []).filter((s) => s.isActive && s.url && s.platform !== "whatsapp");
 
     const fullAddress = [
         address?.line1,
@@ -32,22 +32,33 @@ function Footer() {
         address?.pincode,
     ].filter(Boolean).join(", ");
 
-    // Build dynamic legal links
+    // Build dynamic legal links — only include documents that are actually uploaded/configured & active
     const fixedMap = [
-        { key: "termsAndConditions", title: "Terms & Conditions", path: "/termsconditions" },
+        { key: "aboutUs",           title: "About Us",           path: "/aboutus" },
         { key: "privacyPolicy",     title: "Privacy Policy",     path: "/privacypolicy" },
+        { key: "termsAndConditions", title: "Terms & Conditions", path: "/termsconditions" },
         { key: "returnPolicy",       title: "Return Policy",      path: "/returnpolicy" },
         { key: "shippingPolicy",     title: "Shipping Policy",    path: "/shippingpolicy" },
         { key: "refundPolicy",       title: "Refund Policy",      path: "/refundpolicy" },
-        { key: "aboutUs",           title: "About Us",           path: "/aboutus" },
     ];
 
     const fixedPages = legal?.fixedPages || {};
-    const activeFixedLinks = fixedMap.filter(item => fixedPages[item.key]?.isActive !== false);
+    const activeFixedLinks = fixedMap.filter(item => {
+        const page = fixedPages[item.key];
+        if (!page) {
+            // Check legacy string format if present
+            const legacyVal = legal?.[item.key];
+            return typeof legacyVal === "string" && legacyVal.trim().length > 0;
+        }
+        if (page.isActive === false) return false;
+        const hasDocUrl = Boolean(page.docUrl || page.pdfUrl);
+        const hasContent = Boolean(page.content && page.content.trim());
+        return hasDocUrl || hasContent;
+    });
 
     const customPages = Array.isArray(legal?.customPages) ? legal.customPages : [];
     const activeCustomLinks = customPages
-        .filter(p => p.isActive !== false)
+        .filter(p => p.isActive !== false && Boolean(p.docUrl || p.pdfUrl || p.content))
         .map(p => ({ title: p.name, path: `/legal/${p.slug}` }));
 
     const legalLinks = [...activeFixedLinks, ...activeCustomLinks];
@@ -101,32 +112,70 @@ function Footer() {
                     <div className="flex flex-col items-center gap-3">
                         {activeSocials.length > 0 && (
                             <div className="flex gap-3">
-                                {activeSocials.map((social) => (
-                                    <a
-                                        key={social.platform}
-                                        href={social.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="w-8 h-8 rounded-full border border-border-base flex items-center justify-center text-text-muted hover:text-white hover:bg-primary hover:border-primary transition-all duration-300"
-                                    >
-                                        <i className={`fa-brands ${social.icon} text-xs`} />
-                                    </a>
-                                ))}
+                                {activeSocials.map((social) => {
+                                    let href = (social.url || "").trim();
+                                    if (social.platform === "whatsapp") {
+                                        if (!href.startsWith("http://") && !href.startsWith("https://")) {
+                                            const cleanDigits = href.replace(/[^0-9]/g, "");
+                                            href = cleanDigits.length >= 7 ? `https://wa.me/${cleanDigits}` : `https://${href}`;
+                                        }
+                                    } else if (!href.startsWith("http://") && !href.startsWith("https://")) {
+                                        href = `https://${href}`;
+                                    }
+
+                                    return (
+                                        <a
+                                            key={social.platform}
+                                            href={href}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-8 h-8 rounded-full border border-border-base flex items-center justify-center text-text-muted hover:text-white hover:bg-primary hover:border-primary transition-all duration-300 shadow-2xs"
+                                            title={social.platform}
+                                        >
+                                            <i className={`fa-brands ${social.icon} text-xs`} />
+                                        </a>
+                                    );
+                                })}
                             </div>
                         )}
 
                         <div className="flex flex-wrap justify-center gap-4 text-xs font-semibold text-text-muted">
-                            {(phones || []).map((p, i) => (
-                                <div key={i} className="flex gap-1.5 items-center">
-                                    <span className="material-symbols-outlined text-sm text-primary">{p.isWhatsapp ? "chat" : "call"}</span>
-                                    <p className="font-medium text-xs text-text-muted">{p.number}</p>
-                                </div>
-                            ))}
+                            {(phones || []).map((p, i) => {
+                                const cleanNum = String(p.number || "").replace(/[^0-9]/g, "");
+                                return p.isWhatsapp ? (
+                                    <a
+                                        key={i}
+                                        href={`https://wa.me/${cleanNum}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex gap-1.5 items-center hover:text-emerald-600 transition cursor-pointer"
+                                        title={`Chat on WhatsApp (${p.label || 'Support'})`}
+                                    >
+                                        <span className="material-symbols-outlined text-sm text-emerald-600">chat</span>
+                                        <p className="font-medium text-xs text-text-muted hover:text-emerald-600">{p.number}</p>
+                                    </a>
+                                ) : (
+                                    <a
+                                        key={i}
+                                        href={`tel:${p.number}`}
+                                        className="flex gap-1.5 items-center hover:text-primary transition cursor-pointer"
+                                        title={`Call ${p.label || 'Support'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-sm text-primary">call</span>
+                                        <p className="font-medium text-xs text-text-muted hover:text-primary">{p.number}</p>
+                                    </a>
+                                );
+                            })}
                             {(emails || []).map((e, i) => (
-                                <div key={i} className="flex gap-1.5 items-center">
+                                <a
+                                    key={i}
+                                    href={`mailto:${e.email}`}
+                                    className="flex gap-1.5 items-center hover:text-primary transition cursor-pointer"
+                                    title={`Email ${e.label || 'Support'}`}
+                                >
                                     <span className="material-symbols-outlined text-sm text-primary">mail</span>
-                                    <p className="font-medium text-xs text-text-muted">{e.email}</p>
-                                </div>
+                                    <p className="font-medium text-xs text-text-muted hover:text-primary">{e.email}</p>
+                                </a>
                             ))}
                         </div>
                     </div>

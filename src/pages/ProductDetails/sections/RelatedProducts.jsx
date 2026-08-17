@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { fireDB } from '../../../firebase/FirebaseConfig';
 import CommonProductCard from '../../../components/Common/ProductCard';
 import { useDispatch } from 'react-redux';
@@ -10,11 +11,9 @@ import { toast } from 'react-toastify';
 /**
  * RelatedProducts Component
  * Displays matching catalog recommendations in a scrollable horizontal carousel.
- * Leverages CommonProductCard for consistent style patterns.
+ * Uses TanStack Query for caching recommendations and instant transitions.
  */
 export default function RelatedProducts({ category, currentProductId }) {
-  const [related, setRelated] = useState([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -24,42 +23,36 @@ export default function RelatedProducts({ category, currentProductId }) {
     toast.success('Added to cart!');
   };
 
-  useEffect(() => {
-    if (!category) return;
-
-    const fetchRelated = async () => {
-      setLoading(true);
-      try {
-        const q = query(
-          collection(fireDB, 'products'),
-          where('category', '==', category),
-          limit(8)
-        );
-        const snap = await getDocs(q);
-        const results = [];
-        snap.forEach((doc) => {
-          const data = doc.data();
-          const price = data.price || (data.variants && data.variants.length > 0 ? String(data.variants[0].price) : "");
-          const imageUrl = data.imageUrl || (data.images && data.images.length > 0 ? data.images[0] : "");
-          const mappedProduct = {
-            ...data,
-            id: doc.id,
-            price,
-            imageUrl
-          };
-          // Exclude current product
-          if (mappedProduct.id !== currentProductId) results.push(mappedProduct);
+  const { data: relatedProducts = [], isLoading: loading } = useQuery({
+    queryKey: ['products', 'related', category],
+    queryFn: async () => {
+      if (!category) return [];
+      const q = query(
+        collection(fireDB, 'products'),
+        where('category', '==', category),
+        limit(10)
+      );
+      const snap = await getDocs(q);
+      const results = [];
+      snap.forEach((doc) => {
+        const data = doc.data();
+        const price = data.price || (data.variants && data.variants.length > 0 ? String(data.variants[0].price) : "");
+        const imageUrl = data.imageUrl || (data.images && data.images.length > 0 ? data.images[0] : "");
+        results.push({
+          ...data,
+          id: doc.id,
+          price,
+          imageUrl
         });
-        setRelated(results);
-      } catch (err) {
-        console.error('RelatedProducts fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+      });
+      return results;
+    },
+    enabled: Boolean(category),
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    gcTime: 15 * 60 * 1000,
+  });
 
-    fetchRelated();
-  }, [category, currentProductId]);
+  const related = relatedProducts.filter((p) => p.id !== currentProductId);
 
   // Don't render if nothing to show
   if (!loading && related.length === 0) return null;

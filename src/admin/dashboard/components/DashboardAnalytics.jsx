@@ -6,35 +6,86 @@ import {
 import { FaChartLine, FaTags, FaInfoCircle } from 'react-icons/fa';
 
 /**
+ * Robust date extraction helper across all Firestore order schemas
+ * Handles Firestore Timestamps, JS Dates, ISO strings, and formatted strings.
+ */
+function parseOrderDate(ord) {
+  if (!ord) return null;
+
+  // 1. Check Firestore Timestamp in createdAt or date or timestamp
+  const tsCandidate = ord.createdAt || ord.date || ord.placedAt || ord.timestamp;
+  if (tsCandidate && typeof tsCandidate.toDate === 'function') {
+    return tsCandidate.toDate();
+  }
+  if (tsCandidate && typeof tsCandidate.seconds === 'number') {
+    return new Date(tsCandidate.seconds * 1000);
+  }
+
+  // 2. Check if string representation is parseable
+  if (typeof ord.createdAt === 'string' && ord.createdAt.trim()) {
+    const d = new Date(ord.createdAt);
+    if (!isNaN(d.getTime())) return d;
+  }
+  if (typeof ord.date === 'string' && ord.date.trim()) {
+    const d = new Date(ord.date);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  return null;
+}
+
+/**
  * DashboardAnalytics Component
- * Renders interactive Recharts for Revenue Trends and Category Catalog Breakdown in a balanced 2-column grid.
- * Displays clean empty state placeholders when data is unavailable.
+ * Renders interactive Recharts for Revenue Trends and Category Catalog Breakdown.
+ * Accurately parses and chronologically aggregates order revenue across all dates.
  */
 export default function DashboardAnalytics({ orders = [], products = [] }) {
-  // 1. Prepare Revenue Trend Data
-  const revenueByDateMap = {};
+  // 1. Prepare Revenue Trend Data grouped by chronological day
+  const dateRevenueMap = new Map(); // key: "YYYY-MM-DD" -> { dateLabel: "Aug 16", timestamp: number, revenue: number }
+
   orders.forEach((ord) => {
     const status = (ord.orderStatus || ord.status || '').toUpperCase();
-    if (status === 'CANCELLED' || status === 'REFUNDED' || status === 'PAYMENT_FAILED') return;
-    const raw = ord.totalAmount ?? ord.pricing?.grandTotal ?? ord.amount ?? 0;
-    const amt = typeof raw === 'number' ? raw : (parseFloat(String(raw).replace(/[^0-9.]/g, '')) || 0);
+    const paymentStat = (ord.paymentStatus || ord.payment?.status || '').toUpperCase();
+    if (status === 'CANCELLED' || status === 'REFUNDED' || status === 'PAYMENT_FAILED' || paymentStat === 'FAILED') {
+      return;
+    }
 
-    const dateKey = ord.date
-      ? String(ord.date).slice(0, 6)
-      : (ord.createdAt?.toDate ? ord.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recent');
+    const raw = ord.totalAmount ?? ord.pricing?.grandTotal ?? ord.amount ?? ord.total ?? 0;
+    const amt = typeof raw === 'number' ? (isNaN(raw) ? 0 : raw) : (parseFloat(String(raw).replace(/[^0-9.]/g, '')) || 0);
+    if (amt <= 0) return;
 
-    revenueByDateMap[dateKey] = (revenueByDateMap[dateKey] || 0) + amt;
+    const parsedDate = parseOrderDate(ord);
+    const dateObj = parsedDate || new Date();
+
+    // Standard ISO date key for sorting: "YYYY-MM-DD"
+    const sortKey = dateObj.toISOString().slice(0, 10);
+    const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    if (!dateRevenueMap.has(sortKey)) {
+      dateRevenueMap.set(sortKey, {
+        sortKey,
+        date: dateLabel,
+        time: dateObj.getTime(),
+        revenue: 0,
+      });
+    }
+
+    const entry = dateRevenueMap.get(sortKey);
+    entry.revenue += amt;
   });
 
-  const chartData = Object.keys(revenueByDateMap).map((date) => ({
-    date,
-    revenue: Math.round(revenueByDateMap[date]),
-  }));
+  // Sort chronologically ascending (earliest to latest date)
+  const chartData = Array.from(dateRevenueMap.values())
+    .sort((a, b) => a.time - b.time)
+    .map(({ date, revenue }) => ({
+      date,
+      revenue: Math.round(revenue),
+    }));
 
   // 2. Prepare Category Distribution Data
   const categoryCounts = {};
   products.forEach((prod) => {
-    const cat = prod.category || 'Uncategorized';
+    const cat = prod.category || 'General';
     categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
   });
 
@@ -66,7 +117,7 @@ export default function DashboardAnalytics({ orders = [], products = [] }) {
         <div className="h-64 w-full mt-4 flex items-center justify-center">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
@@ -94,7 +145,7 @@ export default function DashboardAnalytics({ orders = [], products = [] }) {
               <div className="w-10 h-10 rounded-full bg-bg-base flex items-center justify-center text-text-muted">
                 <FaInfoCircle size={18} />
               </div>
-              <p className="text-xs font-bold text-text-base">Not enough revenue data</p>
+              <p className="text-xs font-bold text-text-base">No recent revenue data</p>
               <p className="text-[11px] text-text-muted max-w-xs">
                 Sales revenue trends will automatically render here as customer orders are placed.
               </p>

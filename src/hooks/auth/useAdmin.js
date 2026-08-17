@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { productService } from '../../services/product/productService.js';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +10,7 @@ import { generateVariantCombinations } from '../../utils/variantUtils.js';
 import { useDraftManager } from '../common/useDraftManager.js';
 import { useAuth as useAuthCtx } from '../../context/AuthContext.jsx';
 import { getFriendlyErrorMessage } from '../../utils/firebaseErrorHandler.js';
+import { queryKeys } from '../../utils/queryKeys.js';
 
 /**
  * Helper to flatten and sanitize arrays before sending to Firestore
@@ -81,6 +83,7 @@ const sanitizeProductForFirestore = (data) => {
  */
 export default function useAdmin() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuthCtx();
   const userId = user?.user?.uid ?? null;
   const [loading, setLoading] = useState(false);
@@ -283,6 +286,7 @@ export default function useAdmin() {
       }
 
       toast.success("Product Added successfully");
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
       // Clear draft BEFORE navigating to prevent stale draft on return
       clearProductDraft();
       setTimeout(() => {
@@ -341,6 +345,7 @@ export default function useAdmin() {
 
       const updateData = sanitizeProductForFirestore(rawData);
       await productService.updateProduct(productForm.id, updateData);
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
       toast.success("Product Updated successfully");
       setTimeout(() => {
         navigate('/products');
@@ -353,11 +358,14 @@ export default function useAdmin() {
   };
 
   const toggleProductActiveStatus = async (item) => {
-    if (!item || !item.id) return;
-    const newStatus = !(item.isActive !== false);
+    const productId = item?.id || item?.docId;
+    if (!productId) return;
+    const currentStatus = item.isActive !== false;
+    const newStatus = !currentStatus;
     setLoading(true);
     try {
-      await productService.updateProduct(item.id, { isActive: newStatus });
+      await productService.updateProduct(productId, { isActive: newStatus });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
       toast.success(`Product "${item.title || 'Item'}" marked as ${newStatus ? 'Live' : 'Draft'}!`);
     } catch (error) {
       toast.error(getFriendlyErrorMessage(error, "Failed to update product status."));
@@ -367,9 +375,12 @@ export default function useAdmin() {
   };
 
   const deleteProduct = async (item) => {
+    const productId = item?.id || item?.docId;
+    if (!productId) return;
     setLoading(true);
     try {
-      await productService.deleteProduct(item.id);
+      await productService.deleteProduct(productId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
       toast.success('Product Deleted successfully');
     } catch (error) {
       toast.error(getFriendlyErrorMessage(error, "Failed to delete product."));

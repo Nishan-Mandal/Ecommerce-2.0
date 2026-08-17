@@ -2,6 +2,8 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { authService } from '../services/auth/authService.js';
 import { userService } from '../services/user/userService.js';
 import { clearDraftsForUser } from '../hooks/common/useDraftManager.js';
+import { store } from '../redux/store.jsx';
+import { loadCartFromStorage, setCart, clearCart } from '../redux/cartSlice.jsx';
 
 const AuthContext = createContext();
 
@@ -41,6 +43,10 @@ export function AuthProvider({ children }) {
           };
           setUser(cleanUser);
           localStorage.setItem('user', JSON.stringify(cleanUser));
+
+          // Load user-specific cart into Redux store
+          const userCart = loadCartFromStorage(firebaseUser.uid);
+          store.dispatch(setCart(userCart));
         } catch (err) {
           console.error("Error loading user profile from Firestore", err);
         }
@@ -48,6 +54,9 @@ export function AuthProvider({ children }) {
         setUser(null);
         setUserName('');
         localStorage.removeItem('user');
+        // Reset to guest cart when no authenticated user
+        const guestCart = loadCartFromStorage(null);
+        store.dispatch(setCart(guestCart));
       }
       setLoading(false);
     });
@@ -74,6 +83,11 @@ export function AuthProvider({ children }) {
       localStorage.setItem('user', JSON.stringify(cleanUser));
       setUserName(name);
       setIsLoginOpen(false);
+
+      // Load user-specific cart
+      const userCart = loadCartFromStorage(result.user.uid);
+      store.dispatch(setCart(userCart));
+
       return result;
     } finally {
       setLoading(false);
@@ -96,6 +110,11 @@ export function AuthProvider({ children }) {
       localStorage.setItem('user', JSON.stringify(cleanUser));
       setUserName(name);
       setIsSignupOpen(false);
+
+      // Load user-specific cart (fresh empty or existing)
+      const userCart = loadCartFromStorage(result.user.uid);
+      store.dispatch(setCart(userCart));
+
       return result;
     } finally {
       setLoading(false);
@@ -105,9 +124,14 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     setLoading(true);
     try {
-      // Clear all localStorage drafts belonging to this admin before logout
+      // Clear all localStorage drafts belonging to this user before logout
       const currentUid = user?.user?.uid;
       if (currentUid) clearDraftsForUser(currentUid);
+
+      // Clear the current in-memory cart and purge global guest cart
+      store.dispatch(clearCart());
+      localStorage.removeItem('cart');
+      localStorage.removeItem('cart_guest');
 
       await authService.logout();
       setUser(null);

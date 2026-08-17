@@ -21,30 +21,28 @@ import useDebounce from '../../hooks/common/useDebounce';
 /**
  * UserDetailTable Component
  * Displays client and administrator accounts inside the admin panel.
- * Uses shared DataTable, StatusBadge, and CursorPagination components.
+ * Uses shared DataTable, StatusBadge, CursorPagination, and Pagination components.
  */
-function UserDetailTable({ mode, user: propUser = [], loading: propLoading = false, onRefresh, formatDate }) {
+function UserDetailTable({ 
+    mode, 
+    user = [], 
+    loading = false, 
+    formatDate,
+    pageIndex: propPageIndex,
+    hasMore: propHasMore,
+    isFetching: propIsFetching,
+    onPrev: propOnPrev,
+    onNext: propOnNext,
+    onRefresh: propOnRefresh,
+    invalidate: propInvalidate,
+    pageSize = 10,
+    onPageSizeChange,
+}) {
     const [search, setSearch] = useState('');
     const debouncedSearch = useDebounce(search, 300);
     const [roleFilter, setRoleFilter] = useState('ALL');
-    const [pageSize, setPageSize] = useState(10);
 
-    // Query hook for server-side paginated users
-    const {
-        users: queryUsers,
-        hasMore,
-        isLoading: isUsersLoading,
-        isFetching,
-        pageIndex,
-        goNext,
-        goPrev,
-        refetch,
-        invalidate,
-    } = useUsersQuery({ pageSize });
-
-    const isCursorPaginated = propUser.length === 0;
-    const rawUsers = isCursorPaginated ? queryUsers : propUser;
-    const loading = isCursorPaginated ? isUsersLoading : propLoading;
+    const isCursorPaginated = typeof propPageIndex === 'number';
 
     // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -65,7 +63,7 @@ function UserDetailTable({ mode, user: propUser = [], loading: propLoading = fal
     });
 
     // Client-side filter logic on current page
-    const filteredUsers = rawUsers.filter(u => {
+    const filteredUsers = user.filter(u => {
         const searchLower = debouncedSearch.toLowerCase().trim();
         const matchesSearch = !debouncedSearch ||
             u.name?.toLowerCase().includes(searchLower) ||
@@ -77,13 +75,22 @@ function UserDetailTable({ mode, user: propUser = [], loading: propLoading = fal
         return matchesSearch && matchesRole;
     });
 
-    // Fallback pagination state for prop user array
+    // Fallback pagination state for non-cursor mode
     const [currentPage, setCurrentPage] = useState(1);
+    const [fallbackPageSize, setFallbackPageSize] = useState(pageSize);
+
     useEffect(() => {
         if (!isCursorPaginated) {
             setCurrentPage(1);
         }
     }, [filteredUsers.length, isCursorPaginated]);
+
+    const activePageSize = isCursorPaginated ? pageSize : fallbackPageSize;
+    const activePageChangeSize = isCursorPaginated ? onPageSizeChange : (newSize) => {
+        setFallbackPageSize(newSize);
+        setCurrentPage(1);
+        if (onPageSizeChange) onPageSizeChange(newSize);
+    };
 
 
     const handleCreateAdmin = async (e) => {
@@ -118,7 +125,8 @@ function UserDetailTable({ mode, user: propUser = [], loading: propLoading = fal
             toast.success(`New ${adminForm.role} "${adminForm.name}" created successfully! They can now log in at /login with their email & password.`);
             setIsAddModalOpen(false);
             setAdminForm({ name: '', email: '', password: '', phone: '', role: 'ADMIN' });
-            if (onRefresh) onRefresh();
+            if (propOnRefresh) propOnRefresh();
+            if (propInvalidate) propInvalidate();
         } catch (err) {
             toast.error(getFriendlyErrorMessage(err, "Failed to create account profile. Please try again."));
         } finally {
@@ -150,7 +158,8 @@ function UserDetailTable({ mode, user: propUser = [], loading: propLoading = fal
             toast.success(`Account "${selectedUserToDelete.name || selectedUserToDelete.email}" removed successfully.`);
             setIsDeleteModalOpen(false);
             setSelectedUserToDelete(null);
-            if (onRefresh) onRefresh();
+            if (propOnRefresh) propOnRefresh();
+            if (propInvalidate) propInvalidate();
         } catch (err) {
             console.error("Error deleting user:", err);
             toast.error("Failed to delete user account");
@@ -181,13 +190,13 @@ function UserDetailTable({ mode, user: propUser = [], loading: propLoading = fal
                     buttonText="Add New Admin"
                     clickhandler={() => setIsAddModalOpen(true)}
                 />
-                <TableSkeleton rows={pageSize} columns={6} />
+                <TableSkeleton rows={activePageSize} columns={6} />
             </div>
         );
     }
 
-    const startIndex = isCursorPaginated ? pageIndex * pageSize : (currentPage - 1) * pageSize;
-    const displayUsers = isCursorPaginated ? filteredUsers : filteredUsers.slice(startIndex, startIndex + pageSize);
+    const startIndex = isCursorPaginated ? (propPageIndex || 0) * activePageSize : (currentPage - 1) * activePageSize;
+    const displayUsers = isCursorPaginated ? filteredUsers : filteredUsers.slice(startIndex, startIndex + activePageSize);
 
     const columns = [
         {
@@ -327,25 +336,22 @@ function UserDetailTable({ mode, user: propUser = [], loading: propLoading = fal
             {/* Pagination Controls */}
             {isCursorPaginated ? (
                 <CursorPagination
-                    pageIndex={pageIndex}
-                    hasMore={hasMore}
-                    isFetching={isFetching}
-                    onPrev={goPrev}
-                    onNext={goNext}
-                    onRefresh={refetch}
-                    pageSize={pageSize}
-                    onPageSizeChange={setPageSize}
+                    pageIndex={propPageIndex}
+                    hasMore={propHasMore}
+                    isFetching={propIsFetching}
+                    onPrev={propOnPrev}
+                    onNext={propOnNext}
+                    onRefresh={propOnRefresh}
+                    pageSize={activePageSize}
+                    onPageSizeChange={activePageChangeSize}
                 />
             ) : (
                 <Pagination
                     currentPage={currentPage}
                     totalItems={filteredUsers.length}
-                    pageSize={pageSize}
+                    pageSize={activePageSize}
                     onPageChange={setCurrentPage}
-                    onPageSizeChange={(newSize) => {
-                        setPageSize(newSize);
-                        setCurrentPage(1);
-                    }}
+                    onPageSizeChange={activePageChangeSize}
                 />
             )}
 
