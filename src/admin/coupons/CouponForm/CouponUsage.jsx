@@ -20,7 +20,7 @@ function CouponUsage({
             {/* Body */}
             <div className="p-3">
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
                     {/* Usage Limit */}
                     <div>
@@ -69,7 +69,7 @@ function CouponUsage({
                     </div>
 
                     {/* Current Usage */}
-                    <div>
+                    {/* <div>
                         <label className="block font-semibold mb-1">
                             Current Usage
                         </label>
@@ -82,7 +82,7 @@ function CouponUsage({
                         <p className="text-[9px] text-text-muted mt-1">
                             Redemption counter.
                         </p>
-                    </div>
+                    </div> */}
 
                 </div>
 

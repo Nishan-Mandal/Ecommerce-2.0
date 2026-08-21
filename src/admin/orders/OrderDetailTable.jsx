@@ -132,11 +132,12 @@ function OrderDetailTable({
         });
     }, [order, isPendingToggleActive, statusFilter, paymentFilter, debouncedSearch, isCursorPaginated]);
 
+    // Reset to page 1 whenever any active filter or search changes
     useEffect(() => {
         if (!isCursorPaginated) {
             setCurrentPage(1);
         }
-    }, [filteredOrders.length, isCursorPaginated]);
+    }, [debouncedSearch, statusFilter, paymentFilter, showPendingOrders, isCursorPaginated]);
 
     const filtersConfig = [
         {
@@ -175,8 +176,19 @@ function OrderDetailTable({
         );
     }
 
-    const startIndex = isCursorPaginated ? pageIndex * activePageSize : (currentPage - 1) * activePageSize;
-    const displayOrders = isCursorPaginated ? filteredOrders : filteredOrders.slice(startIndex, startIndex + activePageSize);
+    // In cursor mode the server already handles page offset;
+    // startIndex inside the client-filtered subset is always 0.
+    const startIndex = isCursorPaginated ? 0 : (currentPage - 1) * activePageSize;
+    const displayOrders = isCursorPaginated
+        ? filteredOrders
+        : filteredOrders.slice(startIndex, startIndex + activePageSize);
+
+    // Suppress server's hasMore when the client-side filter produces 0 visible results.
+    // Without this, the Next button stays enabled even when nothing is shown (e.g.
+    // a payment/search filter hides every order on the current server page).
+    const effectiveHasMore = isCursorPaginated
+        ? (hasMore && filteredOrders.length > 0)
+        : undefined;
 
     return (
         <div className="space-y-5 ">
@@ -285,7 +297,7 @@ function OrderDetailTable({
             {isCursorPaginated ? (
                 <CursorPagination
                     pageIndex={pageIndex}
-                    hasMore={hasMore}
+                    hasMore={effectiveHasMore}
                     isFetching={isFetching}
                     onPrev={onPrev}
                     onNext={onNext}

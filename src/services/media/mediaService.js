@@ -4,14 +4,23 @@ import {
   doc, 
   setDoc, 
   getDocs, 
-  query, 
-  orderBy, 
-  onSnapshot 
+  query 
 } from 'firebase/firestore';
 
+// ─── In-memory cache ────────────────────────────────────────────────────────
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+let _cache = null;        // { data: [], timestamp: number } | null
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const mediaService = {
+  /** Clears the in-memory cache so the next call to getMediaLibrary() re-fetches. */
+  invalidateCache() {
+    _cache = null;
+  },
+
   /**
-   * Saves an uploaded image URL to the global media collection
+   * Saves an uploaded image URL to the global media collection.
+   * Also invalidates the cache so the library reflects the new image immediately.
    */
   async saveMedia(url, name = "Uploaded Image") {
     if (!url) return;
@@ -24,6 +33,7 @@ export const mediaService = {
         name,
         createdAt: new Date().toISOString()
       }, { merge: true });
+      this.invalidateCache(); // bust cache so new image shows up
     } catch (err) {
       console.error("Error saving media to library:", err);
     }
@@ -32,7 +42,15 @@ export const mediaService = {
   /**
    * Fetches all uploaded media from Firestore 'media' collection and existing products
    */
-  async getMediaLibrary() {
+  /**
+   * Fetches all media. Results are cached for CACHE_TTL_MS (5 min).
+   * Pass force=true to skip cache and always hit Firestore.
+   */
+  async getMediaLibrary(force = false) {
+    // Return cached data if still fresh
+    if (!force && _cache && (Date.now() - _cache.timestamp < CACHE_TTL_MS)) {
+      return _cache.data;
+    }
     const mediaSet = new Set();
     const mediaList = [];
 
@@ -111,6 +129,8 @@ export const mediaService = {
       console.warn("Could not fetch product images for media library:", err);
     }
 
+    // Store result in cache
+    _cache = { data: mediaList, timestamp: Date.now() };
     return mediaList;
   }
 };

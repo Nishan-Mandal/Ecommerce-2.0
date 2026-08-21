@@ -72,7 +72,7 @@ export default function Navbar() {
     { title: "Orders", path: "/profile?tab=orders" },
   ];
 
-  const isAdmin = user?.user?.email?.toLowerCase() === adminEmail.toLowerCase() || user?.user?.role === 'ADMIN';
+  const isAdmin = user?.user?.email?.toLowerCase() === adminEmail.toLowerCase() || user?.user?.role === 'ADMIN' || user?.user?.role === 'SUPERADMIN';
 
   const mobiliLinks = [
     { label: "Home", path: "/", icon: "home" },

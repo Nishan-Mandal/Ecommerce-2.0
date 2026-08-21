@@ -39,8 +39,13 @@ export default function OrderFulfillmentSection({
             className="px-3.5 py-1.5 text-xs font-extrabold rounded-xl border border-border-base bg-bg-base text-text-base focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-2xs disabled:opacity-60"
           >
             {statusSteps
-              .filter((step, idx) => {
-                // Prevent reverting paid/confirmed orders back to PAYMENT_PENDING (0) or PLACED (1)
+              .filter((step) => {
+                // Always keep the current status so the <select> always has a matching option.
+                // Without this, if PLACED is filtered out while value="PLACED", the browser
+                // shows the first remaining option as visually selected — and clicking it
+                // never fires onChange because the DOM thinks it's already selected.
+                if (step === currentStatus) return true;
+                // Prevent reverting paid/confirmed orders back to PAYMENT_PENDING or PLACED
                 if (isPaidOrAdvanced && (step === "PAYMENT_PENDING" || step === "PLACED")) return false;
                 return true;
               })

@@ -83,7 +83,7 @@ function MediaLibraryModal({
     setUploading(true);
     try {
       for (const file of files) {
-        const url = await uploadService.uploadToCloudinary(file);
+        const url = await uploadService.uploadProductImage(file);
         await mediaService.saveMedia(url, file.name);
       }
       toast.success("Images uploaded to media library!");

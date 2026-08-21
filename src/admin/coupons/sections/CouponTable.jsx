@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaEdit, FaTrash, FaClock } from "react-icons/fa";
 import TableSkeleton from "../../../components/loader/SkeletonLoader/TableSkeleton";
 import Pagination from "../../../components/Common/Pagination";
-import StatusBadge from '../../Components/common/StatusBadge';
 import DataTable from '../../Components/common/DataTable';
 import ToggleButton from '../../../components/Common/ToggleButton';
 
@@ -20,9 +19,13 @@ function CouponTable({
         setCurrentPage(1);
     }, [coupons.length]);
 
+    /**
+     * Returns "EXPIRED" | "INACTIVE" | "ACTIVE"
+     * EXPIRED takes priority — an expired coupon must never appear as ACTIVE even if isActive=true.
+     */
     const getCouponStatusKey = (coupon) => {
-        if (coupon.isActive === false) return "INACTIVE";
         if (coupon.validUntil && new Date(coupon.validUntil) < new Date()) return "EXPIRED";
+        if (coupon.isActive === false) return "INACTIVE";
         return "ACTIVE";
     };
 
@@ -69,22 +72,41 @@ function CouponTable({
         {
             key: "validity",
             header: "Validity",
-            render: (coupon) => (
-                <div className="text-xs space-y-0.5">
-                    <div>
-                        From: <span className="font-semibold text-text-base">{coupon.validFrom ? new Date(coupon.validFrom).toLocaleDateString() : "--"}</span>
+            render: (coupon) => {
+                const isExpired = coupon.validUntil && new Date(coupon.validUntil) < new Date();
+                return (
+                    <div className="text-xs space-y-0.5">
+                        <div>
+                            From: <span className="font-semibold text-text-base">
+                                {coupon.validFrom ? new Date(coupon.validFrom).toLocaleDateString() : "--"}
+                            </span>
+                        </div>
+                        <div className={isExpired ? "text-rose-500" : "text-text-muted"}>
+                            Until: <span className={`font-semibold ${isExpired ? "text-rose-600" : "text-text-base"}`}>
+                                {coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString() : "--"}
+                                {isExpired && <span className="ml-1 text-[9px] font-black uppercase tracking-wide">(Expired)</span>}
+                            </span>
+                        </div>
                     </div>
-                    <div className="text-text-muted">
-                        Until: <span className="font-semibold text-text-base">{coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString() : "--"}</span>
-                    </div>
-                </div>
-            ),
+                );
+            },
         },
         {
             key: "status",
             header: "Status",
-            render: (coupon) => (
-                <div className="flex items-center gap-2">
+            render: (coupon) => {
+                const statusKey = getCouponStatusKey(coupon);
+
+                if (statusKey === "EXPIRED") {
+                    return (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 text-[10px] font-black uppercase tracking-wider">
+                            <FaClock size={9} />
+                            EXPIRED
+                        </span>
+                    );
+                }
+
+                return (
                     <ToggleButton
                         checked={coupon.isActive !== false}
                         onChange={() => onToggleStatus && onToggleStatus(coupon)}
@@ -93,8 +115,8 @@ function CouponTable({
                         onLabel="ACTIVE"
                         offLabel="INACTIVE"
                     />
-                </div>
-            ),
+                );
+            },
         },
         {
             key: "actions",
@@ -125,6 +147,9 @@ function CouponTable({
     ];
 
     const mobileCardRender = (coupon) => {
+        const statusKey = getCouponStatusKey(coupon);
+        const isExpired = statusKey === "EXPIRED";
+
         return (
             <div key={coupon.couponId || coupon.id} className="bg-bg-surface p-5 rounded-2xl border border-border-base shadow-xs space-y-4">
                 <div className="flex justify-between items-center gap-2">
@@ -132,14 +157,21 @@ function CouponTable({
                         {coupon.code}
                     </span>
 
-                    <ToggleButton
-                        checked={coupon.isActive !== false}
-                        onChange={() => onToggleStatus && onToggleStatus(coupon)}
-                        size="sm"
-                        color="success"
-                        onLabel="ACTIVE"
-                        offLabel="INACTIVE"
-                    />
+                    {isExpired ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 text-[10px] font-black uppercase tracking-wider">
+                            <FaClock size={9} />
+                            EXPIRED
+                        </span>
+                    ) : (
+                        <ToggleButton
+                            checked={coupon.isActive !== false}
+                            onChange={() => onToggleStatus && onToggleStatus(coupon)}
+                            size="sm"
+                            color="success"
+                            onLabel="ACTIVE"
+                            offLabel="INACTIVE"
+                        />
+                    )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 bg-bg-base/60 p-3.5 rounded-xl text-xs">
@@ -165,21 +197,25 @@ function CouponTable({
 
                 <div className="text-xs text-text-muted flex justify-between gap-2 pl-1">
                     <div>From: <span className="font-semibold text-text-base">{coupon.validFrom ? new Date(coupon.validFrom).toLocaleDateString() : "--"}</span></div>
-                    <div>Until: <span className="font-semibold text-text-base">{coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString() : "--"}</span></div>
+                    <div className={isExpired ? "text-rose-500" : ""}>
+                        Until: <span className={`font-semibold ${isExpired ? "text-rose-600" : "text-text-base"}`}>
+                            {coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString() : "--"}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="border-t border-border-base my-2"></div>
 
                 <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => onEdit(coupon)} 
+                    <button
+                        onClick={() => onEdit(coupon)}
                         className="flex-1 h-10 flex items-center justify-center gap-2 text-primary bg-primary/10 hover:bg-primary/20 rounded-xl text-xs font-bold transition cursor-pointer"
                     >
                         <FaEdit size={14} />
                         <span>Edit</span>
                     </button>
-                    <button 
-                        onClick={() => onDelete(coupon)} 
+                    <button
+                        onClick={() => onDelete(coupon)}
                         className="flex-1 h-10 flex items-center justify-center gap-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl text-xs font-bold transition cursor-pointer"
                     >
                         <FaTrash size={12} />
@@ -192,7 +228,6 @@ function CouponTable({
 
     return (
         <div className="w-full space-y-4">
-            {/* Reusable Data Table */}
             <DataTable
                 columns={columns}
                 data={paginatedCoupons}
@@ -200,7 +235,6 @@ function CouponTable({
                 mobileCardRender={mobileCardRender}
             />
 
-            {/* Universal Pagination */}
             <Pagination
                 currentPage={currentPage}
                 totalItems={coupons.length}

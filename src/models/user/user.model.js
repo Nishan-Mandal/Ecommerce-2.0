@@ -6,7 +6,7 @@ const user = {
   profileImage: "",
 
   // Role
-  role: "USER", // USER | ADMIN
+  role: "USER", // USER | ADMIN | SUPERADMIN
 
   // Account Status
   isActive: true,

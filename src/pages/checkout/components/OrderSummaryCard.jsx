@@ -91,7 +91,7 @@ export default function OrderSummaryCard({
                       </div>
                       {couponDiscount > 0 && (
                         <p className="text-xs font-bold text-emerald-800">
-                          Coupon Applied: <strong className="font-black text-emerald-950 dark:text-emerald-100">-₹{fmt(couponDiscount)}</strong>
+                          Coupon Applied: <strong className="font-black text-emerald-950">-₹{fmt(couponDiscount)}</strong>
                         </p>
                       )}
                     </div>

@@ -52,7 +52,7 @@ export function ProductBasicInfo({ products, setProducts, handleTagsChange }) {
                         {(() => {
                             const DEFAULT_CATS = ["Custom", "ReadyMade", "ReadyMade-Premium", "Electronics", "Fashion", "Footwear", "Home & Art", "Accessories"];
                             const isCustomCat = products.category && !DEFAULT_CATS.includes(products.category);
-                            
+
                             return (
                                 <div className="space-y-2">
                                     <select
@@ -73,7 +73,7 @@ export function ProductBasicInfo({ products, setProducts, handleTagsChange }) {
                                                 {cat}
                                             </option>
                                         ))}
-                                        <option value="__NEW__">➕ Add New Category...</option>
+                                        <option value="__NEW__">+Add New Category</option>
                                     </select>
 
                                     {(products.isAddingCustomCategory || isCustomCat) && (

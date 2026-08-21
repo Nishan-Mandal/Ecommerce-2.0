@@ -9,9 +9,9 @@ import StatusBadge from '../Components/common/StatusBadge';
 import DataTable from '../Components/common/DataTable';
 import { 
   FaUserPlus, FaShieldAlt, FaTimes, FaSpinner, 
-  FaEye, FaEyeSlash, FaTrash 
+  FaEye, FaEyeSlash, FaTrash, FaCrown, FaLock
 } from 'react-icons/fa';
-import { userService } from '../../services/user/userService';
+import { userService, isSuperAdmin } from '../../services/user/userService';
 import { activityService } from '../../services/activity/activityService';
 import { toast } from 'react-toastify';
 import { getFriendlyErrorMessage } from '../../utils/firebaseErrorHandler.js';
@@ -79,11 +79,12 @@ function UserDetailTable({
     const [currentPage, setCurrentPage] = useState(1);
     const [fallbackPageSize, setFallbackPageSize] = useState(pageSize);
 
+    // Reset to page 1 whenever the active filter or search term changes
     useEffect(() => {
         if (!isCursorPaginated) {
             setCurrentPage(1);
         }
-    }, [filteredUsers.length, isCursorPaginated]);
+    }, [debouncedSearch, roleFilter, isCursorPaginated]);
 
     const activePageSize = isCursorPaginated ? pageSize : fallbackPageSize;
     const activePageChangeSize = isCursorPaginated ? onPageSizeChange : (newSize) => {
@@ -135,6 +136,11 @@ function UserDetailTable({
     };
 
     const handleDeleteClick = (u) => {
+        // Block deletion of SUPERADMIN at the UI level
+        if (isSuperAdmin(u.role)) {
+            toast.error("SUPERADMIN accounts are protected and cannot be deleted.");
+            return;
+        }
         setSelectedUserToDelete(u);
         setIsDeleteModalOpen(true);
     };
@@ -174,6 +180,7 @@ function UserDetailTable({
             onChange: setRoleFilter,
             options: [
                 { value: "ALL", label: "All Roles" },
+                { value: "SUPERADMIN", label: "Superadmin Only" },
                 { value: "ADMIN", label: "Admins Only" },
                 { value: "USER", label: "Customers Only" },
             ],
@@ -195,8 +202,18 @@ function UserDetailTable({
         );
     }
 
-    const startIndex = isCursorPaginated ? (propPageIndex || 0) * activePageSize : (currentPage - 1) * activePageSize;
-    const displayUsers = isCursorPaginated ? filteredUsers : filteredUsers.slice(startIndex, startIndex + activePageSize);
+    // In cursor mode the server already handles page offset;
+    // startIndex within the client-filtered subset is always 0.
+    const startIndex = isCursorPaginated ? 0 : (currentPage - 1) * activePageSize;
+    const displayUsers = isCursorPaginated
+        ? filteredUsers
+        : filteredUsers.slice(startIndex, startIndex + activePageSize);
+
+    // Suppress server's hasMore when client-side filters produce 0 visible rows,
+    // otherwise the Next button stays active even when nothing is displayed.
+    const effectiveHasMore = isCursorPaginated
+        ? (propHasMore && filteredUsers.length > 0)
+        : undefined;
 
     const columns = [
         {
@@ -255,16 +272,26 @@ function UserDetailTable({
             align: 'center',
             className: 'w-24 text-center',
             cellClassName: 'text-center',
-            render: (item) => (
-                <button
-                    type="button"
-                    onClick={() => handleDeleteClick(item)}
-                    className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer"
-                    title={(item.role || 'USER').toUpperCase() === 'ADMIN' ? "Remove Admin Profile" : "Delete Account"}
-                >
-                    <FaTrash size={13} />
-                </button>
-            ),
+            render: (item) => {
+                const locked = isSuperAdmin(item.role);
+                return locked ? (
+                    <span
+                        className="inline-flex items-center gap-1 p-2 text-amber-400 cursor-not-allowed opacity-60"
+                        title="SUPERADMIN accounts cannot be deleted"
+                    >
+                        <FaLock size={12} />
+                    </span>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => handleDeleteClick(item)}
+                        className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all cursor-pointer"
+                        title={(item.role || 'USER').toUpperCase() === 'ADMIN' ? "Remove Admin Profile" : "Delete Account"}
+                    >
+                        <FaTrash size={13} />
+                    </button>
+                );
+            },
         },
     ];
 
@@ -277,14 +304,23 @@ function UserDetailTable({
                     <span className="text-text-muted font-bold">User #{startIndex + index + 1}</span>
                     <div className="flex items-center gap-2">
                         <StatusBadge status={role || 'USER'} size="sm" />
-                        <button
-                            type="button"
-                            onClick={() => handleDeleteClick(item)}
-                            className="p-1 text-rose-600 hover:bg-rose-50 rounded-md transition cursor-pointer"
-                            title="Delete Account"
-                        >
-                            <FaTrash size={12} />
-                        </button>
+                        {isSuperAdmin(role) ? (
+                            <span
+                                className="p-1 text-amber-400 cursor-not-allowed opacity-60"
+                                title="SUPERADMIN accounts cannot be deleted"
+                            >
+                                <FaLock size={11} />
+                            </span>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => handleDeleteClick(item)}
+                                className="p-1 text-rose-600 hover:bg-rose-50 rounded-md transition cursor-pointer"
+                                title="Delete Account"
+                            >
+                                <FaTrash size={12} />
+                            </button>
+                        )}
                     </div>
                 </div>
                 
@@ -337,7 +373,7 @@ function UserDetailTable({
             {isCursorPaginated ? (
                 <CursorPagination
                     pageIndex={propPageIndex}
-                    hasMore={propHasMore}
+                    hasMore={effectiveHasMore}
                     isFetching={propIsFetching}
                     onPrev={propOnPrev}
                     onNext={propOnNext}

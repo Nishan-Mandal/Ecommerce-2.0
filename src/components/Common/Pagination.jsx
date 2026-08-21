@@ -34,7 +34,7 @@ function Pagination({
 
     const activePage = isCursorMode ? (pageIndex || 0) + 1 : (currentPage || 1);
     const totalCount = totalItems || 0;
-    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / pageSize);
 
     const handlePrev = () => {
         if (isCursorMode) {
@@ -58,7 +58,7 @@ function Pagination({
 
     const isNextDisabled = isCursorMode
         ? (!hasMore || isFetching)
-        : (activePage >= totalPages);
+        : (totalPages === 0 || activePage >= totalPages);
 
     return (
         <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-3 px-1 text-xs text-text-muted select-none ${className}`}>
