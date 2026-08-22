@@ -17,13 +17,8 @@ function Cart() {
   const { products, loading: productsLoading } = useProducts();
   const { user, setIsLoginOpen } = useAuth();
 
-  const dispatch = useDispatch()
-  const cart = useSelector((state) => state.cart)
-
-  // Sync cart to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
-  }, [cart])
+  const dispatch = useDispatch();
+  const cart = useSelector((state) => state.cart);
 
   // Quantity updates handler
   const handleUpdateQuantity = (item, newQuantity) => {

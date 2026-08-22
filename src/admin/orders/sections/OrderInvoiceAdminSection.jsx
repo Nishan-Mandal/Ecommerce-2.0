@@ -16,7 +16,7 @@ export default function OrderInvoiceAdminSection({ order, onRefresh }) {
   if (!order) return null;
 
   const orderId = order.id || order.docId || order.orderId;
-  const isUploaded = Boolean(order.invoice?.uploaded && order.invoice?.storagePath);
+  const isUploaded = Boolean(order.invoice?.uploaded && (order.invoice?.storagePath || order.invoice?.url));
   const fileName = order.invoice?.fileName || "Uploaded Invoice.pdf";
   const uploadedAt = order.invoice?.uploadedAt
     ? new Date(order.invoice.uploadedAt).toLocaleDateString("en-IN", {
@@ -70,30 +70,30 @@ export default function OrderInvoiceAdminSection({ order, onRefresh }) {
 
   const handleDownloadUploaded = async () => {
     try {
-      await invoiceService.downloadUploadedInvoice(order.invoice.storagePath, fileName);
+      const storagePath = order.invoice?.storagePath || order.invoice?.url;
+      await invoiceService.downloadUploadedInvoice(storagePath, fileName);
     } catch (err) {
       toast.error(getFriendlyErrorMessage(err));
     }
   };
 
   return (
-    <div className="bg-bg-surface border border-border-base rounded-2xl p-5 shadow-xs space-y-4">
+    <div className="bg-bg-surface border border-border-base rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border-base pb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            <FaFilePdf size={16} />
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-base pb-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0">
+            <FaFilePdf size={15} />
           </div>
-          <div>
-            <h3 className="font-extrabold text-sm text-text-base">Order Invoice Management</h3>
-           
-          </div>
+          <h3 className="font-extrabold text-xs sm:text-sm text-text-base truncate">
+            Order Invoice Management
+          </h3>
         </div>
 
-        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${
+        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide border shrink-0 ${
           isUploaded
-            ? "bg-emerald-100 text-emerald-800 border-emerald-300 "
-            : "bg-indigo-100 text-indigo-800 border-indigo-300 "
+            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+            : "bg-indigo-50 text-indigo-700 border-indigo-200"
         }`}>
           {isUploaded ? "Custom Uploaded PDF" : "System Generated"}
         </span>
@@ -101,17 +101,21 @@ export default function OrderInvoiceAdminSection({ order, onRefresh }) {
 
       {/* Body Status Content */}
       {isUploaded ? (
-        <div className="p-4 rounded-xl bg-bg-base/60 border border-border-base/70 space-y-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200">
-                <FaFilePdf size={20} />
+        <div className="p-3.5 sm:p-4 rounded-xl bg-bg-base/60 border border-border-base/70 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200">
+                <FaFilePdf size={18} />
               </div>
-              <div>
-                <p className="font-extrabold text-xs text-text-base truncate max-w-xs">{fileName}</p>
-                {uploadedAt && <p className="text-[10px] text-text-muted mt-0.5">Uploaded: {uploadedAt}</p>}
-                <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
-                  <FaCheckCircle size={10} /> Active for Client Download
+              <div className="min-w-0">
+                <p className="font-extrabold text-xs text-text-base truncate" title={fileName}>
+                  {fileName}
+                </p>
+                {uploadedAt && (
+                  <p className="text-[10px] text-text-muted mt-0.5">Uploaded: {uploadedAt}</p>
+                )}
+                <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-0.5">
+                  <FaCheckCircle size={9} /> Active for Client Download
                 </p>
               </div>
             </div>
@@ -119,16 +123,16 @@ export default function OrderInvoiceAdminSection({ order, onRefresh }) {
             <button
               type="button"
               onClick={handleDownloadUploaded}
-              className="px-3 py-1.5 rounded-lg bg-bg-surface border border-border-base text-text-base text-xs font-bold hover:bg-bg-base transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="h-8 px-3 rounded-xl bg-bg-surface border border-border-base text-text-base text-xs font-bold hover:bg-bg-base hover:border-primary/40 transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs shrink-0 self-start sm:self-auto"
             >
-              <FaDownload size={11} className="text-primary" />
+              <FaDownload size={10} className="text-primary" />
               <span>Download</span>
             </button>
           </div>
 
-          <div className="pt-3 border-t border-border-base/60 flex items-center justify-between gap-3">
-            <label className="px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-              {uploading ? <FaSpinner className="animate-spin" size={12} /> : <FaFileUpload size={12} />}
+          <div className="pt-2.5 border-t border-border-base/60 flex flex-wrap items-center justify-between gap-2.5">
+            <label className="h-8 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-primary/20">
+              {uploading ? <FaSpinner className="animate-spin" size={11} /> : <FaFileUpload size={11} />}
               <span>{uploading ? "Replacing..." : "Replace PDF"}</span>
               <input
                 type="file"
@@ -143,9 +147,9 @@ export default function OrderInvoiceAdminSection({ order, onRefresh }) {
               type="button"
               onClick={handleRemove}
               disabled={uploading || removing}
-              className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-rose-200"
+              className="h-8 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-rose-200"
             >
-              {removing ? <FaSpinner className="animate-spin" size={12} /> : <FaTrashAlt size={11} />}
+              {removing ? <FaSpinner className="animate-spin" size={11} /> : <FaTrashAlt size={10} />}
               <span>Remove Upload</span>
             </button>
           </div>
@@ -158,8 +162,8 @@ export default function OrderInvoiceAdminSection({ order, onRefresh }) {
           </div>
 
           <div>
-            <label className="w-full px-4 py-2.5 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-extrabold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs">
-              {uploading ? <FaSpinner className="animate-spin" size={14} /> : <FaFileUpload size={14} />}
+            <label className="w-full h-10 px-4 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-extrabold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs">
+              {uploading ? <FaSpinner className="animate-spin" size={13} /> : <FaFileUpload size={13} />}
               <span>{uploading ? "Uploading Invoice PDF..." : "Upload Custom Invoice PDF"}</span>
               <input
                 type="file"

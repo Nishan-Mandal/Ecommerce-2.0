@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Sidebar Component
@@ -12,6 +13,7 @@ export default function Sidebar({
     config,
     handleLogout
 }) {
+    const navigate = useNavigate();
     return (
         <aside
             className={`
@@ -20,7 +22,7 @@ export default function Sidebar({
             `}
         >
             {/* Logo & Company Name */}
-            <div className="px-6 py-5 border-b border-border-base flex items-center gap-3 h-16 shrink-0">
+            <div  onClick={() => navigate('/')} className="px-6 py-4 cursor-pointer border-b border-border-base flex items-center gap-3 h-16 shrink-0">
                 {config.companyLogo ? (
                     <img src={config.companyLogo} alt={config.companyName} className="w-8 h-8 object-contain rounded-lg" />
                 ) : (

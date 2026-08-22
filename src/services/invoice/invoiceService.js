@@ -83,31 +83,55 @@ export const invoiceService = {
   },
 
   /**
-   * Client-side download of an uploaded invoice file from Firebase Storage.
+   * Client-side download of an uploaded invoice file from Firebase Storage or direct URL.
    */
   async downloadUploadedInvoice(storagePath, downloadFileName = "Invoice.pdf") {
     if (!storagePath) throw new Error("Storage path is missing.");
 
     try {
-      const storageRef = ref(storage, storagePath);
-      const url = await getDownloadURL(storageRef);
+      let url = storagePath;
+      // If it's a relative storage path (e.g. invoices/orderId/xyz.pdf), get download URL from Firebase Storage
+      if (!storagePath.startsWith("http://") && !storagePath.startsWith("https://")) {
+        const storageRef = ref(storage, storagePath);
+        url = await getDownloadURL(storageRef);
+      }
 
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch file.");
-      
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const targetFileName = downloadFileName.toLowerCase().endsWith(".pdf")
+        ? downloadFileName
+        : `${downloadFileName}.pdf`;
 
+      // Method 1: Try downloading via fetch & blob (preserves custom download filename without navigating away)
+      try {
+        const response = await fetch(url, { mode: 'cors' });
+        if (response.ok) {
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = blobUrl;
+          a.download = targetFileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+          return true;
+        }
+      } catch (corsErr) {
+        console.warn("Direct blob download failed (cross-origin restriction). Initiating direct browser download fallback:", corsErr);
+      }
+
+      // Method 2: Resilient Fallback - Direct link trigger with target _blank (works even if CORS blocks JavaScript fetch)
       const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = downloadFileName.endsWith(".pdf") ? downloadFileName : `${downloadFileName}.pdf`;
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.download = targetFileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      return true;
     } catch (err) {
       console.error("Error downloading uploaded invoice:", err);
-      throw new Error("The uploaded invoice file is currently unavailable. Please contact customer support.");
+      throw new Error("Unable to download the uploaded invoice file. Please try again or contact support.");
     }
   },
 

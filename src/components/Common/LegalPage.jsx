@@ -82,7 +82,9 @@ function LegalPage({ configKey, title }) {
 
     const legalData = config?.legal || {};
     const pageObj = legalData.fixedPages?.[configKey] || {};
-    const pdfUrl = pageObj.pdfUrl || (typeof legalData[configKey] === "string" && legalData[configKey].startsWith("http") ? legalData[configKey] : "");
+    
+    // Resolve docUrl / pdfUrl or direct string storage URL
+    const docUrl = pageObj.docUrl || pageObj.pdfUrl || (typeof legalData[configKey] === "string" && legalData[configKey].startsWith("http") ? legalData[configKey] : "");
 
     if (pageObj.isActive === false) {
         return (
@@ -93,9 +95,9 @@ function LegalPage({ configKey, title }) {
         );
     }
 
-    // If PDF URL is uploaded and configured, render minimal LegalPdfViewer
-    if (pdfUrl) {
-        return <LegalPdfViewer pdfUrl={pdfUrl} title={title} />;
+    // If Document/PDF URL is uploaded and configured in Firestore, render LegalPdfViewer
+    if (docUrl) {
+        return <LegalPdfViewer pdfUrl={docUrl} title={title} />;
     }
 
     // Otherwise render native formatted document

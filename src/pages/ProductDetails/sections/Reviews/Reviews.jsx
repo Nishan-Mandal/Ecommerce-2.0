@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import ReviewItem from './ReviewCard';
 import { productService } from '../../../../services/product/productService';
 import useAuth from '../../../../hooks/auth/useAuth';
 import { getFriendlyErrorMessage } from '../../../../utils/firebaseErrorHandler.js';
+import Pagination from '../../../../components/Common/Pagination';
 
 // ── Interactive Star Picker ───────────────────────────────────────────────────
 function StarPicker({ value, onChange }) {
@@ -139,6 +140,8 @@ function WriteReviewForm({ productId, onSubmitted }) {
 function ReviewsTab({ productId, reviews = [] }) {
     const [sortBy, setSortBy] = useState('Newest');
     const [localReviews, setLocalReviews] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5);
     const SORT_OPTIONS = ['Newest', 'Oldest', 'Highest', 'Lowest'];
 
     const FALLBACK = [
@@ -174,6 +177,10 @@ function ReviewsTab({ productId, reviews = [] }) {
         return 0;
     });
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [sortBy, reviews.length, localReviews.length]);
+
     // Aggregate stats
     const totalReviews = list.length;
     const avgStars = list.reduce((s, r) => s + r.rating, 0) / totalReviews || 0;
@@ -181,6 +188,9 @@ function ReviewsTab({ productId, reviews = [] }) {
     list.forEach((r) => {
         if (distMap[r.rating] !== undefined) distMap[r.rating]++;
     });
+
+    const startIndex = (currentPage - 1) * pageSize;
+    const paginatedReviews = sorted.slice(startIndex, startIndex + pageSize);
 
     const handleNewReview = (review) => {
         setLocalReviews(prev => [review, ...prev]);
@@ -197,7 +207,7 @@ function ReviewsTab({ productId, reviews = [] }) {
                 <div>
                     <h3 className="text-lg font-bold text-gray-900">Customer Reviews</h3>
                     <p className="text-xs text-gray-400 mt-0.5">
-                        Showing {sorted.length} of {totalReviews} review{totalReviews !== 1 ? 's' : ''}
+                        Showing {sorted.length === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + pageSize, sorted.length)} of {totalReviews} review{totalReviews !== 1 ? 's' : ''}
                     </p>
                 </div>
                 {/* Sort Dropdown */}
@@ -222,14 +232,31 @@ function ReviewsTab({ productId, reviews = [] }) {
 
             {/* Two-column layout */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Left: Review list */}
-                <div className="md:col-span-2">
-                    {sorted.length === 0 ? (
+                {/* Left: Review list & Pagination */}
+                <div className="md:col-span-2 space-y-4">
+                    {paginatedReviews.length === 0 ? (
                         <p className="text-text-muted italic text-sm">No reviews yet. Be the first to review!</p>
                     ) : (
-                        sorted.map((review, index) => (
-                            <ReviewItem key={index} review={review} index={index} />
+                        paginatedReviews.map((review, index) => (
+                            <ReviewItem key={startIndex + index} review={review} index={startIndex + index} />
                         ))
+                    )}
+
+                    {/* Pagination */}
+                    {sorted.length > 0 && (
+                        <div className="pt-4 border-t border-gray-100">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalItems={sorted.length}
+                                pageSize={pageSize}
+                                pageSizeOptions={[5, 10, 20]}
+                                onPageChange={setCurrentPage}
+                                onPageSizeChange={(newSize) => {
+                                    setPageSize(newSize);
+                                    setCurrentPage(1);
+                                }}
+                            />
+                        </div>
                     )}
                 </div>
 

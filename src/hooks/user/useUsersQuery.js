@@ -33,7 +33,8 @@ export function useUsersQuery({ pageSize = 10 } = {}) {
       lastDoc: currentCursor,
     }),
     placeholderData: keepPreviousData,
-    staleTime: 2 * 60 * 1000, // 2 minutes stale time for user profiles
+    staleTime: 3 * 60 * 1000, // 3 minutes stale time for user profiles
+    gcTime: 10 * 60 * 1000,   // 10 minutes cache retention in memory
   });
 
   const goNext = useCallback(() => {

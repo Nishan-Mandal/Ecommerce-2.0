@@ -16,6 +16,7 @@ const configure = {
   companyTagline: "Quality you can trust.",
   companyLogo: "",   // Firebase Storage URL
   faviconUrl: "",    // Firebase Storage URL
+  invoiceTemplate: "classic",
 
   // ─── Contact Information ───────────────────────────────────────────────────
   address: {
@@ -29,11 +30,11 @@ const configure = {
   },
 
   phones: [
-    // { label: "Support", number: "+91 98765 43210", isWhatsapp: true }
+    { label: "Support", number: "+91 98765 43210", isWhatsapp: true }
   ],
 
   emails: [
-    // { label: "Support", email: "support@example.com" }
+    { label: "Support", email: "[EMAIL_ADDRESS]" }
   ],
 
   // ─── Social Links ──────────────────────────────────────────────────────────
@@ -44,7 +45,6 @@ const configure = {
     { platform: "youtube",   icon: "fa-youtube",     url: "", isActive: false },
     { platform: "linkedin",  icon: "fa-linkedin-in", url: "", isActive: false },
     { platform: "pinterest", icon: "fa-pinterest-p", url: "", isActive: false },
-    { platform: "whatsapp",  icon: "fa-whatsapp",    url: "", isActive: false },
   ],
 
   // ─── Banners (Sub-collection: configure/site/banners/{bannerId}) ───────────
@@ -72,12 +72,49 @@ const configure = {
   // }
   collectionsCount: 0,
 
-  // ─── Legal Content (Markdown Strings) ─────────────────────────────────────
+  // ─── Company & Legal Documents (Embedded in configure/site) ────────────────
   legal: {
-    termsAndConditions: "",
-    privacyPolicy: "",
-    returnPolicy: "",
-    aboutUs: "",
+    fixedPages: {
+      aboutUs: {
+        title: "About Us",
+        docUrl: "", // PDF or document storage URL
+        pdfUrl: "",
+        isActive: true,
+      },
+      privacyPolicy: {
+        title: "Privacy Policy",
+        docUrl: "",
+        pdfUrl: "",
+        isActive: true,
+      },
+      termsAndConditions: {
+        title: "Terms & Conditions",
+        docUrl: "",
+        pdfUrl: "",
+        isActive: true,
+      },
+      returnPolicy: {
+        title: "Return Policy",
+        docUrl: "",
+        pdfUrl: "",
+        isActive: true,
+      },
+      shippingPolicy: {
+        title: "Shipping Policy",
+        docUrl: "",
+        pdfUrl: "",
+        isActive: true,
+      },
+      refundPolicy: {
+        title: "Refund Policy",
+        docUrl: "",
+        pdfUrl: "",
+        isActive: true,
+      },
+    },
+    customPages: [
+      // { id: "1", name: "Custom Page", slug: "custom-page", docUrl: "", pdfUrl: "", isActive: true }
+    ],
   },
 
   // ─── SEO Defaults ──────────────────────────────────────────────────────────
@@ -92,3 +129,5 @@ const configure = {
   updatedAt: null,
   updatedBy: "",
 };
+
+export default configure;

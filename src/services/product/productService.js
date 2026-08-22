@@ -101,18 +101,20 @@ export const productService = {
   },
 
   /**
-   * Updates an existing product document, recomputing minPrice and totalStock
+   * Updates an existing product document, conditionally recomputing minPrice and totalStock
    */
   async updateProduct(id, productData) {
     const productRef = doc(fireDB, 'products', id);
-    const minPrice = computeMinPrice(productData);
-    const totalStock = computeTotalStock(productData);
+    const updatePayload = { ...productData };
+
+    if (productData.price !== undefined || productData.variants !== undefined) {
+      updatePayload.minPrice = computeMinPrice(productData);
+    }
+    if (productData.inStock !== undefined || productData.stock !== undefined || productData.variants !== undefined) {
+      updatePayload.totalStock = computeTotalStock(productData);
+    }
     
-    await setDoc(productRef, {
-      ...productData,
-      minPrice,
-      totalStock
-    }, { merge: true });
+    await setDoc(productRef, updatePayload, { merge: true });
   },
 
   /**

@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   FaCheckCircle, FaTruck, FaBoxOpen, FaClock, 
-  FaTimesCircle, FaShieldAlt, FaUser, FaExclamationTriangle, FaCheck 
+  FaTimesCircle, FaShieldAlt, FaUser, FaExclamationTriangle, FaCheck, FaCrown
 } from 'react-icons/fa';
 
 /**
@@ -109,6 +109,13 @@ export default function StatusBadge({
       break;
 
     // ── Role Statuses ───────────────────────────────────────────────────────────
+    case 'SUPERADMIN':
+    case 'OWNER':
+      defaultLabel = defaultLabel || 'SUPERADMIN';
+      defaultIcon = defaultIcon || <FaCrown className="text-amber-500" size={iconSize} />;
+      badgeColorClasses = 'bg-transparent text-amber-600 dark:text-amber-400 border border-amber-500/40';
+      break;
+
     case 'ADMIN':
       defaultLabel = defaultLabel || 'ADMIN';
       defaultIcon = defaultIcon || <FaShieldAlt className="text-purple-500" size={iconSize} />;

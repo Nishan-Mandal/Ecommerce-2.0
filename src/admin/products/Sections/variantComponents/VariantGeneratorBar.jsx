@@ -59,7 +59,7 @@ export default function VariantGeneratorBar({
       </div>
 
       {/* Summary Badges */}
-      <div className="grid grid-cols-3 gap-3 text-center">
+      <div className="grid grid-cols-2 gap-3 text-center">
         <div className="rounded-xl bg-bg-base/60 border border-border-base/60 p-2.5">
           <p className="text-[9px] uppercase font-bold text-text-muted">Option Attributes</p>
           <p className="text-sm font-black text-text-base mt-0.5">{optionCount}</p>
@@ -68,12 +68,12 @@ export default function VariantGeneratorBar({
           <p className="text-[9px] uppercase font-bold text-text-muted">Generated Variants</p>
           <p className="text-sm font-black text-primary mt-0.5">{variantCount}</p>
         </div>
-        <div className="rounded-xl bg-bg-base/60 border border-border-base/60 p-2.5">
+        {/* <div className="rounded-xl bg-bg-base/60 border border-border-base/60 p-2.5">
           <p className="text-[9px] uppercase font-bold text-text-muted">Publish Status</p>
           <p className={`text-xs font-black mt-1 ${isActive !== false ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
             {isActive !== false ? "Live" : "Draft"}
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   );

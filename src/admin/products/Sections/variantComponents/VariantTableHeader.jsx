@@ -37,7 +37,7 @@ export default function VariantTableHeader({
       </div>
 
       {/* Bulk Quick Action Bar */}
-      <div className="flex flex-wrap items-center gap-2 bg-bg-surface p-2 rounded-xl border border-border-base/80">
+      <div className="flex flex-wrap items-center gap-2 bg-bg-surface p-2 rounded-xl ">
         <span className="text-[9.5px] font-black text-text-muted uppercase tracking-wider px-1">
           Bulk Fill:
         </span>

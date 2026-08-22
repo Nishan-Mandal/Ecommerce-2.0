@@ -164,17 +164,47 @@ function CouponFormPage() {
                         </div>
 
                         {/* Top Interactive Status Toggle Button */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-bold text-text-muted hidden sm:inline">Coupon Status:</span>
-                            <ToggleButton
-                                checked={coupon.isActive !== false}
-                                onChange={(checked) => setCoupon((prev) => ({ ...prev, isActive: checked }))}
-                                size="sm"
-                                color="success"
-                                onLabel="ACTIVE"
-                                offLabel="INACTIVE"
-                            />
-                        </div>
+                        {(() => {
+                            const isExpiredByDate = coupon.validUntil && new Date(coupon.validUntil) < new Date();
+                            const isExpiredByUsage =
+                                coupon.usageLimit != null &&
+                                coupon.currentUsage != null &&
+                                Number(coupon.currentUsage) >= Number(coupon.usageLimit);
+                            const isExpired = isExpiredByDate || isExpiredByUsage;
+
+                            const expiredReason = [
+                                isExpiredByDate && "Validity date passed",
+                                isExpiredByUsage && "Usage limit reached",
+                            ].filter(Boolean).join(" · ");
+
+                            if (isExpired) {
+                                return (
+                                    <div className="flex flex-col items-end gap-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[11px] font-bold text-text-muted hidden sm:inline">Coupon Status:</span>
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 text-[11px] font-black uppercase tracking-wider">
+                                                ⏱ EXPIRED
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] text-rose-500 font-semibold">{expiredReason} — fix below to re-activate</p>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[11px] font-bold text-text-muted hidden sm:inline">Coupon Status:</span>
+                                    <ToggleButton
+                                        checked={coupon.isActive !== false}
+                                        onChange={(checked) => setCoupon((prev) => ({ ...prev, isActive: checked }))}
+                                        size="sm"
+                                        color="success"
+                                        onLabel="ACTIVE"
+                                        offLabel="INACTIVE"
+                                    />
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
 

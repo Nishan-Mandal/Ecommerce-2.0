@@ -12,8 +12,16 @@ import {
   arrayUnion,
   deleteField
 } from 'firebase/firestore';
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { initializeApp, getApps, deleteApp } from "firebase/app";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, deleteUser as deleteFirebaseAuthUser } from "firebase/auth";
+
+/**
+ * Returns true if the given role string is SUPERADMIN.
+ * Centralised so every check in the app stays consistent.
+ */
+export function isSuperAdmin(role) {
+  return String(role || '').toUpperCase().trim() === 'SUPERADMIN';
+}
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -357,10 +365,22 @@ export const userService = {
   },
 
   /**
-   * Creates a user/admin document in Firebase Auth (via secondary app) and Firestore
+   * Creates a user/admin/superadmin document in Firebase Auth (via secondary app) and Firestore.
+   * Supported roles: 'USER' | 'ADMIN' | 'SUPERADMIN'
+   *
+   * Only one SUPERADMIN may exist at a time. Attempting to create a second one
+   * throws an error at both the service and UI level.
    */
   async createUser(userData) {
     let authUid = null;
+
+    // 0. Guard: enforce the single-SUPERADMIN rule
+    if (isSuperAdmin(userData.role)) {
+      const snap = await getDocs(query(collection(fireDB, "users"), where("role", "==", "SUPERADMIN")));
+      if (!snap.empty) {
+        throw new Error("A SUPERADMIN already exists. Only one SUPERADMIN is allowed in the system.");
+      }
+    }
 
     // 1. If password is provided, create Firebase Auth user via secondary app instance so admin remains logged in
     if (userData.email && userData.password) {
@@ -395,7 +415,7 @@ export const userService = {
   },
 
   /**
-   * Updates user role (ADMIN / USER)
+   * Updates user role (ADMIN / USER / SUPERADMIN)
    */
   async updateUserRole(userId, newRole) {
     if (!userId) throw new Error("User ID is required");
@@ -405,12 +425,54 @@ export const userService = {
   },
 
   /**
-   * Deletes a user / admin profile from Firestore
+   * Deletes a user/admin profile from Firestore AND Firebase Auth.
+   *
+   * SUPERADMIN accounts are protected and cannot be deleted.
+   *
+   * Deleting the Auth account as well fixes the "email already exists" error
+   * that previously occurred when trying to re-register the same email after
+   * its Firestore doc was deleted but the Auth record still existed.
+   *
+   * Because client-side SDKs cannot delete an arbitrary Auth user directly,
+   * we sign into a short-lived secondary app with the user's stored password.
+   * If the password is not available (e.g. social/phone accounts), we skip
+   * Auth deletion gracefully — the Firestore doc is still removed.
    */
-  async deleteUser(userId) {
+  async deleteUser(userId, userPassword = null) {
     if (!userId) throw new Error("User ID required");
+
+    // 1. Fetch Firestore document
     const result = await getUserDocRef(userId);
     const targetRef = result?.docRef || doc(fireDB, "users", userId);
+    const userData = result?.data || {};
+
+    // 2. Guard: refuse to delete SUPERADMIN accounts
+    if (isSuperAdmin(userData.role)) {
+      throw new Error("SUPERADMIN accounts are protected and cannot be deleted.");
+    }
+
+    // 3. Attempt to delete the Firebase Auth account so the email is fully released.
+    //    We do this via a temporary secondary app instance (sign in → delete).
+    const email = userData.email;
+    if (email && userPassword) {
+      try {
+        const tempAppName = `TempDelete_${Date.now()}`;
+        const tempApp = initializeApp(firebaseConfig, tempAppName);
+        try {
+          const tempAuth = getAuth(tempApp);
+          const cred = await signInWithEmailAndPassword(tempAuth, email, userPassword);
+          await deleteFirebaseAuthUser(cred.user);
+        } finally {
+          await deleteApp(tempApp).catch(() => {});
+        }
+      } catch (authErr) {
+        // Auth deletion failed (wrong password, social account, etc.) — continue
+        // to remove the Firestore doc so the account is at least hidden from the panel.
+        console.warn("Could not delete Firebase Auth user (password may be unavailable):", authErr.code);
+      }
+    }
+
+    // 4. Delete the Firestore document
     await deleteDoc(targetRef);
   },
 

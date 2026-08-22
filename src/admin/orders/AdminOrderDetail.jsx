@@ -17,6 +17,7 @@ import OrderLogisticsSection from "./sections/OrderLogisticsSection";
 import OrderMetadataSection from "./sections/OrderMetadataSection";
 import OrderInvoiceAdminSection from "./sections/OrderInvoiceAdminSection";
 import { OrderCancelModal, OrderTrackingModal } from "./sections/OrderModals";
+import OrderDetailSkeleton from "../../components/loader/SkeletonLoader/OrderDetailSkeleton";
 
 // Allowed Status Flow
 const STATUS_STEPS = [
@@ -207,22 +208,7 @@ export default function AdminOrderDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
-        <div className="h-10 w-48 bg-border-base/40 animate-pulse rounded-xl" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="h-40 bg-border-base/40 animate-pulse rounded-2xl" />
-            <div className="h-60 bg-border-base/40 animate-pulse rounded-2xl" />
-            <div className="h-80 bg-border-base/40 animate-pulse rounded-2xl" />
-          </div>
-          <div className="space-y-6">
-            <div className="h-60 bg-border-base/40 animate-pulse rounded-2xl" />
-            <div className="h-40 bg-border-base/40 animate-pulse rounded-2xl" />
-          </div>
-        </div>
-      </div>
-    );
+    return <OrderDetailSkeleton />;
   }
 
   if (!order) {
@@ -272,7 +258,8 @@ export default function AdminOrderDetail() {
   const shippingCharge = Number(order.pricing?.shippingCharge ?? 40);
   const grandTotal = Number(order.pricing?.grandTotal ?? order.totalAmount ?? (subtotal - couponDiscount + shippingCharge));
 
-  const paymentStatus = order.payment?.status || (currentStatus === "DELIVERED" ? "Success" : "Paid");
+  const advancedStatuses = ["CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"];
+  const paymentStatus = order.payment?.status || order.paymentStatus || (advancedStatuses.includes(currentStatus.toUpperCase()) ? "Success" : "Pending");
   const paymentGateway = order.payment?.gateway || order.paymentMode || order.paymentInfo?.method || "ONLINE";
   const paymentMethod = order.payment?.method || order.paymentMode || "Online Payment";
   const paymentId = order.payment?.paymentId || order.paymentId || order.id || "N/A";

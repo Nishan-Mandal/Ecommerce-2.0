@@ -1,138 +1,137 @@
 import React from 'react';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaChevronDown, FaSyncAlt, FaSpinner } from 'react-icons/fa';
 
 /**
- * Reusable Pagination Component
- * Supports page selection, page size dropdown, total items counter, and prev/next controls.
+ * Universal Reusable Pagination Component
+ * Follows the exact unified UI style of Products, Orders, and Users throughout the entire application.
  */
 function Pagination({
-    currentPage = 1,
-    totalItems = 0,
-    pageSize = 10,
+    // Standard Offset Props
+    currentPage,
+    totalItems,
     onPageChange,
+
+    // Cursor-Based Props
+    pageIndex,
+    hasMore,
+    isFetching = false,
+    onPrev,
+    onNext,
+    onRefresh,
+
+    // Common Props
+    pageSize = 10,
     onPageSizeChange,
-    pageSizeOptions = [10, 20, 50, 100],
+    pageSizeOptions = [5, 10, 20, 50],
     className = "",
 }) {
-    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-    const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-    const endItem = Math.min(totalItems, currentPage * pageSize);
+    const isCursorMode = typeof pageIndex === 'number' || (onPrev && onNext);
 
-    if (totalItems === 0) return null;
+    // If offset mode and no items exist, don't render
+    if (!isCursorMode && (totalItems === undefined || totalItems === 0)) {
+        return null;
+    }
+
+    const activePage = isCursorMode ? (pageIndex || 0) + 1 : (currentPage || 1);
+    const totalCount = totalItems || 0;
+    const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / pageSize);
 
     const handlePrev = () => {
-        if (currentPage > 1 && onPageChange) {
-            onPageChange(currentPage - 1);
+        if (isCursorMode) {
+            if (onPrev && pageIndex > 0 && !isFetching) onPrev();
+        } else {
+            if (activePage > 1 && onPageChange) onPageChange(activePage - 1);
         }
     };
 
     const handleNext = () => {
-        if (currentPage < totalPages && onPageChange) {
-            onPageChange(currentPage + 1);
+        if (isCursorMode) {
+            if (onNext && hasMore && !isFetching) onNext();
+        } else {
+            if (activePage < totalPages && onPageChange) onPageChange(activePage + 1);
         }
     };
 
-    // Calculate page range buttons to display
-    const getPageNumbers = () => {
-        const pages = [];
-        const delta = 1; // Number of pages before and after current page
-        const range = [];
+    const isPrevDisabled = isCursorMode
+        ? (pageIndex === 0 || isFetching)
+        : (activePage <= 1);
 
-        for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
-            range.push(i);
-        }
-
-        if (currentPage - delta > 2) {
-            range.unshift('...');
-        }
-        if (currentPage + delta < totalPages - 1) {
-            range.push('...');
-        }
-
-        range.unshift(1);
-        if (totalPages > 1) {
-            range.push(totalPages);
-        }
-
-        return range;
-    };
+    const isNextDisabled = isCursorMode
+        ? (!hasMore || isFetching)
+        : (totalPages === 0 || activePage >= totalPages);
 
     return (
-        <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-3 px-2 text-xs text-text-muted ${className}`}>
-            {/* Info & Page Size */}
-            <div className="flex items-center gap-3">
-                <span>
-                    Showing <strong className="font-extrabold text-text-base">{startItem}</strong> to{" "}
-                    <strong className="font-extrabold text-text-base">{endItem}</strong> of{" "}
-                    <strong className="font-extrabold text-text-base">{totalItems}</strong> entries
-                </span>
+        <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 py-3 px-1 text-xs text-text-muted select-none ${className}`}>
+            
+            {/* Left: Page Indicator & Page Size Selector */}
+            <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-1.5 font-medium text-xs text-text-muted">
+                    <span>Showing Page</span>
+                    <span className="font-extrabold text-text-base px-2.5 py-0.5 rounded-lg bg-bg-surface border border-border-base font-mono">
+                        {activePage}
+                    </span>
+                    {isFetching && <FaSpinner className="animate-spin text-primary ml-1" size={12} />}
+                </div>
 
                 {onPageSizeChange && (
-                    <div className="flex items-center gap-1.5 ml-2">
-                        <span className="text-[11px]">Show:</span>
-                        <select
-                            value={pageSize}
-                            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                            className="px-2 py-1 bg-bg-surface border border-border-base rounded-lg text-xs font-bold text-text-base focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                        >
-                            {pageSizeOptions.map((opt) => (
-                                <option key={opt} value={opt}>
-                                    {opt}
-                                </option>
-                            ))}
-                        </select>
+                    <div className="flex items-center gap-2 pl-2 border-l border-border-base/60">
+                        <span className="text-[11px] font-semibold text-text-muted">Show:</span>
+                        <div className="relative">
+                            <select
+                                value={pageSize}
+                                onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                                className="appearance-none h-8 pl-2.5 pr-6 bg-bg-surface border border-border-base hover:border-primary/40 rounded-xl text-xs font-extrabold text-text-base focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer shadow-2xs"
+                            >
+                                {pageSizeOptions.map((opt) => (
+                                    <option key={opt} value={opt} className="bg-bg-surface text-text-base font-semibold py-1">
+                                        {opt}
+                                    </option>
+                                ))}
+                            </select>
+                            <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-text-muted pointer-events-none" />
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* Pagination Controls */}
-            <div className="flex items-center gap-1">
-                {/* Prev Button */}
+            {/* Right: Refresh, Previous, and Next Buttons */}
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+                {/* Refresh Button */}
+                {onRefresh && (
+                    <button
+                        type="button"
+                        onClick={onRefresh}
+                        disabled={isFetching}
+                        className="h-8 px-3 rounded-xl border border-border-base bg-bg-surface text-text-base hover:bg-bg-base hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-semibold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95"
+                        title="Refresh Page"
+                    >
+                        <FaSyncAlt size={10} className={isFetching ? "animate-spin" : ""} />
+                        <span>Refresh</span>
+                    </button>
+                )}
+
+                {/* Previous Button */}
                 <button
                     type="button"
                     onClick={handlePrev}
-                    disabled={currentPage === 1}
-                    className="p-2 rounded-lg border border-border-base bg-bg-surface text-text-base hover:bg-bg-base disabled:opacity-40 disabled:cursor-not-allowed transition"
+                    disabled={isPrevDisabled}
+                    className="h-8 px-3 rounded-xl border border-border-base bg-bg-surface text-text-base hover:bg-bg-base hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95"
                     title="Previous Page"
                 >
-                    <FaChevronLeft size={10} />
+                    <FaChevronLeft size={9} />
+                    <span>Previous</span>
                 </button>
-
-                {/* Page Number Buttons */}
-                {getPageNumbers().map((page, idx) => {
-                    if (page === '...') {
-                        return (
-                            <span key={`dots-${idx}`} className="px-2 text-text-muted select-none">
-                                ...
-                            </span>
-                        );
-                    }
-                    const isCurrent = page === currentPage;
-                    return (
-                        <button
-                            key={page}
-                            type="button"
-                            onClick={() => onPageChange && onPageChange(page)}
-                            className={`min-w-[32px] h-8 px-2.5 rounded-lg text-xs font-extrabold transition ${
-                                isCurrent
-                                    ? "bg-primary text-white shadow-xs"
-                                    : "bg-bg-surface border border-border-base text-text-base hover:bg-bg-base"
-                            }`}
-                        >
-                            {page}
-                        </button>
-                    );
-                })}
 
                 {/* Next Button */}
                 <button
                     type="button"
                     onClick={handleNext}
-                    disabled={currentPage === totalPages}
-                    className="p-2 rounded-lg border border-border-base bg-bg-surface text-text-base hover:bg-bg-base disabled:opacity-40 disabled:cursor-not-allowed transition"
+                    disabled={isNextDisabled}
+                    className="h-8 px-3 rounded-xl border border-border-base bg-bg-surface text-text-base hover:bg-bg-base hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-bold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95"
                     title="Next Page"
                 >
-                    <FaChevronRight size={10} />
+                    <span>Next</span>
+                    <FaChevronRight size={9} />
                 </button>
             </div>
         </div>

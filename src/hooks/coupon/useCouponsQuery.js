@@ -14,6 +14,7 @@ export function useCouponsQuery() {
     queryKey: queryKeys.coupons.all,
     queryFn: () => couponService.getCoupons(),
     staleTime: 5 * 60 * 1000, // 5 minutes stale time for coupons
+    gcTime: 15 * 60 * 1000,   // 15 minutes cache retention
   });
 
   const invalidate = useCallback(() => {
