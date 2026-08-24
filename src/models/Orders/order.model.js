@@ -1,40 +1,29 @@
 /**
- * Order Model Schema
- * Created inside Webhook transaction upon successful payment confirmation.
+ * Order Data Model Schema
+ * Represents customer orders in the `orders` collection.
  */
-const order = {
+export const orderModel = {
   // Identity
   orderId: "",
   userId: "",
+  userEmail: "",
+  email: "",
 
-  // Products Purchased (Immutable Snapshot)
+  // Purchased Products Snapshot (Immutable)
   products: [
     {
       productId: "",
-      variantId: "",
-
-      // Product Snapshot
+      variantId: null,
       productName: "",
       productSlug: "",
       productImage: "",
-
-      // Variant Snapshot
       variantName: "",
       sku: "",
-
-      // Selected Options
-      options: {
-        color: "",
-        size: "",
-        material: "",
-      },
-
+      options: {},
+      selectedVariant: {},
       quantity: 1,
-
-      // Pricing Snapshot
+      price: 0,
       originalPrice: 0,
-      sellingPrice: 0,
-      discount: 0,
       totalPrice: 0,
     },
   ],
@@ -51,7 +40,7 @@ const order = {
     state: "",
     pincode: "",
     landmark: "",
-    type: "HOME",
+    type: "HOME", // HOME | WORK | OTHER
   },
 
   // Pricing Breakdown Summary
@@ -62,31 +51,39 @@ const order = {
     shippingCharge: 0,
     grandTotal: 0,
   },
+  totalAmount: 0,
 
-  // Immutable Coupon Snapshot
+  // Applied Coupon Snapshot
   coupon: {
     couponId: null,
     code: null,
     discount: 0,
+    amountSaved: 0,
   },
 
-  // Payment Reference
+  // Payment Details
   payment: {
     paymentId: "",
-    gateway: "RAZORPAY",
+    gateway: "RAZORPAY", // RAZORPAY | COD
     gatewayPaymentId: "",
-    method: "UPI",
-    status: "SUCCESS",
+    gatewayOrderId: "",
+    method: "UPI", // UPI | CARD | NETBANKING | COD
+    status: "PENDING", // PENDING | SUCCESS | FAILED | REFUNDED
   },
+  paymentMode: "Online Payment",
+  paymentStatus: "PENDING",
+  paymentId: null,
 
-  // Order Status & Historical Audit Trail
+  // Order Lifecycle Status
   orderStatus: "PLACED",
-  // PLACED | CONFIRMED | PACKED | SHIPPED | OUT_FOR_DELIVERY | DELIVERED | CANCELLED | RETURN_REQUESTED | RETURNED | REFUNDED
+  // Status flow: PAYMENT_PENDING | PLACED | CONFIRMED | PROCESSING | PACKED | SHIPPED | OUT_FOR_DELIVERY | DELIVERED | CANCELLED | REFUNDED
+  status: "Order Placed",
   statusHistory: [
     {
       status: "PLACED",
-      updatedBy: "SYSTEM_WEBHOOK",
+      updatedBy: "CLIENT",
       timestamp: null,
+      note: "",
     },
   ],
 
@@ -95,17 +92,28 @@ const order = {
     courier: "",
     trackingId: "",
     trackingUrl: "",
+    updatedAt: null,
   },
 
-  // Customer & Admin Notes
+  // Invoice Details
+  invoice: {
+    uploaded: false,
+    storagePath: null,
+    url: null,
+    invoiceNumber: null,
+  },
+  invoiceUrl: null,
+
+  // Notes & Cancellation
   customerNote: "",
   adminNote: "",
+  cancelReason: null,
+  cancelledAt: null,
+  deliveredAt: null,
 
   // Timestamps
   createdAt: null,
   updatedAt: null,
-  deliveredAt: null,
-  cancelledAt: null,
 };
 
-export default order;
+export default orderModel;

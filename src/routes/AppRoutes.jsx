@@ -3,7 +3,6 @@ import { Route, Routes, Outlet, useNavigate, Navigate } from "react-router-dom";
 import Home from "../pages/home/Home";
 import NoPage from "../pages/nopage/NoPage";
 import Cart from "../pages/cart/Cart";
-import Blog from "../pages/blog/Blog";
 import Dashboard from "../admin/dashboard/Dashboard";
 import ProductDetails from "../pages/ProductDetails/ProductDetails";
 import { useAuth } from "../context/AuthContext";
@@ -80,7 +79,6 @@ export default function AppRoutes() {
         <Route path="/shippingpolicy" element={<ShippingPolicy />} />
         <Route path="/refundpolicy" element={<RefundPolicy />} />
         <Route path="/legal/:slug" element={<CustomLegalPage />} />
-        <Route path="/blog" element={<Blog />} />
         {/* User Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/checkout" element={<CheckoutPage />} />

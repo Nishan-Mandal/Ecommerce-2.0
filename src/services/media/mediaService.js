@@ -1,8 +1,6 @@
 import { fireDB } from '../../firebase/FirebaseConfig.js';
 import { 
   collection, 
-  doc, 
-  setDoc, 
   getDocs, 
   query 
 } from 'firebase/firestore';
@@ -10,6 +8,7 @@ import {
 // ─── In-memory cache ────────────────────────────────────────────────────────
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 let _cache = null;        // { data: [], timestamp: number } | null
+let _uploadedSessionImages = []; // In-memory session images uploaded directly via modal
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const mediaService = {
@@ -19,62 +18,42 @@ export const mediaService = {
   },
 
   /**
-   * Saves an uploaded image URL to the global media collection.
-   * Also invalidates the cache so the library reflects the new image immediately.
+   * Registers newly uploaded image in memory for current session without writing extra Firestore documents.
    */
   async saveMedia(url, name = "Uploaded Image") {
     if (!url) return;
-    try {
-      // Create a deterministic doc ID from URL hash or timestamp
-      const docId = btoa(url).replace(/=/g, '').substring(0, 32);
-      const mediaRef = doc(fireDB, "media", docId);
-      await setDoc(mediaRef, {
+    if (!_uploadedSessionImages.some(item => item.url === url)) {
+      _uploadedSessionImages.push({
+        id: `upload_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         url,
         name,
+        source: "Recent Upload",
         createdAt: new Date().toISOString()
-      }, { merge: true });
-      this.invalidateCache(); // bust cache so new image shows up
-    } catch (err) {
-      console.error("Error saving media to library:", err);
+      });
     }
+    this.invalidateCache();
   },
 
   /**
-   * Fetches all uploaded media from Firestore 'media' collection and existing products
-   */
-  /**
-   * Fetches all media. Results are cached for CACHE_TTL_MS (5 min).
-   * Pass force=true to skip cache and always hit Firestore.
+   * Fetches all product and variant media dynamically from products catalog.
+   * Results are cached for CACHE_TTL_MS (5 min).
    */
   async getMediaLibrary(force = false) {
-    // Return cached data if still fresh
     if (!force && _cache && (Date.now() - _cache.timestamp < CACHE_TTL_MS)) {
       return _cache.data;
     }
     const mediaSet = new Set();
     const mediaList = [];
 
-    // 1. Fetch from media collection
-    try {
-      const snap = await getDocs(query(collection(fireDB, "media")));
-      snap.forEach(docSnap => {
-        const data = docSnap.data();
-        if (data.url && !mediaSet.has(data.url)) {
-          mediaSet.add(data.url);
-          mediaList.push({
-            id: docSnap.id,
-            url: data.url,
-            name: data.name || "Product Media",
-            source: "Media Library",
-            createdAt: data.createdAt || null
-          });
-        }
-      });
-    } catch (err) {
-      console.warn("Could not fetch media collection:", err);
-    }
+    // 1. Include any session-uploaded images first
+    _uploadedSessionImages.forEach(item => {
+      if (item.url && !mediaSet.has(item.url)) {
+        mediaSet.add(item.url);
+        mediaList.push(item);
+      }
+    });
 
-    // 2. Fetch from existing products catalog to ensure all product images are selectable
+    // 2. Fetch from existing products catalog
     try {
       const prodSnap = await getDocs(query(collection(fireDB, "products")));
       prodSnap.forEach(docSnap => {
