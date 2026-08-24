@@ -19,7 +19,7 @@ export default function ProductDetails() {
     averageRating,
     reviewCount,
     refetchRatings,
-    isFetching,
+    isLoading,
     error,
     addProductToCart,
   } = useProductDetails();
@@ -43,7 +43,7 @@ export default function ProductDetails() {
     }
   }, [selectedVariant, product, setSelectedImage]);
 
-  if (isFetching) return <LoadingSkeleton />;
+  if (isLoading || !product) return <LoadingSkeleton />;
   if (error) return <ErrorState message={error} />;
   if (!product) return null;
 

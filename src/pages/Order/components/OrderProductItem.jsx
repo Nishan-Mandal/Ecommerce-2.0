@@ -82,7 +82,7 @@ function OrderProductItem({ item, orderStatus }) {
         </div>
       </div>
 
-      {/* Item Price & Action Link */}
+      {/* Item Price */}
       <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-border-base/40 shrink-0">
         <div className="text-right">
           <span className="text-[10px] text-text-muted block font-semibold">Total Item Price</span>
@@ -90,16 +90,6 @@ function OrderProductItem({ item, orderStatus }) {
             ₹{itemTotal.toLocaleString("en-IN")}
           </span>
         </div>
-
-        {productId && (
-          <Link
-            to={`/productdetails/${productId}`}
-            className="px-3 py-1.5 rounded-lg bg-bg-surface border border-border-base text-text-base hover:bg-primary hover:text-white hover:border-primary text-xs font-bold transition-all flex items-center gap-1 shrink-0 shadow-2xs"
-          >
-            <span>View Product</span>
-            <FaChevronRight size={10} />
-          </Link>
-        )}
       </div>
     </div>
   );

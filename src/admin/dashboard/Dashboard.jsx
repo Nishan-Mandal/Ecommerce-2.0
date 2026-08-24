@@ -162,8 +162,9 @@ function Dashboard() {
                         />
                     ))}
                 </div>
-                {/* Recharts Analytics Charts */}
-                <DashboardAnalytics orders={orders} products={products} />
+
+                {/* Recharts Analytics Charts (Disabled/Removed per requirement) */}
+                {/* <DashboardAnalytics orders={orders} products={products} /> */}
 
                 {/* 2-Column Grid: Recent Orders & Audit Activity Feed */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">

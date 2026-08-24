@@ -7,20 +7,21 @@ import { queryKeys } from '../../utils/queryKeys';
  * Custom Hook for Admin Paginated Users
  * Uses TanStack Query + Firestore startAfter() cursor pagination for zero unnecessary reads.
  */
-export function useUsersQuery({ pageSize = 10 } = {}) {
+export function useUsersQuery({ roleFilter = 'ALL', pageSize = 10 } = {}) {
   const queryClient = useQueryClient();
   const [cursorStack, setCursorStack] = useState([null]);
   const [pageIndex, setPageIndex] = useState(0);
 
-  // Reset pagination state whenever page size changes
+  // Reset pagination state whenever filter or page size changes
   useEffect(() => {
     setCursorStack([null]);
     setPageIndex(0);
-  }, [pageSize]);
+  }, [roleFilter, pageSize]);
 
   const currentCursor = cursorStack[pageIndex];
 
   const queryFilters = {
+    roleFilter,
     pageSize,
     pageIndex,
     cursorId: currentCursor?.id || null,
@@ -31,6 +32,7 @@ export function useUsersQuery({ pageSize = 10 } = {}) {
     queryFn: () => userService.getPaginatedUsers({
       pageSize,
       lastDoc: currentCursor,
+      roleFilter,
     }),
     placeholderData: keepPreviousData,
     staleTime: 3 * 60 * 1000, // 3 minutes stale time for user profiles

@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { addToCart } from '../../../redux/cartSlice';
 import { useFilter } from '../../../context/FilterContext';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../utils/queryKeys';
 import ProductCard from '../../../components/Common/ProductCard';
 import ProductCardSkeleton from '../../../components/loader/SkeletonLoader/ProductCardSkeleton';
 import useProductsQuery from '../../../hooks/product/useProductsQuery';
@@ -15,8 +17,14 @@ function ProductsGrid() {
     const dispatch = useDispatch();
     const cartItems = useSelector((state) => state.cart);
 
-    const [collections, setCollections] = useState([]);
-    const [collectionsLoading, setCollectionsLoading] = useState(true);
+    // Fetch and cache active collections via TanStack Query
+    const { data: rawCollections = [], isLoading: collectionsLoading } = useQuery({
+        queryKey: queryKeys.configure.collections,
+        queryFn: () => configureService.getCollections(),
+        staleTime: 10 * 60 * 1000, // 10 minutes cache
+    });
+
+    const collections = rawCollections.filter((c) => c.isActive !== false);
 
     const handleCopyProducts = () => {
         if (!products || products.length === 0) {
@@ -52,16 +60,6 @@ function ProductsGrid() {
     useEffect(() => {
         setFilterType('');
         setFilterPrice('');
-    }, []);
-
-    useEffect(() => {
-        configureService.getCollections()
-            .then((cols) => {
-                const active = cols.filter((c) => c.isActive !== false);
-                setCollections(active);
-            })
-            .catch(() => setCollections([]))
-            .finally(() => setCollectionsLoading(false));
     }, []);
 
     const addCart = (product) => {

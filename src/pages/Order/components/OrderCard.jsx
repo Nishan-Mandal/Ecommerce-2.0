@@ -1,10 +1,12 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import OrderProductItem from "./OrderProductItem";
 import { FaCopy, FaCheck, FaInfoCircle, FaCalendarAlt, FaCreditCard, FaTruck, FaClock, FaTimesCircle, FaCheckCircle, FaPalette } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { InvoiceDownloadButton } from "../../../invoice/index";
 
 function OrderCard({ order, onViewDetails }) {
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
 
   const orderId = order.orderId || order.docId || order.id || "N/A";
@@ -205,10 +207,13 @@ function OrderCard({ order, onViewDetails }) {
 
           <button
             type="button"
-            onClick={() => onViewDetails && onViewDetails(order)}
-            className="px-3.5 py-1.5 rounded-xl bg-bg-surface border border-border-base hover:bg-bg-base text-text-base font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/order/${orderId}`, { state: { order } });
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer text-xs"
           >
-            <FaInfoCircle size={12} className="text-primary" />
+            <FaInfoCircle size={12} />
             <span>Order Details</span>
           </button>
         </div>

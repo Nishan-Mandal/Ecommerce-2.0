@@ -325,11 +325,26 @@ export default function LegalTab({ draft, updateDraft }) {
                       </div>
                     </div>
                   ) : (
-                    <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-border-base hover:border-primary/50 bg-white rounded-xl cursor-pointer text-text-muted hover:text-primary transition">
-                      <FaFileUpload size={14} />
-                      <span className="font-semibold text-[11px]">{isUploading ? "Uploading..." : "Upload Document (PDF)"}</span>
-                      <input type="file" accept="application/pdf" className="hidden" onChange={(e) => uploadCustomPdf(page.id, e.target.files[0])} disabled={isUploading} />
-                    </label>
+                    <div className="space-y-2">
+                      <label className="flex items-center justify-center gap-2 p-2.5 border-2 border-dashed border-border-base hover:border-primary/50 bg-white rounded-xl cursor-pointer text-text-muted hover:text-primary transition">
+                        <FaFileUpload size={13} />
+                        <span className="font-semibold text-[11px]">{isUploading ? "Uploading..." : "Upload Document (PDF)"}</span>
+                        <input type="file" accept="application/pdf" className="hidden" onChange={(e) => uploadCustomPdf(page.id, e.target.files[0])} disabled={isUploading} />
+                      </label>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-text-muted uppercase mb-1">
+                          Or Write Policy Text (Markdown / Formatted Text)
+                        </label>
+                        <textarea
+                          value={page.content || ""}
+                          onChange={(e) => updateCustomPage(page.id, "content", e.target.value)}
+                          placeholder={`# ${page.name || "Policy"}\n\nEnter policy details, terms, conditions, or information here...`}
+                          rows={3}
+                          className="w-full px-3 py-2 rounded-xl border border-border-base bg-white text-xs font-mono focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
                   )}
 
                   {/* Footer actions */}

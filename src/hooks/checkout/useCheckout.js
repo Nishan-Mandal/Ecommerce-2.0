@@ -267,19 +267,30 @@ export function useCheckout() {
     setStage("submitting");
     setErrorMessage("");
     try {
-      const itemsPayload = cart.map((item) => ({
-        productId: item.id || item.productId || "custom_item",
-        variantId: item.selectedVariant
-          ? item.selectedVariant.variantId || item.selectedVariant.sku || item.selectedVariant.id || null
-          : null,
-        quantity: item.quantity,
-        title: item.title || item.productName || "Product Item",
-        price: item.price,
-        originalPrice: item.originalPrice || item.price,
-        imageUrl: item.imageUrl || item.image || item.productImage || (Array.isArray(item.images) ? item.images[0] : null) || "",
-        image: item.imageUrl || item.image || item.productImage || (Array.isArray(item.images) ? item.images[0] : null) || "",
-        productImage: item.imageUrl || item.image || item.productImage || (Array.isArray(item.images) ? item.images[0] : null) || "",
-      }));
+      const itemsPayload = cart.map((item) => {
+        const vId = item.variantId ||
+          item.selectedVariantObj?.variantId ||
+          item.selectedVariantObj?.id ||
+          item.selectedVariantObj?.sku ||
+          (item.selectedVariant ? (item.selectedVariant.variantId || item.selectedVariant.sku || item.selectedVariant.id || null) : null) ||
+          null;
+
+        const vOptions = item.selectedVariant || item.selectedVariantObj?.attributes || null;
+
+        return {
+          productId: item.id || item.productId || "custom_item",
+          variantId: vId,
+          options: vOptions,
+          selectedVariant: vOptions,
+          quantity: item.quantity,
+          title: item.title || item.productName || "Product Item",
+          price: item.price,
+          originalPrice: item.originalPrice || item.price,
+          imageUrl: item.imageUrl || item.image || item.productImage || (Array.isArray(item.images) ? item.images[0] : null) || "",
+          image: item.imageUrl || item.image || item.productImage || (Array.isArray(item.images) ? item.images[0] : null) || "",
+          productImage: item.imageUrl || item.image || item.productImage || (Array.isArray(item.images) ? item.images[0] : null) || "",
+        };
+      });
 
       const userEmail = user?.user?.email || user?.email || user?.userProfile?.email || selectedAddress?.email || "";
 

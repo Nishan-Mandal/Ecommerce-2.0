@@ -414,12 +414,36 @@ export const productService = {
   },
 
   /**
+   * Fetches existing rating submitted by a specific user for a product.
+   */
+  async getUserProductRating(productId, userId) {
+    if (!productId || !userId) return null;
+    try {
+      const { query, where, getDocs } = await import('firebase/firestore');
+      const q = query(
+        collection(fireDB, 'ratings'),
+        where('productId', '==', productId),
+        where('userId', '==', userId)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const d = snap.docs[0];
+        return { id: d.id, ...d.data() };
+      }
+      return null;
+    } catch (err) {
+      console.warn('Could not fetch user rating:', err);
+      return null;
+    }
+  },
+
+  /**
    * Submits a user review for a product.
    * Schema matches ratings.model.js:
    *   { productId, userId, userName, rating, review, createdAt, updatedAt }
    */
   async submitRating({ productId, userId, userName, rating, review }) {
-    const { addDoc, serverTimestamp } = await import('firebase/firestore');
+    const { addDoc, serverTimestamp, query, where, getDocs, doc: fireDoc, updateDoc } = await import('firebase/firestore');
     const ratingRef = collection(fireDB, 'ratings');
     const now = serverTimestamp();
     const docRef = await addDoc(ratingRef, {
@@ -431,6 +455,27 @@ export const productService = {
       createdAt: now,
       updatedAt: now,
     });
+
+    // Recompute and persist averageRating and ratingsCount on product document
+    try {
+      const q = query(collection(fireDB, 'ratings'), where('productId', '==', productId));
+      const snap = await getDocs(q);
+      const allRatings = [];
+      snap.forEach((d) => {
+        const val = Number(d.data()?.rating || d.data()?.stars || 0);
+        if (val > 0) allRatings.push(val);
+      });
+      if (allRatings.length > 0) {
+        const avg = Number((allRatings.reduce((a, b) => a + b, 0) / allRatings.length).toFixed(1));
+        await updateDoc(fireDoc(fireDB, 'products', productId), {
+          averageRating: avg,
+          ratingsCount: allRatings.length,
+        });
+      }
+    } catch (err) {
+      console.warn('Could not update product averageRating in Firestore:', err);
+    }
+
     return {
       id: docRef.id,
       productId,

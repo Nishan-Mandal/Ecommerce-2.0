@@ -1,22 +1,12 @@
-import { useState, useEffect } from 'react';
-import { productService } from '../../services/product/productService.js';
+import useProductsQuery from './useProductsQuery';
 
+/**
+ * useProducts Hook
+ * Reusable product hook connected to TanStack Query cache (50 products).
+ * Prevents un-cached onSnapshot listeners and shares cache with Home and All Products.
+ */
 export default function useProducts() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    setLoading(true);
-    const unsubscribe = productService.getProducts((data) => {
-      setProducts(data);
-      setLoading(false);
-    });
-
-    return () => {
-      if (typeof unsubscribe === 'function') unsubscribe();
-    };
-  }, []);
-
-  return { products, loading, error };
+  const { products, isLoading, error } = useProductsQuery({ pageSize: 50 });
+  return { products, loading: isLoading, error };
 }
+

@@ -10,7 +10,11 @@ export const queryKeys = {
     infinite: (filters) => ['products', 'infinite', filters],
     detail: (id) => ['products', 'detail', id],
     ratings: (productId) => ['products', 'ratings', productId],
+    related: (category) => ['products', 'related', category],
     counts: ['products', 'counts'],
+  },
+  categories: {
+    all: ['categories', 'all'],
   },
   orders: {
     all: ['orders'],

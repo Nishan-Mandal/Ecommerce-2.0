@@ -2,10 +2,12 @@ import React from "react";
 import { useParams } from "react-router-dom";
 import { useSiteConfig } from "../../context/SiteConfigContext";
 import { FormattedLegalContent } from "../../components/Common/LegalPage";
+import LegalPdfViewer from "../../components/Common/LegalPdfViewer";
 
 /**
  * CustomLegalPage
  * Dynamic page renderer for custom legal pages configured in the Admin Panel.
+ * Supports both uploaded PDF documents via LegalPdfViewer and formatted text documents.
  * Route: /legal/:slug
  */
 export default function CustomLegalPage() {
@@ -21,8 +23,9 @@ export default function CustomLegalPage() {
   }
 
   const customPages = Array.isArray(config?.legal?.customPages) ? config.legal.customPages : [];
+  const normalizedSlug = (slug || "").toLowerCase().trim();
   const currentPage = customPages.find(
-    (p) => p.slug === slug || p.slug === slug?.toLowerCase()
+    (p) => (p.slug || "").toLowerCase().trim() === normalizedSlug
   );
 
   if (!currentPage) {
@@ -41,6 +44,13 @@ export default function CustomLegalPage() {
         <p className="text-sm">This policy page is currently inactive.</p>
       </div>
     );
+  }
+
+  const docUrl = currentPage.docUrl || currentPage.pdfUrl || "";
+
+  // If a PDF document was uploaded for this custom page, render the PDF viewer
+  if (docUrl) {
+    return <LegalPdfViewer pdfUrl={docUrl} title={currentPage.name} />;
   }
 
   return (

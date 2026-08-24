@@ -7,6 +7,7 @@ import CommonProductCard from '../../../components/Common/ProductCard';
 import { useDispatch } from 'react-redux';
 import { addToCart } from '../../../redux/cartSlice';
 import { toast } from 'react-toastify';
+import { queryKeys } from '../../../utils/queryKeys';
 
 /**
  * RelatedProducts Component
@@ -24,7 +25,7 @@ export default function RelatedProducts({ category, currentProductId }) {
   };
 
   const { data: relatedProducts = [], isLoading: loading } = useQuery({
-    queryKey: ['products', 'related', category],
+    queryKey: queryKeys.products.related(category),
     queryFn: async () => {
       if (!category) return [];
       const q = query(

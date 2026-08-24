@@ -9,6 +9,7 @@ import { productService } from '../../services/product/productService'
 import { useDispatch, useSelector } from 'react-redux'
 import { addToCart } from '../../redux/cartSlice'
 import { toast } from 'react-toastify'
+import { queryKeys } from '../../utils/queryKeys';
 import AllProductsBanner from './sections/AllProductsBanner';
 import AllProductsSidebar from './sections/AllProductsSidebar';
 import AllProductsGrid from './sections/AllProductsGrid';
@@ -26,7 +27,7 @@ function Allproducts() {
 
     // Fetch and cache distinct store categories via TanStack Query
     const { data: storeCategories = [] } = useQuery({
-        queryKey: ['categories', 'all'],
+        queryKey: queryKeys.categories.all,
         queryFn: () => productService.getCategories(),
         staleTime: 10 * 60 * 1000,
     });
