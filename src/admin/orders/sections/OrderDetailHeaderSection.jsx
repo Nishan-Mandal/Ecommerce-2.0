@@ -8,6 +8,7 @@ export default function OrderDetailHeaderSection({
   updatedAt,
   currentStatus,
   paymentStatus,
+  isCod,
   statusBadgeStyles,
   paymentBadgeStyles,
   formatDate,
@@ -26,7 +27,7 @@ export default function OrderDetailHeaderSection({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 ">
       {/* Top Nav Action Row */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <button
@@ -39,10 +40,10 @@ export default function OrderDetailHeaderSection({
         <div className="flex items-center gap-2">
           <button
             onClick={onRefresh}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border-base bg-bg-surface text-xs font-bold text-text-muted hover:text-primary hover:border-primary/40 transition active:scale-95 cursor-pointer shadow-2xs"
+            className="flex items-center gap-1.5 px-2 py-2 rounded-full border border-border-base bg-bg-surface text-xs font-bold text-text-muted hover:text-primary hover:border-primary/40 transition active:scale-95 cursor-pointer shadow-2xs"
           >
             <FaSyncAlt size={11} className={loading ? "animate-spin" : ""} />
-            <span>Refresh</span>
+
           </button>
 
           <button
@@ -56,7 +57,7 @@ export default function OrderDetailHeaderSection({
       </div>
 
       {/* Main Order Info Banner */}
-      <div className="bg-bg-surface p-5 rounded-2xl border border-border-base shadow-xs">
+      <div className="px-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5 flex-wrap">
@@ -86,7 +87,9 @@ export default function OrderDetailHeaderSection({
 
             <StatusBadge
               status={
-                String(paymentStatus).toUpperCase().includes("SUCCESS") || String(paymentStatus).toUpperCase().includes("PAID")
+                isCod
+                  ? (String(paymentStatus).toUpperCase().includes("PAID") ? "DELIVERED" : "COD")
+                  : String(paymentStatus).toUpperCase().includes("SUCCESS") || String(paymentStatus).toUpperCase().includes("PAID")
                   ? "DELIVERED"
                   : String(paymentStatus).toUpperCase().includes("FAIL")
                   ? "CANCELLED"

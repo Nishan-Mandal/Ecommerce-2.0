@@ -44,6 +44,15 @@ export const DEFAULT_CONFIG = {
     collectionsCount: 0,
     legal: { termsAndConditions: "", privacyPolicy: "", returnPolicy: "", aboutUs: "" },
     seo: { metaTitle: "", metaDescription: "", ogImageUrl: "", keywords: [] },
+    /**
+     * paymentMethods – controls which payment options appear at checkout.
+     * enableOnline: shows Razorpay / UPI / card gateway
+     * enableCod:    shows Cash on Delivery option
+     */
+    paymentMethods: {
+        enableOnline: true,
+        enableCod: true,
+    },
     updatedAt: null,
     updatedBy: "",
 };

@@ -11,12 +11,10 @@ const AdminRoute = () => {
 
   try {
     const admin = JSON.parse(userString);
-    const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'kingshukdash123@gmail.com';
-    
-    const isEmailAdmin = admin?.user?.email?.toLowerCase() === adminEmail.toLowerCase();
-    const isRoleAdmin = admin?.user?.role === 'ADMIN' || admin?.user?.role === 'SUPERADMIN';
+    const role = admin?.user?.role;
+    const isRoleAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
 
-    if (isEmailAdmin || isRoleAdmin) {
+    if (isRoleAdmin) {
       return <Outlet />;
     }
   } catch (error) {

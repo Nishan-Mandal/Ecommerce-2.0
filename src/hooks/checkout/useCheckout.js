@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { doc, onSnapshot } from "firebase/firestore";
 import { fireDB } from "../../firebase/FirebaseConfig";
@@ -8,6 +9,7 @@ import { clearCart } from "../../redux/cartSlice.jsx";
 import { paymentService } from "../../services/payment/paymentService";
 import { userService } from "../../services/user/userService";
 import useAuth from "../auth/useAuth";
+import { useSiteConfig } from "../../context/SiteConfigContext";
 import { getFriendlyErrorMessage } from "../../utils/firebaseErrorHandler.js";
 
 /**
@@ -16,9 +18,15 @@ import { getFriendlyErrorMessage } from "../../utils/firebaseErrorHandler.js";
  */
 export function useCheckout() {
   const { user } = useAuth();
+  const { config } = useSiteConfig();
   const cart = useSelector((s) => s.cart);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Admin-configured payment methods
+  const enableOnline = config?.paymentMethods?.enableOnline !== false;
+  const enableCod = config?.paymentMethods?.enableCod !== false;
 
   // Address State
   const [addresses, setAddresses] = useState([]);
@@ -33,8 +41,20 @@ export function useCheckout() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
 
-  // Payment State
-  const [paymentMethod, setPaymentMethod] = useState("ONLINE");
+  // Payment State (defaults to whichever method is available)
+  const [paymentMethod, setPaymentMethod] = useState(() => {
+    if (!enableOnline && enableCod) return "COD";
+    return "ONLINE";
+  });
+
+  // Automatically adjust payment method if current selection becomes disabled by config
+  useEffect(() => {
+    if (!enableOnline && enableCod && paymentMethod !== "COD") {
+      setPaymentMethod("COD");
+    } else if (enableOnline && !enableCod && paymentMethod !== "ONLINE") {
+      setPaymentMethod("ONLINE");
+    }
+  }, [enableOnline, enableCod, paymentMethod]);
 
   // Checkout Flow State
   const [stage, setStage] = useState("idle");
@@ -43,6 +63,24 @@ export function useCheckout() {
 
   const unsubscribeRef = useRef(null);
   const hasHandledSuccessRef = useRef(false);
+
+  const [codHandlingFee, setCodHandlingFee] = useState(0);
+
+  useEffect(() => {
+    if (config?.codHandlingFee !== undefined && !isNaN(Number(config.codHandlingFee))) {
+      setCodHandlingFee(Math.max(0, Number(config.codHandlingFee)));
+    } else {
+      try {
+        const raw = localStorage.getItem("cached_site_config") || sessionStorage.getItem("cached_site_config");
+        if (raw) {
+          const cfg = JSON.parse(raw);
+          if (cfg.codHandlingFee !== undefined && !isNaN(Number(cfg.codHandlingFee))) {
+            setCodHandlingFee(Math.max(0, Number(cfg.codHandlingFee)));
+          }
+        }
+      } catch (_) {}
+    }
+  }, [config]);
 
   // Derived calculations (display only)
   const subtotal = cart.reduce((acc, item) => acc + Number(item.price || 0) * item.quantity, 0);
@@ -53,6 +91,7 @@ export function useCheckout() {
   const couponDiscount = appliedCoupon?.discountAmount || 0;
   const shippingCharge = 0;
   const estimatedTotal = Math.max(0, subtotal - couponDiscount + shippingCharge);
+  const finalTotal = paymentMethod === "COD" ? estimatedTotal + codHandlingFee : estimatedTotal;
   const selectedAddress = addresses.find((a) => a.addressId === selectedAddressId) || null;
 
   // Load Addresses
@@ -60,6 +99,7 @@ export function useCheckout() {
     const uid = user?.user?.uid || user?.uid;
     if (!uid) {
       setAddressLoading(false);
+      
       return;
     }
     setAddressLoading(true);
@@ -276,16 +316,18 @@ export function useCheckout() {
           null;
 
         const vOptions = item.selectedVariant || item.selectedVariantObj?.attributes || null;
+        const rawQty = item.quantity ?? 1;
+        const qtyNum = Math.max(1, parseInt(rawQty, 10) || 1);
 
         return {
           productId: item.id || item.productId || "custom_item",
           variantId: vId,
           options: vOptions,
           selectedVariant: vOptions,
-          quantity: item.quantity,
+          quantity: qtyNum,
           title: item.title || item.productName || "Product Item",
-          price: item.price,
-          originalPrice: item.originalPrice || item.price,
+          price: Number(item.price || 0),
+          originalPrice: Number(item.originalPrice || item.price || 0),
           imageUrl: item.imageUrl || item.image || item.productImage || (Array.isArray(item.images) ? item.images[0] : null) || "",
           image: item.imageUrl || item.image || item.productImage || (Array.isArray(item.images) ? item.images[0] : null) || "",
           productImage: item.imageUrl || item.image || item.productImage || (Array.isArray(item.images) ? item.images[0] : null) || "",
@@ -293,13 +335,21 @@ export function useCheckout() {
       });
 
       const userEmail = user?.user?.email || user?.email || user?.userProfile?.email || selectedAddress?.email || "";
+      const normalizedAddress = selectedAddress ? {
+        ...selectedAddress,
+        fullName: selectedAddress.fullName || selectedAddress.name || "",
+        phone: selectedAddress.phone || selectedAddress.phoneNumber || selectedAddress.mobile || "",
+        pincode: selectedAddress.pincode || selectedAddress.pinCode || selectedAddress.postalCode || "",
+      } : null;
 
       if (paymentMethod === "ONLINE") {
         const payOrder = await paymentService.createPaymentOrder({
           items: itemsPayload,
-          shippingAddress: selectedAddress,
+          shippingAddressId: selectedAddress?.addressId || selectedAddressId,
+          shippingAddress: normalizedAddress,
           couponCode: appliedCoupon?.code || "",
           userEmail: userEmail,
+          paymentMethod: "ONLINE",
         });
         setStage("payment_modal");
         const result = await paymentService.openRazorpayCheckout({
@@ -308,7 +358,7 @@ export function useCheckout() {
           amount: payOrder.amount,
           currency: payOrder.currency,
           keyId: payOrder.keyId,
-          userProfile: { name: selectedAddress.fullName, phone: selectedAddress.phone, email: userEmail },
+          userProfile: { name: normalizedAddress.fullName, phone: normalizedAddress.phone, email: userEmail },
 
           onSuccess: async (razorpayResponse) => {
             setStage("processing");
@@ -322,6 +372,7 @@ export function useCheckout() {
               });
               sessionStorage.removeItem('appliedCoupon');
               dispatch(clearCart());
+              await queryClient.invalidateQueries({ queryKey: ['orders'] });
               setStage("success");
               if (!hasHandledSuccessRef.current) {
                 hasHandledSuccessRef.current = true;
@@ -332,8 +383,9 @@ export function useCheckout() {
               console.error("Client verify error:", vErr);
               // Fallback to Firestore order status listener with 5s timeout
               listenForOrderPlaced(payOrder.orderId);
-              setTimeout(() => {
+              setTimeout(async () => {
                 dispatch(clearCart());
+                await queryClient.invalidateQueries({ queryKey: ['orders'] });
                 if (!hasHandledSuccessRef.current) {
                   hasHandledSuccessRef.current = true;
                   toast.info("Payment completed. Redirecting to your orders...");
@@ -350,29 +402,20 @@ export function useCheckout() {
           },
         });
         if (!result.success && result.cancelled) setStage("ready");
-      } else {
-        const { orderService } = await import("../../services/order/orderService");
-        const { Timestamp } = await import("firebase/firestore");
-        await orderService.createOrder({
-          items: cart,
-          addressInfo: {
-            name: selectedAddress.fullName,
-            address: [selectedAddress.houseNo, selectedAddress.street].filter(Boolean).join(", "),
-            pincode: selectedAddress.pincode,
-            phoneNumber: selectedAddress.phone,
-          },
-          date: Timestamp.now(),
-          edDate: new Date(new Date().setDate(new Date().getDate() + 7)),
-          email: user?.user?.email,
-          userid: user?.user?.uid,
-          status: "Order Placed",
-          totalAmount: estimatedTotal + 40,
-          paymentMode: "Cash On Delivery",
-          isCustom: false,
-          paymentId: null,
+      } else if (paymentMethod === "COD") {
+        const codRes = await paymentService.createCodOrder({
+          items: itemsPayload,
+          shippingAddressId: selectedAddress?.addressId || selectedAddressId,
+          shippingAddress: normalizedAddress,
+          couponCode: appliedCoupon?.code || "",
+          userEmail: userEmail,
         });
+
+        sessionStorage.removeItem('appliedCoupon');
         dispatch(clearCart());
-        toast.success("Order placed! Cash on Delivery.");
+        await queryClient.invalidateQueries({ queryKey: ['orders'] });
+        setStage("success");
+        toast.success("Cash on Delivery order placed successfully!");
         navigate("/profile?tab=orders");
       }
     } catch (err) {
@@ -381,7 +424,7 @@ export function useCheckout() {
       setErrorMessage(msg);
       toast.error(msg);
     }
-  }, [cart, selectedAddress, paymentMethod, appliedCoupon, user, estimatedTotal, listenForOrderPlaced, dispatch, navigate]);
+  }, [cart, selectedAddress, paymentMethod, appliedCoupon, user, estimatedTotal, listenForOrderPlaced, dispatch, navigate, queryClient]);
 
   const handleRetry = useCallback(() => { setStage("ready"); setErrorMessage(""); }, []);
 
@@ -389,7 +432,7 @@ export function useCheckout() {
     addresses, selectedAddressId, selectedAddress, addressLoading, addressFormOpen, editingAddress,
     couponCode, appliedCoupon, couponLoading, couponError,
     paymentMethod, stage, errorMessage, placedOrderId, cart,
-    subtotal, productDiscount, couponDiscount, shippingCharge, estimatedTotal,
+    subtotal, productDiscount, couponDiscount, shippingCharge, estimatedTotal, codHandlingFee, finalTotal,
     setSelectedAddressId, setAddressFormOpen, setCouponCode, setPaymentMethod,
     handleAddAddress, handleUpdateAddress, handleDeleteAddress, handleSetDefaultAddress, openEditAddress, closeAddressForm,
     handleApplyCoupon, handleRemoveCoupon, handleProceedToPayment, handleRetry,

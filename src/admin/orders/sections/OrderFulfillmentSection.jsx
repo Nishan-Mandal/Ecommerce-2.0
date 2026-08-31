@@ -6,6 +6,7 @@ export default function OrderFulfillmentSection({
   paymentStatus,
   statusSteps,
   currentStepIndex,
+  isCod = false,
   updating,
   cancelledAt,
   updatedAt,
@@ -13,7 +14,7 @@ export default function OrderFulfillmentSection({
   onUpdateStatus
 }) {
   const isPaidOrAdvanced =
-    currentStepIndex >= 2 ||
+    (isCod ? currentStepIndex >= 1 : currentStepIndex >= 2) ||
     ["CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(currentStatus) ||
     String(paymentStatus || "").toUpperCase().includes("PAID") ||
     String(paymentStatus || "").toUpperCase().includes("SUCCESS");
@@ -41,6 +42,7 @@ export default function OrderFulfillmentSection({
             {statusSteps
               .filter((step) => {
                 if (step === currentStatus) return true;
+                if (isCod && step === "PAYMENT_PENDING") return false;
                 // Prevent reverting paid/confirmed orders back to PAYMENT_PENDING or PLACED
                 if (isPaidOrAdvanced && (step === "PAYMENT_PENDING" || step === "PLACED")) return false;
                 return true;

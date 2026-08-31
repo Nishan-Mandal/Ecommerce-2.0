@@ -58,7 +58,7 @@ function ProductForm(props) {
     const showDraftBanner = hasDraft && !products?.id;
 
     return (
-        <div className="w-full max-w-screen-2xl mx-auto py-2 space-y-6 lg:space-y-8">
+        <div className="space-y-6">
             {/* Top Header Action Bar & Live/Draft Status Switch */}
             <ProductHeader
                 title={title || "Product Configuration"}

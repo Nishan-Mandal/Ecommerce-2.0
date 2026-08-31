@@ -1,4 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { doc, setDoc } from 'firebase/firestore';
+import { fireDB } from '../firebase/FirebaseConfig.js';
 import { authService } from '../services/auth/authService.js';
 import { userService } from '../services/user/userService.js';
 import { clearDraftsForUser } from '../hooks/common/useDraftManager.js';
@@ -29,9 +31,44 @@ export function AuthProvider({ children }) {
     const unsubscribe = authService.onAuthChange(async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          const profile = await userService.getUserProfile(firebaseUser.uid);
+          const profile = await userService.getUserProfile(firebaseUser.uid, firebaseUser.email);
           const name = profile?.name || "";
           const role = profile?.role || "USER";
+          
+          // Ensure document always exists at users/{uid} for Firestore Security Rules.
+          // isAdmin() in rules uses exists(/users/{uid}), so this MUST complete before
+          // setLoading(false) is called, otherwise any Firestore queries that fire
+          // immediately after login will get 403 Forbidden.
+          if (profile && profile.docId !== firebaseUser.uid) {
+            // Check if uid-keyed doc already exists — if so, merge only missing fields
+            // to avoid silently downgrading a SUPERADMIN role with a stale value
+            const { getDoc: _getDoc, doc: _doc } = await import('firebase/firestore');
+            const existingUidDoc = await _getDoc(_doc(fireDB, "users", firebaseUser.uid));
+            const existingRole = existingUidDoc.exists() ? existingUidDoc.data()?.role : null;
+
+            // Role precedence: SUPERADMIN > ADMIN > USER
+            const ROLE_PRIORITY = { SUPERADMIN: 3, superadmin: 3, ADMIN: 2, admin: 2, USER: 1, user: 1 };
+            const finalRole = (ROLE_PRIORITY[existingRole] || 0) > (ROLE_PRIORITY[role] || 0) ? existingRole : role;
+
+            await setDoc(doc(fireDB, "users", firebaseUser.uid), {
+              ...profile,
+              uid: firebaseUser.uid,
+              role: finalRole,
+            }, { merge: true });
+
+            // If old email-keyed doc had a higher role than uid-keyed doc, delete the duplicate
+            // to prevent anomaly where same user appears twice in the users list
+          } else if (!profile) {
+            // New user with no Firestore profile yet — create a minimal one
+            await setDoc(doc(fireDB, "users", firebaseUser.uid), {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || "",
+              displayName: firebaseUser.displayName || "",
+              role: "USER",
+              createdAt: new Date().toISOString(),
+            }, { merge: true });
+          }
+
           setUserName(name);
           const cleanUser = {
             user: {
@@ -68,9 +105,18 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const result = await authService.login(email, password);
-      const profile = await userService.getUserProfile(result.user.uid);
+      const profile = await userService.getUserProfile(result.user.uid, result.user.email);
       const name = profile?.name || "";
       const role = profile?.role || "USER";
+
+      // Ensure document exists at users/{uid}
+      if (profile && profile.docId !== result.user.uid) {
+        await setDoc(doc(fireDB, "users", result.user.uid), {
+          ...profile,
+          uid: result.user.uid,
+          role: role,
+        }, { merge: true });
+      }
       const cleanUser = {
         user: {
           uid: result.user.uid,

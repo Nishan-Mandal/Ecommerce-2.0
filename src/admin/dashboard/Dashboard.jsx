@@ -10,7 +10,7 @@ import { orderService } from '../../services/order/orderService';
 import { activityService } from '../../services/activity/activityService';
 import { queryKeys } from '../../utils/queryKeys';
 
-import DashboardCard from './DashboardCard';
+import DashboardCard from './components/DashboardCard';
 import DashboardAnalytics from './components/DashboardAnalytics';
 import RecentActivityFeed from './components/RecentActivityFeed';
 import RecentOrdersTable from './components/RecentOrdersTable';
@@ -101,7 +101,7 @@ function Dashboard() {
             <section className="space-y-6 lg:space-y-8 mt-1 px-4 md:px-0">
 
                 {/* Quick Action Buttons Strip */}
-                <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 sm:p-5">
+                <div className="sm:px-1">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <h2 className="text-base font-black text-text-base flex items-center gap-2">
