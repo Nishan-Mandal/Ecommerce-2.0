@@ -32,8 +32,8 @@ function DashboardSkeleton() {
                 ))}
             </div>
 
-            {/* Analytics Chart Block Skeleton */}
-            <div className="bg-bg-surface border border-border-base/60 rounded-2xl p-6 shadow-xs space-y-4">
+            {/* Analytics Chart Block Skeleton (Disabled) */}
+            {/* <div className="bg-bg-surface border border-border-base/60 rounded-2xl p-6 shadow-xs space-y-4">
                 <div className="flex justify-between items-center">
                     <div className="h-5 w-40 bg-border-base/40 rounded-md" />
                     <div className="h-8 w-28 bg-border-base/30 rounded-xl" />
@@ -43,7 +43,7 @@ function DashboardSkeleton() {
                         <div key={i} className="w-full bg-border-base/30 rounded-t-md" style={{ height: `${20 + (i % 5) * 15}%` }} />
                     ))}
                 </div>
-            </div>
+            </div> */}
 
             {/* Bottom 2-Column Tables Skeleton */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

@@ -5,6 +5,7 @@ import useUsersQuery from '../../hooks/user/useUsersQuery';
 
 export default function AdminUsersPage() {
     const { mode } = useTheme();
+    const [roleFilter, setRoleFilter] = useState('ALL');
     const [pageSize, setPageSize] = useState(10);
 
     const {
@@ -17,7 +18,7 @@ export default function AdminUsersPage() {
         goPrev,
         refetch,
         invalidate,
-    } = useUsersQuery({ pageSize });
+    } = useUsersQuery({ roleFilter, pageSize });
 
     const formatDate = (dateValue) => {
         if (!dateValue) return 'N/A';
@@ -34,6 +35,8 @@ export default function AdminUsersPage() {
                 user={users}
                 loading={isLoading}
                 isFetching={isFetching}
+                roleFilter={roleFilter}
+                setRoleFilter={setRoleFilter}
                 pageIndex={pageIndex}
                 hasMore={hasMore}
                 onPrev={goPrev}

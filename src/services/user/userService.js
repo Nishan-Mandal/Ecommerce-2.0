@@ -384,26 +384,57 @@ export const userService = {
 
     // 1. If password is provided, create Firebase Auth user via secondary app instance so admin remains logged in
     if (userData.email && userData.password) {
+      const normalizedEmail = userData.email.trim().toLowerCase();
       try {
         const secondaryAppName = "SecondaryAdminCreator";
         const existingApps = getApps();
         const found = existingApps.find((a) => a.name === secondaryAppName);
         const secondaryApp = found || initializeApp(firebaseConfig, secondaryAppName);
         const secondaryAuth = getAuth(secondaryApp);
-        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userData.email, userData.password);
+        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, normalizedEmail, userData.password);
         authUid = userCredential.user.uid;
       } catch (authErr) {
-        console.error("Error creating Firebase Auth user:", authErr);
-        throw authErr;
+        if (authErr.code === 'auth/email-already-in-use') {
+          // Check if an active document exists in Firestore for this email
+          const existingSnap = await getDocs(
+            query(collection(fireDB, "users"), where("email", "==", normalizedEmail))
+          );
+
+          if (!existingSnap.empty) {
+            throw new Error(`An active user with email "${normalizedEmail}" already exists.`);
+          }
+
+          // Orphan Auth record found (previous Firestore doc was deleted)
+          // Attempt to claim the existing Auth UID with the provided password or send reset
+          const secondaryAppName = "SecondaryAdminCreator";
+          const existingApps = getApps();
+          const found = existingApps.find((a) => a.name === secondaryAppName);
+          const secondaryApp = found || initializeApp(firebaseConfig, secondaryAppName);
+          const secondaryAuth = getAuth(secondaryApp);
+
+          try {
+            const cred = await signInWithEmailAndPassword(secondaryAuth, normalizedEmail, userData.password);
+            authUid = cred.user.uid;
+          } catch (signInErr) {
+            // Password differs from previous account: send password reset email so user can set new password
+            const { sendPasswordResetEmail } = await import("firebase/auth");
+            await sendPasswordResetEmail(secondaryAuth, normalizedEmail).catch(() => {});
+            console.warn("Orphan Auth user adopted; password reset email dispatched.");
+          }
+        } else {
+          console.error("Error creating Firebase Auth user:", authErr);
+          throw authErr;
+        }
       }
     }
 
     // 2. Save user profile in Firestore users collection
-    const docId = authUid || userData.uid || userData.email || `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const normalizedEmail = (userData.email || "").trim().toLowerCase();
+    const docId = authUid || userData.uid || normalizedEmail || `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const docRef = doc(fireDB, "users", docId);
     const payload = {
       name: userData.name || "",
-      email: userData.email || "",
+      email: normalizedEmail,
       phone: userData.phone || "",
       role: userData.role || "ADMIN",
       uid: docId,
@@ -477,32 +508,63 @@ export const userService = {
   },
 
   /**
-   * Fetches paginated users using Firestore cursor queries
+   * Fetches paginated users using Firestore cursor queries with role filtering
    */
-  async getPaginatedUsers({ pageSize = 10, lastDoc = null }) {
-    const { limit, startAfter } = await import('firebase/firestore');
-    const constraints = [limit(pageSize + 1)];
+  async getPaginatedUsers({ pageSize = 10, lastDoc = null, roleFilter = 'ALL' }) {
+    const { limit, startAfter, where } = await import('firebase/firestore');
+    const whereConstraints = [];
+
+    if (roleFilter && roleFilter !== 'ALL') {
+      if (roleFilter === 'SUPERADMIN') {
+        whereConstraints.push(where("role", "==", "SUPERADMIN"));
+      } else if (roleFilter === 'ADMIN') {
+        whereConstraints.push(where("role", "in", ["ADMIN", "admin"]));
+      } else if (roleFilter === 'USER') {
+        whereConstraints.push(where("role", "in", ["USER", "user"]));
+      }
+    }
+
+    const constraints = [...whereConstraints, limit(pageSize + 1)];
 
     if (lastDoc) {
       constraints.push(startAfter(lastDoc));
     }
 
-    const q = query(collection(fireDB, "users"), ...constraints);
-    const snap = await getDocs(q);
+    let snap;
+    try {
+      const q = query(collection(fireDB, "users"), ...constraints);
+      snap = await getDocs(q);
+    } catch (err) {
+      console.warn("User query index notice. Falling back to simple query:", err);
+      try {
+        const simpleQ = query(collection(fireDB, "users"), ...whereConstraints, limit(pageSize + 1));
+        snap = await getDocs(simpleQ);
+      } catch (err2) {
+        snap = await getDocs(query(collection(fireDB, "users"), limit(100)));
+      }
+    }
 
     const docs = snap.docs;
     const hasMore = docs.length > pageSize;
     const pageDocs = hasMore ? docs.slice(0, pageSize) : docs;
 
-    const users = pageDocs.map((docSnap) => ({
+    let users = pageDocs.map((docSnap) => ({
       docId: docSnap.id,
       id: docSnap.id,
       ...docSnap.data(),
       docSnap
     }));
 
+    if (roleFilter && roleFilter !== 'ALL') {
+      users = users.filter((u) => {
+        const userRole = (u.role || 'USER').toUpperCase();
+        return userRole === roleFilter;
+      });
+    }
+
     const lastVisible = pageDocs[pageDocs.length - 1] || null;
-    return { users, lastDoc: lastVisible, hasMore };
+    const cleanUsers = users.map(({ docSnap, ...rest }) => rest);
+    return { users: cleanUsers, lastDoc: lastVisible, hasMore };
   },
 };
 

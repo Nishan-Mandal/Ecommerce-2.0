@@ -89,9 +89,11 @@ export default function AdminOrderDetail() {
     trackingUrl: "",
   });
 
-  const fetchOrder = useCallback(async () => {
+  const fetchOrder = useCallback(async (isSilent = false) => {
     if (!id) return;
-    setLoading(true);
+    if (!isSilent) {
+      setLoading(true);
+    }
     try {
       const docRef = doc(fireDB, "orders", id);
       const docSnap = await getDoc(docRef);
@@ -139,14 +141,20 @@ export default function AdminOrderDetail() {
         });
 
       } else {
-        toast.error("Order not found in database.");
-        setOrder(null);
+        if (!isSilent) {
+          toast.error("Order not found in database.");
+          setOrder(null);
+        }
       }
     } catch (err) {
       console.error("Error fetching order detail:", err);
-      toast.error("Failed to load order details.");
+      if (!isSilent) {
+        toast.error("Failed to load order details.");
+      }
     } finally {
-      setLoading(false);
+      if (!isSilent) {
+        setLoading(false);
+      }
     }
   }, [id]);
 
@@ -165,13 +173,35 @@ export default function AdminOrderDetail() {
 
   const executeStatusChange = async (newStatus) => {
     setUpdating(true);
+    const prevStatus = order?.orderStatus || order?.status;
+    
+    // 1. Optimistic Local State Update (Instant UI response, zero page flash)
+    setOrder((prev) => {
+      if (!prev) return prev;
+      const nowIso = new Date().toISOString();
+      const existingHistory = Array.isArray(prev.statusHistory) ? prev.statusHistory : [];
+      return {
+        ...prev,
+        orderStatus: newStatus,
+        status: newStatus,
+        cancelledAt: newStatus === "CANCELLED" ? nowIso : prev.cancelledAt,
+        statusHistory: [
+          ...existingHistory,
+          { status: newStatus, updatedBy: "ADMIN", timestamp: nowIso }
+        ]
+      };
+    });
+
     try {
       await orderService.updateOrderStatus(id, newStatus, "ADMIN");
       toast.success(`Order status updated to ${newStatus.replace(/_/g, " ")}`);
       setShowCancelModal(false);
-      fetchOrder();
+      // 2. Silent background sync without triggering full-page skeleton
+      fetchOrder(true);
     } catch (err) {
       toast.error(getFriendlyErrorMessage(err, "Failed to update status. Please try again."));
+      // Rollback on error
+      fetchOrder(true);
     } finally {
       setUpdating(false);
     }
@@ -194,7 +224,8 @@ export default function AdminOrderDetail() {
       });
       toast.success("Tracking information updated successfully!");
       setShowTrackingModal(false);
-      fetchOrder();
+      // Silent background sync
+      fetchOrder(true);
     } catch (err) {
       console.error("Error saving tracking:", err);
       toast.error("Failed to update tracking.");

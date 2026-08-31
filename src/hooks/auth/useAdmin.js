@@ -176,7 +176,6 @@ export default function useAdmin() {
           const downloadURL = await uploadService.uploadProductImage(file, (p) => {
             setUploadProgress(Math.round(((uploadedCount + p / 100) / totalFiles) * 100));
           });
-          await mediaService.saveMedia(downloadURL, file.name);
           finalImages.push(downloadURL);
           uploadedCount++;
         } catch (err) {
@@ -196,7 +195,6 @@ export default function useAdmin() {
           const file = pendingMap.get(vUrl);
           try {
             const downloadURL = await uploadService.uploadProductImage(file);
-            await mediaService.saveMedia(downloadURL, file.name);
             vImages.push(downloadURL);
           } catch (err) {
             console.error("Error uploading pending variant image:", err);

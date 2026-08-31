@@ -97,11 +97,21 @@ export default function Modal({ setGrandTotal, items, isOpen: externalIsOpen, cl
             if (paymentMode === 'Online Payment') {
                 let initiatedViaCloud = false;
                 try {
-                    const itemsPayload = (items || []).map(item => ({
-                        productId: item.id || item.productId || "unknown",
-                        variantId: item.selectedVariant ? (item.selectedVariant.variantId || item.selectedVariant.sku || null) : null,
-                        quantity: item.quantity || 1
-                    }));
+                    const itemsPayload = (items || []).map(item => {
+                        const vId = item.variantId ||
+                            item.selectedVariantObj?.variantId ||
+                            item.selectedVariantObj?.id ||
+                            (item.selectedVariant ? (item.selectedVariant.variantId || item.selectedVariant.sku || item.selectedVariant.id || null) : null) ||
+                            null;
+                        const vOptions = item.selectedVariant || item.selectedVariantObj?.attributes || null;
+                        return {
+                            productId: item.id || item.productId || "unknown",
+                            variantId: vId,
+                            options: vOptions,
+                            selectedVariant: vOptions,
+                            quantity: item.quantity || 1
+                        };
+                    });
 
                     const shippingAddressPayload = {
                         fullName: name,

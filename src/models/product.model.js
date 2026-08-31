@@ -1,300 +1,56 @@
-// Updated Product Schema 
-// const products={
-//   "productId": "PROD_001",
-//   "brand": "Apple",
-//   "title": "iPhone 16 Pro",
-//   "description": "Latest Apple flagship smartphone",
-//   "category": "Mobiles",
-//   "tags": [
-//     "Apple",
-//     "5G"
-//   ],
-//   "images": [
-//     "product1.jpg",
-//     "product2.jpg"
-//   ],
+/**
+ * Product Data Model Schema
+ * Represents single & multi-variant products in the `products` collection.
+ */
+export const productModel = {
+  productId: "",
+  title: "",
+  description: "",
+  category: "",
+  brand: "",
+  tags: [],
 
-//   "hasVariants": true,
+  // Media
+  imageUrl: "",
+  images: [],
 
-//   // Used only when hasVariants = false
-//   "price": null,
-//   "originalPrice": null,
-//   "inStock": null,
+  // Standalone Product Pricing & Stock (hasVariants === false)
+  price: 0,
+  originalPrice: 0,
+  inStock: 0,
 
-//   // Used only when hasVariants = true
-//   "variantTypes": [
-//     {
-//       "name": "Color",
-//       "values": [
-//         "Black",
-//         "White"
-//       ]
-//     },
-//     {
-//       "name": "Storage",
-//       "values": [
-//         "128 GB",
-//         "256 GB"
-//       ]
-//     }
-//   ],
-
-//   "variants": [
-//     {
-//       "variantId": "VAR_001",
-//       "attributes": {
-//         "Color": "Black",
-//         "Storage": "128 GB"
-//       },
-//       "price": 1299,
-//       "originalPrice": 1599,
-//       "inStock": 20,
-//       "images": [
-//         "black128-1.jpg"
-//       ]
-//     },
-//     {
-//       "variantId": "VAR_002",
-//       "attributes": {
-//         "Color": "Black",
-//         "Storage": "256 GB"
-//       },
-//       "price": 1399,
-//       "originalPrice": 1599,
-//       "inStock": 15,
-//       "images": [
-//         "black256-1.jpg"
-//       ]
-//     }
-//   ],
-
-//   "createdAt": "Timestamp",
-//   "updatedAt": "Timestamp"
-// }
-
-
-// const product={
-//   "productId": "PROD_001",
-//   "brand": "Apple",
-//   "title": "iPhone 16 Pro",
-//   "description": "Latest Apple flagship smartphone",
-//   "category": "Mobiles",
-//   "tags": [
-//     "Apple",
-//     "5G"
-//   ],
-//   "images": [
-//     "product1.jpg",
-//     "product2.jpg"
-//   ],
-//   "variantTypes": [
-//     {
-//       "name": "Color",
-//       "values": [
-//         "Black",
-//         "White"
-//       ]
-//     },
-//     {
-//       "name": "Storage",
-//       "values": [
-//         "128 GB",
-//         "256 GB"
-//       ]
-//     }
-//   ],
-//   "variants": [
-//     {
-//       "variantId": "VAR_001",
-//       "attributes": {
-//         "Color": "Black",
-//         "Storage": "128 GB"
-//       },
-//       "price": 1299,
-//       "originalPrice": 1599,
-//       "inStock": 20,  
-//       "images": [
-//         "black128-1.jpg"
-//       ]
-//     },
-//     {
-//       "variantId": "VAR_002",
-//       "attributes": {
-//         "Color": "Black",
-//         "Storage": "256 GB"
-//       },
-//       "price": 1399,
-//       "inStock": 15,
-//       "images": [
-//         "black256-1.jpg"
-//       ]
-//     },
-//     {
-//       "variantId": "VAR_003",
-//       "attributes": {
-//         "Color": "White",
-//         "Storage": "128 GB"
-//       },
-//       "price": 1299,
-//       "inStock": 18,
-//       "images": [
-//         "white128-1.jpg"
-//       ]
-//     },
-//     {
-//       "variantId": "VAR_004",
-//       "attributes": {
-//         "Color": "White",
-//         "Storage": "256 GB"
-//       },
-//       "price": 1399,
-//       "inStock": 12,
-//       "images": [
-//         "white256-1.jpg"
-//       ]
-//     }
-//   ],
-  
-//   "createdAt": "Timestamp",
-//   "updatedAt": "Timestamp"
-// }
-
-
-
-
-{
-  "productId": "PROD_001",
-  "brand": "Apple",
-  "title": "iPhone 16 Pro",
-
-  "description": {
-    "short": "Latest Apple flagship smartphone",
-
-    "sections": [
-      {
-        "id": "SEC_001",
-        "type": "TEXT",
-        "title": "Overview",
-        "content": "The iPhone 16 Pro is Apple's latest flagship featuring the A18 Pro chip, titanium body, improved cameras, and Apple Intelligence."
-      },
-
-      {
-        "id": "SEC_002",
-        "type": "TEXT",
-        "title": "Features",
-        "content": "Supports 5G, Wi-Fi 7, USB-C, Face ID, MagSafe, and fast wireless charging."
-      },
-
-      {
-        "id": "SEC_003",
-        "type": "TABLE",
-        "title": "Specifications",
-
-        "columns": [
-          "Feature",
-          "Value"
-        ],
-
-        "rows": [
-          ["Display", "6.3-inch Super Retina XDR OLED"],
-          ["Processor", "Apple A18 Pro"],
-          ["RAM", "8 GB"],
-          ["Storage", "128 GB / 256 GB / 512 GB"],
-          ["Battery", "3582 mAh"],
-          ["Operating System", "iOS 26"]
-        ]
-      },
-
-      {
-        "id": "SEC_004",
-        "type": "TABLE",
-        "title": "In the Box",
-
-        "columns": [
-          "Item",
-          "Quantity"
-        ],
-
-        "rows": [
-          ["iPhone 16 Pro", "1"],
-          ["USB-C Cable", "1"],
-          ["Documentation", "1"]
-        ]
-      }
-    ]
-  },
-
-  "category": "Mobiles",
-
-  "tags": [
-    "Apple",
-    "5G"
+  // Multi-Variant Product Configuration (hasVariants === true)
+  hasVariants: false,
+  variantTypes: [
+    // { name: "Color", values: ["White", "Black"] },
+    // { name: "Size", values: ["S", "M", "L", "XL"] }
+  ],
+  variants: [
+    // {
+    //   variantId: "VAR_001",
+    //   sku: "TSH-WHT-L",
+    //   title: "White / L",
+    //   attributes: { Color: "White", Size: "L" },
+    //   price: 499,
+    //   originalPrice: 699,
+    //   inStock: 20,
+    //   isActive: true,
+    //   images: ["url1.jpg"]
+    // }
   ],
 
-  "images": [
-    "product1.jpg",
-    "product2.jpg"
-  ],
+  // Ratings & Counters
+  averageRating: 0,
+  ratingsCount: 0,
+  totalSold: 0,
 
-  "hasVariants": true,
+  // Visibility & State
+  isActive: true,
+  featured: false,
 
-  "price": null,
-  "originalPrice": null,
-  "inStock": null,
+  // Timestamps
+  createdAt: null,
+  updatedAt: null,
+};
 
-  "variantTypes": [
-    {
-      "name": "Color",
-      "values": [
-        "Black",
-        "White"
-      ]
-    },
-    {
-      "name": "Storage",
-      "values": [
-        "128 GB",
-        "256 GB"
-      ]
-    }
-  ],
-
-  "variants": [
-    {
-      "variantId": "VAR_001",
-
-      "attributes": {
-        "Color": "Black",
-        "Storage": "128 GB"
-      },
-
-      "price": 1299,
-      "originalPrice": 1599,
-      "inStock": 20,
-
-      "images": [
-        "black128-1.jpg"
-      ]
-    },
-
-    {
-      "variantId": "VAR_002",
-
-      "attributes": {
-        "Color": "Black",
-        "Storage": "256 GB"
-      },
-
-      "price": 1399,
-      "originalPrice": 1599,
-      "inStock": 15,
-
-      "images": [
-        "black256-1.jpg"
-      ]
-    }
-  ],
-
-  "createdAt": "Timestamp",
-  "updatedAt": "Timestamp"
-}
+export default productModel;

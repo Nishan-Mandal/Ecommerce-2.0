@@ -30,6 +30,58 @@ export default function useProductDetails() {
     queryKey: queryKeys.products.detail(id),
     queryFn: () => productService.getProductById(id),
     enabled: Boolean(id),
+    initialData: () => {
+      if (!id) return undefined;
+      // Search all cached product queries in TanStack Query cache (paginated, infinite, etc.)
+      const cachedQueries = queryClient.getQueriesData({ queryKey: queryKeys.products.all });
+      for (const [, queryData] of cachedQueries) {
+        if (!queryData) continue;
+        // 1. Array format (e.g. data = [products])
+        if (Array.isArray(queryData)) {
+          const found = queryData.find((p) => (p?.id || p?.docId) === id);
+          if (found) return found;
+        }
+        // 2. Paginated format (e.g. data = { products: [...] })
+        if (Array.isArray(queryData?.products)) {
+          const found = queryData.products.find((p) => (p?.id || p?.docId) === id);
+          if (found) return found;
+        }
+        // 3. Infinite query format (e.g. data = { pages: [{ products: [...] }] })
+        if (Array.isArray(queryData?.pages)) {
+          for (const page of queryData.pages) {
+            if (Array.isArray(page?.products)) {
+              const found = page.products.find((p) => (p?.id || p?.docId) === id);
+              if (found) return found;
+            }
+          }
+        }
+      }
+      return undefined;
+    },
+    initialDataUpdatedAt: () => {
+      if (!id) return undefined;
+      const queryCache = queryClient.getQueryCache();
+      const cachedQueries = queryClient.getQueriesData({ queryKey: queryKeys.products.all });
+      for (const [key, queryData] of cachedQueries) {
+        if (!queryData) continue;
+        let match = false;
+        if (Array.isArray(queryData) && queryData.some((p) => (p?.id || p?.docId) === id)) match = true;
+        if (Array.isArray(queryData?.products) && queryData.products.some((p) => (p?.id || p?.docId) === id)) match = true;
+        if (Array.isArray(queryData?.pages)) {
+          for (const page of queryData.pages) {
+            if (Array.isArray(page?.products) && page.products.some((p) => (p?.id || p?.docId) === id)) {
+              match = true;
+              break;
+            }
+          }
+        }
+        if (match) {
+          const queryObj = queryCache.find({ queryKey: key });
+          return queryObj?.state?.dataUpdatedAt;
+        }
+      }
+      return undefined;
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes fresh cache
     gcTime: 15 * 60 * 1000,    // 15 minutes in memory
     retry: 1,
@@ -66,11 +118,32 @@ export default function useProductDetails() {
 
   // ── 5. Cart Helper ────────────────────────────────────────────────
   const addProductToCart = useCallback((prod, selectedVariant = null, quantity = 1) => {
+    const variantId = selectedVariant
+      ? (selectedVariant.variantId || selectedVariant.id || selectedVariant.sku || null)
+      : null;
+    const variantAttrs = selectedVariant
+      ? (selectedVariant.attributes || (typeof selectedVariant === 'object' && !selectedVariant.attributes ? selectedVariant : null))
+      : null;
+
     const cartItem = {
       ...prod,
-      price: selectedVariant ? selectedVariant.price : prod.price,
-      originalPrice: selectedVariant ? (selectedVariant.originalPrice || selectedVariant.price) : prod.originalPrice,
-      selectedVariant: selectedVariant ? selectedVariant.attributes : null,
+      price: selectedVariant?.price !== undefined ? Number(selectedVariant.price) : Number(prod.price),
+      originalPrice: selectedVariant?.originalPrice !== undefined
+        ? Number(selectedVariant.originalPrice)
+        : (selectedVariant?.price !== undefined ? Number(selectedVariant.price) : Number(prod.originalPrice || prod.price)),
+      selectedVariant: variantAttrs,
+      selectedVariantObj: selectedVariant ? {
+        variantId: variantId,
+        id: variantId,
+        sku: selectedVariant.sku || null,
+        title: selectedVariant.title || null,
+        attributes: variantAttrs,
+        price: selectedVariant.price,
+        originalPrice: selectedVariant.originalPrice,
+        inStock: selectedVariant.inStock,
+        images: selectedVariant.images
+      } : null,
+      variantId: variantId,
       quantity: quantity
     };
     const { time, ...serializable } = cartItem;
@@ -99,7 +172,8 @@ export default function useProductDetails() {
     averageRating,
     reviewCount: ratings.length,
     refetchRatings,
-    isFetching: isProductLoading || isProductFetching,
+    isLoading: isProductLoading && !product,
+    isFetching: isProductFetching,
     error,
     cartItems,
     addProductToCart,

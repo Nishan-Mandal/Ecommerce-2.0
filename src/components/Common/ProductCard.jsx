@@ -7,9 +7,13 @@ import { useNavigate } from 'react-router-dom'
  * Features hover transformations, dynamic rating stars, category labels, and cart add triggers.
  * Enforces uniform height and alignment across grid layouts.
  */
-function ProductCard({ item, index, addCart }) {
+function ProductCard({ item = {}, index, addCart }) {
     const navigate = useNavigate();
-    const { title, price, description, imageUrl, category, averageRating } = item;
+    const { title = '', price = 0, description = '', imageUrl = '', images = [], category = '', averageRating, rating } = item;
+    const displayImage = imageUrl || (Array.isArray(images) && images.length > 0 ? images[0] : '');
+
+    const ratingValue = Number(averageRating || rating || 0);
+    const hasRating = !isNaN(ratingValue) && ratingValue > 0;
 
     const descText = typeof description === "object"
         ? (description?.short || "")
@@ -24,7 +28,7 @@ function ProductCard({ item, index, addCart }) {
             {/* Image Container */}
             <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden bg-bg-base/30 rounded-xl flex items-center justify-center p-2">
                 <img
-                    src={imageUrl}
+                    src={displayImage}
                     alt={title}
                     className="max-h-full max-w-full object-contain transition-transform duration-700 group-hover:scale-105"
                 />
@@ -36,16 +40,18 @@ function ProductCard({ item, index, addCart }) {
                     </span>
                 )}
 
-                {/* Floating Rating Badge */}
-                <div className="absolute top-2 right-2 bg-bg-surface/90 backdrop-blur px-1.5 py-0.5 rounded-md text-[9px] font-bold text-amber-500 flex items-center gap-0.5 shadow-xs border border-border-base/10 shrink-0">
-                    <span
-                        className="material-symbols-outlined text-[11px]"
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                    >
-                        star
-                    </span>
-                    <span>{averageRating ? Number(averageRating).toFixed(1) : "4.8"}</span>
-                </div>
+                {/* Floating Rating Badge (Functional: only displays authentic star rating if reviews exist) */}
+                {hasRating && (
+                    <div className="absolute top-2 right-2 bg-bg-surface/90 backdrop-blur px-1.5 py-0.5 rounded-md text-[9px] font-bold text-amber-500 flex items-center gap-0.5 shadow-xs border border-border-base/10 shrink-0">
+                        <span
+                            className="material-symbols-outlined text-[11px]"
+                            style={{ fontVariationSettings: "'FILL' 1" }}
+                        >
+                            star
+                        </span>
+                        <span>{ratingValue.toFixed(1)}</span>
+                    </div>
+                )}
             </div>
 
             {/* Content Container */}

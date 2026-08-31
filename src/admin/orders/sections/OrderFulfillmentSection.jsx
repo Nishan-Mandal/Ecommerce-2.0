@@ -31,7 +31,7 @@ export default function OrderFulfillmentSection({
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs font-bold text-text-muted shrink-0">Update Status:</label>
+          <label className="text-xs font-bold text-text-muted shrink-0">Change Status:</label>
           <select
             value={currentStatus}
             onChange={(e) => onUpdateStatus(e.target.value)}
@@ -40,21 +40,26 @@ export default function OrderFulfillmentSection({
           >
             {statusSteps
               .filter((step) => {
-                // Always keep the current status so the <select> always has a matching option.
-                // Without this, if PLACED is filtered out while value="PLACED", the browser
-                // shows the first remaining option as visually selected — and clicking it
-                // never fires onChange because the DOM thinks it's already selected.
                 if (step === currentStatus) return true;
                 // Prevent reverting paid/confirmed orders back to PAYMENT_PENDING or PLACED
                 if (isPaidOrAdvanced && (step === "PAYMENT_PENDING" || step === "PLACED")) return false;
                 return true;
               })
-              .map((step) => (
-                <option key={step} value={step}>
-                  {step.replace(/_/g, " ")}
-                </option>
-              ))}
-            {currentStatus !== "DELIVERED" && <option value="CANCELLED">CANCELLED</option>}
+              .map((step) => {
+                const isCurrent = step === currentStatus;
+                const formattedName = step.replace(/_/g, " ");
+                return (
+                  <option key={step} value={step} disabled={isCurrent}>
+                    {isCurrent ? `${formattedName} (Current)` : `Mark as ${formattedName}`}
+                  </option>
+                );
+              })}
+            {currentStatus !== "DELIVERED" && currentStatus !== "CANCELLED" && (
+              <option value="CANCELLED">Cancel Order</option>
+            )}
+            {currentStatus === "CANCELLED" && (
+              <option value="CANCELLED" disabled>● CANCELLED (Current)</option>
+            )}
           </select>
         </div>
       </div>

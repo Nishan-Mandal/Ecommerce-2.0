@@ -146,7 +146,7 @@ function User() {
     }
 
     return (
-        <div className="min-h-screen bg-bg-base py-4 sm:py-6 px-3 sm:px-5 lg:px-8 font-sans">
+        <div className="min-h-screen bg-bg-base py-4 sm:py-6 px-1 sm:px-1 lg:px-8 font-sans">
             <div className="max-w-6xl mx-auto">
 
                 {/* ─── DESKTOP LAYOUT ─────────────────────────────────────────── */}
