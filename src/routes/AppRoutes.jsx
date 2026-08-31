@@ -1,10 +1,8 @@
 import React, { useEffect } from 'react';
-import { Route, Routes, Outlet, useNavigate } from "react-router-dom";
+import { Route, Routes, Outlet, useNavigate, Navigate } from "react-router-dom";
 import Home from "../pages/home/Home";
-import Order from "../pages/order/Order";
 import NoPage from "../pages/nopage/NoPage";
 import Cart from "../pages/cart/Cart";
-import Blog from "../pages/blog/Blog";
 import Dashboard from "../admin/dashboard/Dashboard";
 import ProductDetails from "../pages/ProductDetails/ProductDetails";
 import { useAuth } from "../context/AuthContext";
@@ -27,6 +25,7 @@ import Review from '../admin/Review/Review';
 import Configure from '../admin/configure/Configure';
 import Layout from "../components/layout/Layout";
 import User from '../pages/user/User';
+import CustomerOrderDetail from "../pages/order/orderDetails/CustomerOrderDetail";
 
 import ShippingPolicy from '../pages/consumerservice/ShippingPolicy';
 import RefundPolicy from '../pages/consumerservice/RefundPolicy';
@@ -80,11 +79,11 @@ export default function AppRoutes() {
         <Route path="/shippingpolicy" element={<ShippingPolicy />} />
         <Route path="/refundpolicy" element={<RefundPolicy />} />
         <Route path="/legal/:slug" element={<CustomLegalPage />} />
-        <Route path="/blog" element={<Blog />} />
         {/* User Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/order" element={<Order />} />
+          <Route path="/order" element={<Navigate to="/profile?tab=orders" replace />} />
+          <Route path="/order/:id" element={<CustomerOrderDetail />} />
           <Route path="/profile" element={<User />} />
         </Route>
       </Route>

@@ -41,7 +41,8 @@ export function useProductsQuery({ category = 'ALL', statusFilter = 'ALL', stock
       sortBy
     }),
     placeholderData: keepPreviousData,
-    staleTime: 2 * 60 * 1000, // 2 minutes stale time for catalog
+    staleTime: 5 * 60 * 1000, // 5 minutes stale time for catalog
+    gcTime: 15 * 60 * 1000,   // 15 minutes garbage collection in memory
   });
 
   const goNext = useCallback(() => {

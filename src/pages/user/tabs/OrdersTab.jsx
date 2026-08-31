@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
   FaShoppingBag, FaSearch, FaCheckCircle, 
-  FaExclamationCircle, FaTimesCircle, FaTruck, FaClock, FaImage 
+  FaExclamationCircle, FaTimesCircle, FaTruck, FaClock, FaImage,
+  FaChevronRight, FaCalendarAlt
 } from "react-icons/fa";
 import Pagination from "../../../components/common/Pagination";
 import { InvoiceDownloadButton } from "../../../invoice/index";
+import { useNavigate } from "react-router-dom";
 
 function formatDate(dateVal) {
   if (!dateVal) return "N/A";
@@ -87,6 +89,7 @@ function getOrderItems(o) {
 
 export default function OrdersTab({ orders = [] }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
@@ -123,21 +126,21 @@ export default function OrdersTab({ orders = [] }) {
   return (
     <div className="space-y-3.5 text-xs">
       {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1.5 border-b border-border-base/50">
-        <div>
-          <h2 className="text-base font-extrabold text-text-base tracking-tight">My Orders</h2>
-          <p className="text-[10px] text-text-muted mt-0.5">{orders.length} total orders recorded</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-border-base/50">
+        <div className="flex items-baseline justify-between sm:block">
+          <h2 className="text-sm sm:text-base font-extrabold text-text-base tracking-tight">My Orders</h2>
+          <p className="text-[10px] text-text-muted sm:mt-0.5">{orders.length} total orders recorded</p>
         </div>
 
         {/* Search */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-60">
+        <div className="w-full sm:w-60">
+          <div className="relative">
             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[11px]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search your orders..."
+              placeholder="Search orders..."
               className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-border-base/70 bg-bg-base/60 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-text-muted/60"
             />
           </div>
@@ -156,89 +159,115 @@ export default function OrdersTab({ orders = [] }) {
             const rawAmt = o.totalAmount ?? o.pricing?.grandTotal ?? o.amount ?? 0;
             const totalAmt = typeof rawAmt === 'number' ? rawAmt : (parseFloat(String(rawAmt).replace(/[^0-9.]/g, '')) || 0);
             const orderIdDisplay = o.id || o.orderId || o.paymentId || "R0pgC" + idx;
-            const gatewayDisplay = (o.paymentMode || o.paymentInfo?.method || o.payment?.gateway || "RAZORPAY").toUpperCase();
+            const targetOrderId = o.docId || o.orderId || o.id || orderIdDisplay;
 
             return (
               <div
                 key={o.id || o.orderId || idx}
-                className="bg-bg-surface rounded-xl border border-border-base/70 p-3.5 sm:p-4 shadow-2xs hover:shadow-xs transition-all duration-200 space-y-3"
+                onClick={() => navigate(`/order/${targetOrderId}`, { state: { order: o } })}
+                className="group bg-bg-surface hover:bg-bg-surface/80 border border-border-base/70 hover:border-primary/50 rounded-2xl p-4 sm:p-5 shadow-2xs hover:shadow-sm transition-all duration-200 space-y-3 cursor-pointer relative overflow-hidden"
               >
-                {/* Header row: Order Meta & Total Amount + Status */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-border-base/50">
-                  <div className="min-w-0">
-                    <p className="text-[11px] text-text-muted font-medium flex items-center gap-1.5 flex-wrap">
-                      <span>Order ID: <strong className="font-extrabold text-text-base font-mono">{orderIdDisplay}</strong></span>
-                      <span className="opacity-40">•</span>
-                      <span>Ordered on <strong className="font-semibold text-text-base">{formatDate(o.date || o.createdAt)}</strong></span>
-                      <span className="opacity-40">•</span>
-                      <span className="uppercase font-bold tracking-wider text-[9px] text-text-muted">{gatewayDisplay}</span>
+                {/* ── Top Header Row: Status Badge & Date on Left, Total Amount & Invoice on Right ── */}
+                <div className="flex items-center justify-between gap-3 pb-3 border-b border-border-base/50 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    {renderStatusBadge(o.orderStatus || o.status, o.paymentStatus || o.payment?.status)}
+                    <span className="text-text-muted/40 hidden sm:inline">•</span>
+                    <p className="text-[11px] text-text-muted font-medium flex items-center gap-1.5 whitespace-nowrap">
+                      <FaCalendarAlt size={10} className="text-primary/70 shrink-0" />
+                      <span>Placed on <strong className="font-semibold text-text-base">{formatDate(o.date || o.createdAt)}</strong></span>
                     </p>
-                    
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-base sm:text-lg font-black text-text-base">
+                  <div className="flex items-center gap-2.5 sm:gap-3 ml-auto shrink-0">
+                    <span className="text-sm sm:text-base font-black text-text-base">
                       ₹{Math.round(totalAmt).toLocaleString("en-IN")}
                     </span>
-                    <div>
-                      {renderStatusBadge(o.orderStatus || o.status, o.paymentStatus || o.payment?.status)}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <InvoiceDownloadButton
+                        order={o}
+                        buttonClass="px-2.5 py-1 rounded-lg bg-bg-base hover:bg-primary hover:text-white border border-border-base text-text-base text-[10px] sm:text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                        label="Invoice"
+                      />
                     </div>
-                     <InvoiceDownloadButton order={o} />
                   </div>
                 </div>
 
-                {/* List of ALL products in this order */}
-                <div className="divide-y divide-border-base/40 space-y-2.5">
-                  {items.map((item, itemIdx) => {
-                    const itemImg = item.productImage || item.imageUrl || item.images?.[0] || "";
-                    const itemTitle = item.productName || item.title || item.name || "Product Order Item";
-                    const itemQty = Number(item.quantity || item.qty || 1) || 1;
-                    const pid = item.productId || item.id || "";
-                    const itemPrice = Number(item.price || item.unitPrice || 0);
-                    const variantText = item.selectedVariant
-                      ? (typeof item.selectedVariant === "object"
-                          ? Object.entries(item.selectedVariant).map(([k, v]) => `${k}: ${v}`).join(", ")
-                          : String(item.selectedVariant))
-                      : (item.variant || item.size || item.color || "");
+                {/* ── Product Items List + Arrow Icon ── */}
+                <div className="flex items-center justify-between gap-3 pt-0.5">
+                  <div className="divide-y divide-border-base/40 space-y-2.5 min-w-0 flex-1">
+                    {items.map((item, itemIdx) => {
+                      const itemImg = item.productImage || item.imageUrl || item.images?.[0] || "";
+                      const itemTitle = item.productName || item.title || item.name || "Product Item";
+                      const itemQty = Number(item.quantity || item.qty || 1) || 1;
+                      
+                      const rawPrice = Number(
+                        item.price ??
+                        item.sellingPrice ??
+                        item.unitPrice ??
+                        item.offerPrice ??
+                        item.discountPrice ??
+                        item.salePrice ??
+                        item.finalPrice ??
+                        item.productPrice ??
+                        item.priceAtPurchase ??
+                        item.selectedVariant?.price ??
+                        0
+                      );
+                      const rawItemTotal = Number(item.totalPrice ?? item.total ?? item.amount ?? 0);
+                      let displayPrice = rawPrice;
+                      if (!displayPrice && rawItemTotal > 0) {
+                        displayPrice = rawItemTotal / itemQty;
+                      } else if (!displayPrice && !rawItemTotal) {
+                        displayPrice = Math.round(totalAmt / (items.length || 1) / itemQty);
+                      }
 
-                    return (
-                      <div key={itemIdx} className={`flex items-center gap-3 ${itemIdx > 0 ? "pt-2.5" : ""}`}>
-                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-primary/5 border border-primary/10 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
-                          {itemImg ? (
-                            <img src={itemImg} alt={itemTitle} className="w-full h-full object-contain rounded-lg" />
-                          ) : (
-                            <FaImage size={16} className="text-primary/40" />
-                          )}
-                        </div>
+                      const variantText = item.selectedVariant
+                        ? (typeof item.selectedVariant === "object"
+                            ? Object.entries(item.selectedVariant).map(([k, v]) => `${k}: ${v}`).join(", ")
+                            : String(item.selectedVariant))
+                        : (item.variant || item.size || item.color || "");
 
-                        <div className="min-w-0 flex-1 space-y-0.5">
-                          {pid ? (
-                            <Link to={`/productdetails/${pid}`} className="font-extrabold text-xs sm:text-sm text-text-base hover:text-primary transition-colors line-clamp-1">
-                              {itemTitle}
-                            </Link>
-                          ) : (
-                            <h4 className="font-extrabold text-xs sm:text-sm text-text-base line-clamp-1">{itemTitle}</h4>
-                          )}
-
-                          {variantText && (
-                            <p className="text-[10px] text-text-muted font-medium line-clamp-1">
-                              Variant: <span className="text-text-base font-semibold">{variantText}</span>
-                            </p>
-                          )}
-
-                          <p className="text-[10px] text-text-muted font-medium">
-                            Qty: <strong className="font-bold text-text-base">{itemQty}</strong>
-                            {itemPrice > 0 && (
-                              <>
-                                <span className="mx-1.5 opacity-40">•</span>
-                                Price: <strong className="font-bold text-text-base">₹{Math.round(itemPrice).toLocaleString("en-IN")}</strong>
-                              </>
+                      return (
+                        <div key={itemIdx} className={`flex items-center gap-3 ${itemIdx > 0 ? "pt-2.5" : ""}`}>
+                          {/* Product Thumbnail */}
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-bg-base/30 border border-border-base/60 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                            {itemImg ? (
+                              <img src={itemImg} alt={itemTitle} className="w-full h-full object-contain rounded-lg group-hover:scale-105 transition-transform duration-200" />
+                            ) : (
+                              <FaImage size={16} className="text-primary/40" />
                             )}
-                          </p>
+                          </div>
+
+                          {/* Product Details */}
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <p className="font-bold text-xs sm:text-sm text-text-base group-hover:text-primary transition-colors truncate">
+                              {itemTitle}
+                            </p>
+
+                            {variantText && (
+                              <p className="text-[10px] sm:text-[11px] text-text-muted font-medium truncate">
+                                Variant: <span className="text-text-base font-semibold">{variantText}</span>
+                              </p>
+                            )}
+
+                            <div className="flex items-center gap-1.5 text-xs text-text-muted font-medium">
+                              <span className="font-black text-text-base">
+                                ₹{Math.round(displayPrice).toLocaleString("en-IN")}
+                              </span>
+                              <span>• Qty: {itemQty}</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+
+                  {/* ── Right Navigation Chevron Arrow ── */}
+                  <div className="shrink-0 pl-1">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-bg-base/60 border border-border-base/60 flex items-center justify-center text-text-muted group-hover:text-primary group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:translate-x-1 transition-all duration-200 shadow-2xs">
+                      <FaChevronRight size={11} />
+                    </div>
+                  </div>
                 </div>
               </div>
             );

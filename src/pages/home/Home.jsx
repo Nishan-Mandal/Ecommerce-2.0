@@ -4,7 +4,6 @@ import HeroSection from './Sections/HeroSection'
 import ProductsGrid from './Sections/ProductsGrid'
 import FeatureGrid from './Sections/FeatureGrid'
 import ReviewSection from '../../components/testimonial/ReviewSection'
-import Feedback from './Sections/Feedback'
 
 
 const reviews = [

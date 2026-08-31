@@ -1,0 +1,127 @@
+import React from "react";
+import { FaTag } from "react-icons/fa";
+import { InvoiceDownloadButton } from "../../../../invoice/index";
+
+/**
+ * OrderPriceDetailsCard Component
+ * Displays authentic order price breakdown, delivery charges, discounts, payment method, and invoice download.
+ */
+export default function OrderPriceDetailsCard({ order }) {
+  const pricing = order?.pricing || {};
+  const items = Array.isArray(order?.products) && order.products.length > 0
+    ? order.products
+    : (Array.isArray(order?.items) && order.items.length > 0 ? order.items : []);
+
+  // Compute items subtotal from items or pricing
+  let itemsSubtotal = Number(pricing.subtotal || 0);
+  if (!itemsSubtotal) {
+    itemsSubtotal = items.reduce((acc, it) => {
+      let p = Number(
+        it.price ??
+        it.sellingPrice ??
+        it.unitPrice ??
+        it.offerPrice ??
+        it.discountPrice ??
+        it.salePrice ??
+        it.finalPrice ??
+        it.productPrice ??
+        it.priceAtPurchase ??
+        it.selectedVariant?.price ??
+        0
+      );
+      const q = Number(it.quantity || it.qty || 1) || 1;
+      let tot = Number(it.totalPrice ?? it.total ?? it.amount ?? (p * q));
+      if (!p && tot > 0) p = tot / q;
+      return acc + (tot || p * q);
+    }, 0);
+  }
+
+  const rawGrandTotal = order?.totalAmount ?? pricing.grandTotal ?? order?.amount ?? itemsSubtotal;
+  const grandTotal = typeof rawGrandTotal === "number"
+    ? rawGrandTotal
+    : (parseFloat(String(rawGrandTotal).replace(/[^0-9.]/g, "")) || itemsSubtotal);
+
+  if (!itemsSubtotal && grandTotal > 0) {
+    itemsSubtotal = grandTotal;
+  }
+
+  const deliveryFee = Number(pricing.deliveryCharges || pricing.shippingCharges || order?.deliveryCharges || 0);
+  const couponDiscount = Number(pricing.couponDiscount || order?.couponDiscount || order?.discount || 0);
+  const couponCode = order?.couponCode || pricing.appliedCoupon || "";
+
+  const paymentInfo = order?.paymentInfo || order?.payment || {};
+  const paymentMode = (
+    order?.paymentMode ||
+    paymentInfo.method ||
+    paymentInfo.gateway ||
+    order?.paymentMethod ||
+    "ONLINE"
+  ).toUpperCase();
+
+  const isUpi = paymentMode.includes("UPI");
+  const isCod = paymentMode.includes("COD") || paymentMode.includes("CASH");
+
+  return (
+    <div className="bg-bg-surface border border-border-base/70 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+      <div className="flex items-center justify-between pb-3.5 border-b border-border-base/50">
+        <h3 className="text-sm sm:text-base font-bold text-text-base">
+          Price details
+        </h3>
+        <span className="text-xs text-text-muted font-semibold">
+          {items.length} {items.length === 1 ? "item" : "items"}
+        </span>
+      </div>
+
+      <div className="space-y-3 text-xs">
+        {/* Items Subtotal */}
+        <div className="flex justify-between items-center text-text-muted">
+          <span>Items Subtotal</span>
+          <span className="font-bold text-text-base">
+            ₹{Math.round(itemsSubtotal).toLocaleString("en-IN")}
+          </span>
+        </div>
+
+        {/* Coupon Discount (only if actually applied) */}
+        {couponDiscount > 0 && (
+          <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400 font-medium">
+            <span className="flex items-center gap-1.5">
+              <FaTag size={10} />
+              <span>Coupon Savings {couponCode && <strong className="font-mono">({couponCode})</strong>}</span>
+            </span>
+            <span className="font-bold">-₹{Math.round(couponDiscount).toLocaleString("en-IN")}</span>
+          </div>
+        )}
+
+        {/* Delivery Fee */}
+        <div className="flex justify-between items-center text-text-muted">
+          <span>Delivery Charges</span>
+          <span className="font-bold text-text-base">
+            {deliveryFee > 0 ? `₹${Math.round(deliveryFee).toLocaleString("en-IN")}` : (
+              <span className="text-emerald-600 dark:text-emerald-400 uppercase text-[10px] tracking-wider font-bold">
+                FREE
+              </span>
+            )}
+          </span>
+        </div>
+
+        {/* Dashed Separator Line */}
+        <div className="border-t border-dashed border-border-base/80 my-2" />
+
+        {/* Total Amount */}
+        <div className="flex justify-between items-center text-sm font-bold text-text-base">
+          <span>Total Amount</span>
+          <span className="text-base font-black text-primary">
+            ₹{Math.round(grandTotal).toLocaleString("en-IN")}
+          </span>
+        </div>
+        {/* Download Invoice Button */}
+        <div className="pt-3">
+          <InvoiceDownloadButton
+            order={order}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-border-base/80 bg-bg-surface hover:bg-bg-base text-text-base font-bold text-xs transition-colors shadow-2xs cursor-pointer"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}

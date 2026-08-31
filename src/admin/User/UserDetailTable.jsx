@@ -28,6 +28,8 @@ function UserDetailTable({
     user = [], 
     loading = false, 
     formatDate,
+    roleFilter: propRoleFilter,
+    setRoleFilter: propSetRoleFilter,
     pageIndex: propPageIndex,
     hasMore: propHasMore,
     isFetching: propIsFetching,
@@ -40,7 +42,11 @@ function UserDetailTable({
 }) {
     const [search, setSearch] = useState('');
     const debouncedSearch = useDebounce(search, 300);
-    const [roleFilter, setRoleFilter] = useState('ALL');
+
+    // Internal roleFilter state fallback if not controlled by parent
+    const [internalRoleFilter, setInternalRoleFilter] = useState('ALL');
+    const roleFilter = propRoleFilter !== undefined ? propRoleFilter : internalRoleFilter;
+    const setRoleFilter = propSetRoleFilter || setInternalRoleFilter;
 
     const isCursorPaginated = typeof propPageIndex === 'number';
 
@@ -62,7 +68,7 @@ function UserDetailTable({
         role: 'ADMIN',
     });
 
-    // Client-side filter logic on current page
+    // Client-side filter logic for search within current result set
     const filteredUsers = user.filter(u => {
         const searchLower = debouncedSearch.toLowerCase().trim();
         const matchesSearch = !debouncedSearch ||
@@ -70,7 +76,9 @@ function UserDetailTable({
             u.email?.toLowerCase().includes(searchLower) ||
             u.uid?.toLowerCase().includes(searchLower);
 
-        const matchesRole = roleFilter === 'ALL' || (u.role || 'USER').toUpperCase() === roleFilter;
+        const matchesRole = isCursorPaginated
+            ? (roleFilter === 'ALL' || (u.role || 'USER').toUpperCase() === roleFilter)
+            : (roleFilter === 'ALL' || (u.role || 'USER').toUpperCase() === roleFilter);
 
         return matchesSearch && matchesRole;
     });

@@ -1,30 +1,51 @@
-const user = {
-  userId: "", 
-  username: "",
+/**
+ * User Profile Data Model Schema
+ * Represents user accounts in the `users` collection.
+ */
+export const userModel = {
+  uid: "",
   email: "",
+  name: "",
+  username: "",
   phone: "",
   profileImage: "",
 
-  // Role
+  // Role & Authorization
   role: "USER", // USER | ADMIN | SUPERADMIN
 
-  // Account Status
+  // Account State
   isActive: true,
   emailVerified: false,
   phoneVerified: false,
 
-  // Quick Access
+  // Address Book
+  addresses: [
+    // {
+    //   addressId: "addr_1",
+    //   fullName: "",
+    //   phone: "",
+    //   houseNo: "",
+    //   street: "",
+    //   city: "",
+    //   district: "",
+    //   state: "",
+    //   pincode: "",
+    //   landmark: "",
+    //   type: "HOME", // HOME | WORK | OTHER
+    //   isDefault: true
+    // }
+  ],
   defaultAddressId: null,
 
-  // Statistics
+  // Statistics & Counters
   totalOrders: 0,
-  totalReviews: 0,
-  wishlistCount: 0,
-  cartItemsCount: 0,
   totalSpent: 0,
+  totalReviews: 0,
 
-  // Metadata
+  // Timestamps
   createdAt: null,
   updatedAt: null,
   lastLogin: null,
 };
+
+export default userModel;

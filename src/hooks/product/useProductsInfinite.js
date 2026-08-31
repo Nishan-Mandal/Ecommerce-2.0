@@ -31,6 +31,7 @@ export function useProductsInfinite({ category = '', maxPrice = '', sortBy = 'Fe
     initialPageParam: null,
     getNextPageParam: (lastPage) => (lastPage?.hasMore && lastPage?.lastDoc ? lastPage.lastDoc : undefined),
     staleTime: 5 * 60 * 1000, // 5 minutes cache for client product list
+    gcTime: 15 * 60 * 1000,   // 15 minutes in memory
   });
 
   // Flatten and deduplicate all fetched page arrays by unique product ID

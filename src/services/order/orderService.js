@@ -139,6 +139,42 @@ export const orderService = {
   },
 
   /**
+   * Fetches a single order document by its ID (docId, orderId, or paymentId)
+   */
+  async getOrderById(id) {
+    if (!id) return null;
+    try {
+      // 1. Direct document lookup by Firestore ID
+      const docRef = doc(fireDB, "orders", id);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        return { docId: snap.id, id: snap.id, ...snap.data() };
+      }
+
+      // 2. Lookup by custom orderId field
+      const q1 = query(collection(fireDB, "orders"), where("orderId", "==", id));
+      const snap1 = await getDocs(q1);
+      if (!snap1.empty) {
+        const d = snap1.docs[0];
+        return { docId: d.id, id: d.id, ...d.data() };
+      }
+
+      // 3. Lookup by paymentId field
+      const q2 = query(collection(fireDB, "orders"), where("paymentId", "==", id));
+      const snap2 = await getDocs(q2);
+      if (!snap2.empty) {
+        const d = snap2.docs[0];
+        return { docId: d.id, id: d.id, ...d.data() };
+      }
+
+      return null;
+    } catch (err) {
+      console.error("Error fetching order by ID:", err);
+      throw err;
+    }
+  },
+
+  /**
    * Creates a new order in Firestore
    */
   async createOrder(orderInfo) {
