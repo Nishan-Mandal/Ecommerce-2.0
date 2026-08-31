@@ -8,6 +8,7 @@ export const queryKeys = {
     all: ['products'],
     paginated: (filters) => ['products', 'paginated', filters],
     infinite: (filters) => ['products', 'infinite', filters],
+    search: (filters) => ['products', 'search', filters],
     detail: (id) => ['products', 'detail', id],
     ratings: (productId) => ['products', 'ratings', productId],
     related: (category) => ['products', 'related', category],

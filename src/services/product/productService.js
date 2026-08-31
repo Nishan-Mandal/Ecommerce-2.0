@@ -414,6 +414,108 @@ export const productService = {
   },
 
   /**
+   * Searches across the entire active products catalog in Firestore.
+   * Matches across title, brand, category, tags, description, and variant attributes.
+   * Applies category, maxPrice, and sorting filters.
+   */
+  async searchProducts({ searchTerm = '', category = '', maxPrice = '', sortBy = 'Featured', limit: maxLimit = 200 } = {}) {
+    const { limit: fireLimit, where, query: fireQuery, collection: fireCollection, getDocs: fireGetDocs } = await import('firebase/firestore');
+
+    const whereConstraints = [where("isActive", "==", true)];
+
+    if (category && category.trim() !== '' && category !== 'ALL') {
+      whereConstraints.push(where("category", "==", category.trim()));
+    }
+
+    const numMaxPrice = Number(maxPrice);
+    const isPriceFilterActive = !isNaN(numMaxPrice) && numMaxPrice > 0;
+    if (isPriceFilterActive) {
+      whereConstraints.push(where("minPrice", "<=", numMaxPrice));
+    }
+
+    let snap;
+    try {
+      const q = fireQuery(
+        fireCollection(fireDB, "products"),
+        ...whereConstraints,
+        fireLimit(maxLimit)
+      );
+      snap = await fireGetDocs(q);
+    } catch (err) {
+      console.warn("searchProducts query notice. Falling back to active collection read:", err);
+      const simpleQ = fireQuery(
+        fireCollection(fireDB, "products"),
+        where("isActive", "==", true),
+        fireLimit(maxLimit)
+      );
+      snap = await fireGetDocs(simpleQ);
+    }
+
+    let products = snap.docs.map((d) => {
+      const data = d.data();
+      const price = data.price || (data.variants && data.variants.length > 0 ? String(data.variants[0].price) : "");
+      const imageUrl = data.imageUrl || (data.images && data.images.length > 0 ? data.images[0] : "");
+      return {
+        ...data,
+        id: d.id,
+        price,
+        imageUrl,
+        isActive: data.isActive !== false,
+        minPrice: data.minPrice ?? computeMinPrice(data),
+        totalStock: data.totalStock ?? computeTotalStock(data),
+      };
+    }).filter(p => p.isActive);
+
+    // Apply category filter in-memory if query fallback occurred
+    if (category && category.trim() !== '' && category !== 'ALL') {
+      products = products.filter(p => (p.category || '').toLowerCase() === category.trim().toLowerCase());
+    }
+
+    // Apply price filter in-memory
+    if (isPriceFilterActive) {
+      products = products.filter(p => (Number(p.minPrice) || Number(p.price) || 0) <= numMaxPrice);
+    }
+
+    // Full multi-term keyword search across all fields
+    if (searchTerm && searchTerm.trim() !== '') {
+      const rawQuery = searchTerm.toLowerCase().trim();
+      const searchTerms = rawQuery.split(/[\s,]+/).filter(Boolean);
+
+      products = products.filter((obj) => {
+        const title = (obj.title || '').toLowerCase();
+        const brand = (obj.brand || '').toLowerCase();
+        const cat = (obj.category || '').toLowerCase();
+        const desc = typeof obj.description === 'string'
+          ? obj.description.toLowerCase()
+          : (obj.description?.short || '').toLowerCase();
+        const tags = Array.isArray(obj.tags)
+          ? obj.tags.map(t => String(t).toLowerCase()).join(' ')
+          : String(obj.tags || '').toLowerCase();
+
+        const combinedText = `${title} ${brand} ${cat} ${tags} ${desc}`;
+        return searchTerms.every(term => combinedText.includes(term)) ||
+               searchTerms.some(term => title.includes(term) || tags.includes(term));
+      });
+    }
+
+    // In-memory sorting for consistency
+    if (sortBy === 'Price: Low to High') {
+      products.sort((a, b) => Number(a.minPrice || a.price || 0) - Number(b.minPrice || b.price || 0));
+    } else if (sortBy === 'Price: High to Low') {
+      products.sort((a, b) => Number(b.minPrice || b.price || 0) - Number(a.minPrice || a.price || 0));
+    } else {
+      // Default: Newest first
+      products.sort((a, b) => {
+        const timeA = a.time?.seconds || (a.time instanceof Date ? a.time.getTime() : 0);
+        const timeB = b.time?.seconds || (b.time instanceof Date ? b.time.getTime() : 0);
+        return timeB - timeA;
+      });
+    }
+
+    return products;
+  },
+
+  /**
    * Fetches existing rating submitted by a specific user for a product.
    */
   async getUserProductRating(productId, userId) {

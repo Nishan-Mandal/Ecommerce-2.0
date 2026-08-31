@@ -62,8 +62,10 @@ export default function useCustomerOrderDetail() {
       }
       return undefined;
     },
-    staleTime: 3 * 60 * 1000, // 3 minutes fresh cache
+    staleTime: 5 * 1000, // 5 seconds stale time for live order updates
     gcTime: 15 * 60 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   // ── 2. Authorization Verification ──────────────────────────────────────
