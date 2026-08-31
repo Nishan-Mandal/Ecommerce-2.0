@@ -11,6 +11,7 @@ import BannersTab from "./tabs/BannersTab";
 import CollectionsTab from "./tabs/CollectionsTab";
 import LegalTab from "./tabs/LegalTab";
 import SeoTab from "./tabs/SeoTab";
+import PaymentTab from "./tabs/PaymentTab";
 import Header from "../Components/Header";
 
 import { useFormAutoSave } from "../../hooks/common/useFormAutoSave";
@@ -22,6 +23,7 @@ const TABS = [
     { id: "banners", icon: "image", label: "Banners" },
     { id: "collections", icon: "grid_view", label: "Collections" },
     { id: "legal", icon: "description", label: "Legal" },
+    { id: "payment", icon: "payments", label: "Payment" },
 ];
 
 function Configure() {
@@ -70,8 +72,15 @@ function Configure() {
                         ? (saving ? "Saving..." : "Save Changes")
                         : undefined
                 }
+                buttonDisabledHint={
+                    activeTab === "payment" &&
+                    !draft?.paymentMethods?.enableOnline &&
+                    !draft?.paymentMethods?.enableCod
+                        ? "Enable at least one payment method before saving"
+                        : undefined
+                }
                 clickhandler={handleSave}
-                disabled={saving}
+                disabled={saving || (activeTab === "payment" && !draft?.paymentMethods?.enableOnline && !draft?.paymentMethods?.enableCod)}
             />
 
             {/* Tab Navigation Wrapper */}
@@ -129,6 +138,7 @@ function Configure() {
                     {activeTab === "collections" && <CollectionsTab />}
                     {activeTab === "legal" && <LegalTab       {...tabProps} />}
                     {activeTab === "seo" && <SeoTab         {...tabProps} />}
+                    {activeTab === "payment" && <PaymentTab    {...tabProps} />}
                 </div>
             </div>
         </div>

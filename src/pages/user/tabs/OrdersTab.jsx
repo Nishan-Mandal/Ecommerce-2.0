@@ -23,11 +23,107 @@ function formatDate(dateVal) {
   return "N/A";
 }
 
-function renderStatusBadge(statusRaw, paymentStatRaw) {
-  const status = (statusRaw || "").toUpperCase();
-  const payStat = (paymentStatRaw || "").toUpperCase();
+export function isCodOrder(o = {}) {
+  if (!o || typeof o !== "object") return false;
+  if (o.isCod === true) return true;
+  if (Number(o.pricing?.codHandlingFee || o.codHandlingFee || 0) > 0) return true;
+  
+  const valuesToCheck = [
+    o.paymentMode,
+    o.paymentMethod,
+    o.payment_method,
+    o.payment_mode,
+    o.paymentType,
+    o.paymentId,
+    o.payment?.method,
+    o.payment?.gateway,
+    o.payment?.mode,
+    o.payment?.type,
+    o.payment?.paymentMode,
+    o.paymentInfo?.method,
+    o.paymentInfo?.gateway,
+    o.paymentInfo?.mode,
+    typeof o.payment === "string" ? o.payment : "",
+  ];
 
-  if (status === "PAYMENT_FAILED" || payStat === "FAILED") {
+  return valuesToCheck.some((val) => {
+    if (!val) return false;
+    const s = String(val).toUpperCase();
+    return s.includes("COD") || s.includes("CASH");
+  });
+}
+
+function renderStatusBadge(statusRaw, paymentStatRaw, paymentModeRaw, orderObj = {}) {
+  const isCod = isCodOrder({
+    ...orderObj,
+    paymentMode: paymentModeRaw || orderObj.paymentMode,
+  });
+
+  const raw = (statusRaw || orderObj.orderStatus || orderObj.status || "").toUpperCase().trim().replace(/[\s-]+/g, "_");
+  const payStat = (paymentStatRaw || orderObj.paymentStatus || orderObj.payment?.status || "").toUpperCase().trim();
+
+  // ── For COD Orders: never show Payment Pending ─────────────────────────
+  // Initial stage is "ORDER PLACED", then "CONFIRMED", "SHIPPED", etc.
+  if (isCod) {
+    if (raw === "CANCELLED" || raw === "ORDER_CANCELLED") {
+      return (
+        <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <FaTimesCircle className="text-gray-500" size={11} />
+          <span>CANCELLED</span>
+        </span>
+      );
+    }
+    if (raw === "DELIVERED" || raw === "ORDER_DELIVERED") {
+      return (
+        <span className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+          <FaCheckCircle className="text-emerald-600" size={11} />
+          <span>DELIVERED</span>
+        </span>
+      );
+    }
+    if (raw === "OUT_FOR_DELIVERY") {
+      return (
+        <span className="flex items-center gap-1.5 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+          <FaTruck className="text-amber-600" size={11} />
+          <span>OUT FOR DELIVERY</span>
+        </span>
+      );
+    }
+    if (raw === "SHIPPED" || raw === "ORDER_SHIPPED" || raw === "IN_TRANSIT") {
+      return (
+        <span className="flex items-center gap-1.5 text-[10px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">
+          <FaTruck className="text-cyan-600" size={11} />
+          <span>SHIPPED</span>
+        </span>
+      );
+    }
+    if (raw === "PACKED" || raw === "PROCESSING") {
+      return (
+        <span className="flex items-center gap-1.5 text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+          <FaClock className="text-purple-600" size={11} />
+          <span>{raw.replace(/_/g, " ")}</span>
+        </span>
+      );
+    }
+    if (raw === "CONFIRMED" || raw === "ORDER_CONFIRMED") {
+      return (
+        <span className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+          <FaCheckCircle className="text-indigo-600" size={11} />
+          <span>CONFIRMED</span>
+        </span>
+      );
+    }
+    // Default initial COD status is Order Placed
+    return (
+      <span className="flex items-center gap-1.5 text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+        <FaCheckCircle className="text-blue-600" size={11} />
+        <span>ORDER PLACED</span>
+      </span>
+    );
+  }
+
+  // ── For Online / Non-COD Orders ─────────────────────────────────────────
+  if (raw === "PAYMENT_FAILED" || payStat === "FAILED") {
     return (
       <span className="flex items-center gap-1.5 text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-wider">
         <FaExclamationCircle className="text-rose-600" size={11} />
@@ -36,7 +132,7 @@ function renderStatusBadge(statusRaw, paymentStatRaw) {
     );
   }
 
-  if (status === "PAYMENT_PENDING" || payStat === "PENDING") {
+  if (raw === "PAYMENT_PENDING" || (payStat === "PENDING" && (raw === "PENDING" || raw === "PAYMENT_PENDING"))) {
     return (
       <span className="flex items-center gap-1.5 text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">
         <FaClock className="text-purple-600" size={11} />
@@ -45,7 +141,7 @@ function renderStatusBadge(statusRaw, paymentStatRaw) {
     );
   }
 
-  if (status === "CANCELLED") {
+  if (raw === "CANCELLED" || raw === "ORDER_CANCELLED") {
     return (
       <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
         <FaTimesCircle className="text-gray-500" size={11} />
@@ -54,7 +150,7 @@ function renderStatusBadge(statusRaw, paymentStatRaw) {
     );
   }
 
-  if (status === "DELIVERED") {
+  if (raw === "DELIVERED" || raw === "ORDER_DELIVERED") {
     return (
       <span className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
         <FaCheckCircle className="text-emerald-600" size={11} />
@@ -63,11 +159,29 @@ function renderStatusBadge(statusRaw, paymentStatRaw) {
     );
   }
 
-  if (status === "SHIPPED") {
+  if (raw === "OUT_FOR_DELIVERY") {
     return (
-      <span className="flex items-center gap-1.5 text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-        <FaTruck className="text-rose-600" size={11} />
+      <span className="flex items-center gap-1.5 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+        <FaTruck className="text-amber-600" size={11} />
+        <span>OUT FOR DELIVERY</span>
+      </span>
+    );
+  }
+
+  if (raw === "SHIPPED" || raw === "ORDER_SHIPPED" || raw === "IN_TRANSIT") {
+    return (
+      <span className="flex items-center gap-1.5 text-[10px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">
+        <FaTruck className="text-cyan-600" size={11} />
         <span>SHIPPED</span>
+      </span>
+    );
+  }
+
+  if (raw === "CONFIRMED" || raw === "ORDER_CONFIRMED") {
+    return (
+      <span className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+        <FaCheckCircle className="text-indigo-600" size={11} />
+        <span>CONFIRMED</span>
       </span>
     );
   }
@@ -75,7 +189,7 @@ function renderStatusBadge(statusRaw, paymentStatRaw) {
   return (
     <span className="flex items-center gap-1.5 text-[10px] font-black text-primary uppercase tracking-wider">
       <FaCheckCircle className="text-primary" size={11} />
-      <span>{status || "PLACED"}</span>
+      <span>{raw.replace(/_/g, " ") || "ORDER PLACED"}</span>
     </span>
   );
 }
@@ -170,7 +284,12 @@ export default function OrdersTab({ orders = [] }) {
                 {/* ── Top Header Row: Status Badge & Date on Left, Total Amount & Invoice on Right ── */}
                 <div className="flex items-center justify-between gap-3 pb-3 border-b border-border-base/50 flex-wrap sm:flex-nowrap">
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    {renderStatusBadge(o.orderStatus || o.status, o.paymentStatus || o.payment?.status)}
+                    {renderStatusBadge(
+                      o.orderStatus || o.status,
+                      o.paymentStatus || o.payment?.status,
+                      o.paymentMode || o.paymentMethod || o.payment?.gateway || o.payment?.method || o.paymentInfo?.method,
+                      o
+                    )}
                     <span className="text-text-muted/40 hidden sm:inline">•</span>
                     <p className="text-[11px] text-text-muted font-medium flex items-center gap-1.5 whitespace-nowrap">
                       <FaCalendarAlt size={10} className="text-primary/70 shrink-0" />

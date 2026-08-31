@@ -24,8 +24,8 @@ export default function useCustomerOrderDetail() {
 
   const currentUserId = user?.user?.uid || user?.uid || "";
   const currentUserEmail = user?.user?.email || user?.email || "";
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || "kingshukdash123@gmail.com";
-  const isAdmin = currentUserEmail.toLowerCase() === adminEmail.toLowerCase();
+  const currentUserRole = user?.user?.role || user?.role || "USER";
+  const isAdmin = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERADMIN';
 
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);

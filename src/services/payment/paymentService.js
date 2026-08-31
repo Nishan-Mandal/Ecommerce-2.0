@@ -25,10 +25,10 @@ export const paymentService = {
    *   - shippingAddressId: string (preferred — Firestore saved address ID)
    *   - shippingAddress: object (optional fallback for inline addresses)
    */
-  async createPaymentOrder({ items, couponCode, shippingAddressId, shippingAddress }) {
+  async createPaymentOrder({ items, couponCode, shippingAddressId, shippingAddress, paymentMethod, userEmail }) {
     try {
       const createOrderFn = httpsCallable(functions, "createPaymentOrder");
-      const res = await createOrderFn({ items, couponCode, shippingAddressId, shippingAddress });
+      const res = await createOrderFn({ items, couponCode, shippingAddressId, shippingAddress, paymentMethod, userEmail });
       const data = res.data;
       // Normalize key field: Cloud Function returns razorpayKeyId
       return {
@@ -38,6 +38,35 @@ export const paymentService = {
     } catch (err) {
       console.error("Error creating payment order:", err);
       throw err;
+    }
+  },
+
+  /**
+   * Places a Cash on Delivery (COD) order via createCodOrder Cloud Function,
+   * with automatic fallback to createPaymentOrder with COD method.
+   */
+  async createCodOrder({ items, couponCode, shippingAddressId, shippingAddress, userEmail }) {
+    try {
+      const createCodFn = httpsCallable(functions, "createCodOrder");
+      const res = await createCodFn({ items, couponCode, shippingAddressId, shippingAddress, userEmail });
+      return res.data;
+    } catch (err) {
+      console.warn("createCodOrder callable failed, attempting createPaymentOrder fallback:", err?.message || err);
+      try {
+        const createOrderFn = httpsCallable(functions, "createPaymentOrder");
+        const res = await createOrderFn({
+          items,
+          couponCode,
+          shippingAddressId,
+          shippingAddress,
+          userEmail,
+          paymentMethod: "COD",
+        });
+        return res.data;
+      } catch (fallbackErr) {
+        console.error("Error placing Cash on Delivery order:", fallbackErr || err);
+        throw fallbackErr || err;
+      }
     }
   },
 

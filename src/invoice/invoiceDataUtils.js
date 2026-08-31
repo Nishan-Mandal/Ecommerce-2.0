@@ -199,9 +199,21 @@ export function normalizeInvoiceData(order = {}, siteConfig = {}) {
   }
 
   // Payment Details
-  const paymentMode = order.paymentMethod || order.paymentMode || order.paymentInfo?.method || order.payment?.gateway || "Online Payment";
+  const isCod = Boolean(
+    order.isCod === true ||
+    Number(order.pricing?.codHandlingFee || order.codHandlingFee || 0) > 0 ||
+    String(order.paymentMode || order.paymentMethod || order.payment?.gateway || order.payment?.method || "").toUpperCase().includes("COD") ||
+    String(order.paymentMode || order.paymentMethod || "").toUpperCase().includes("CASH")
+  );
+
+  const paymentMode = isCod
+    ? "Cash on Delivery"
+    : (order.paymentMode || order.paymentMethod || order.paymentInfo?.method || order.payment?.gateway || "Online Payment");
+
   const paymentId = order.paymentId || order.payment?.paymentId || order.gatewayOrderId || "N/A";
-  const paymentStatus = order.paymentStatus || (order.orderStatus === "DELIVERED" ? "PAID" : "COMPLETED");
+  const paymentStatus = isCod 
+    ? (order.orderStatus === "DELIVERED" ? "PAID" : "PENDING (ON DELIVERY)")
+    : (order.paymentStatus || (order.orderStatus === "DELIVERED" ? "PAID" : "COMPLETED"));
 
   // QR Code URL Redirect Path
   const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : "";

@@ -32,7 +32,7 @@ export const authService = {
       time: Timestamp.now()
     };
     
-    await addDoc(collection(fireDB, "users"), userProfile);
+    await setDoc(doc(fireDB, "users", userCredential.user.uid), userProfile, { merge: true });
     
     // Auto login
     const loginCredential = await signInWithEmailAndPassword(auth, email, password);

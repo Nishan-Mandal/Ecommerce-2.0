@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FaUser, FaCopy, FaCheck, FaPhoneAlt, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
+import { FaUser, FaCopy, FaCheck, FaPhoneAlt, FaEnvelope, FaMapMarkerAlt, FaChevronDown, FaChevronUp } from "react-icons/fa";
 
 export default function OrderCustomerInfoSection({
   customerName,
@@ -12,16 +12,19 @@ export default function OrderCustomerInfoSection({
   pincode,
   copyToClipboard
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [phoneCopied, setPhoneCopied] = useState(false);
   const [addrCopied, setAddrCopied] = useState(false);
 
-  const handleCopyPhone = () => {
+  const handleCopyPhone = (e) => {
+    e.stopPropagation();
     copyToClipboard(customerPhone, "Phone number copied!");
     setPhoneCopied(true);
     setTimeout(() => setPhoneCopied(false), 2000);
   };
 
-  const handleCopyAddr = () => {
+  const handleCopyAddr = (e) => {
+    e.stopPropagation();
     const fullAddrStr = `${fullStreet}, ${city}, ${state} - ${pincode}`;
     copyToClipboard(fullAddrStr, "Full address copied!");
     setAddrCopied(true);
@@ -29,17 +32,30 @@ export default function OrderCustomerInfoSection({
   };
 
   return (
-    <div className="bg-bg-surface p-5 rounded-2xl border border-border-base shadow-xs space-y-4 text-xs">
-      <div className="flex items-center justify-between pb-3 border-b border-border-base/70">
+    <div className="bg-bg-surface p-5 rounded-2xl border border-border-base shadow-xs space-y-4 text-xs transition-all">
+      <div 
+        onClick={() => setIsExpanded((prev) => !prev)}
+        className="flex items-center justify-between pb-3 border-b border-border-base/70 cursor-pointer select-none group"
+      >
         <h2 className="text-sm font-black text-text-base flex items-center gap-2">
           <FaUser className="text-primary" /> Customer Details
         </h2>
-        <span className="px-2.5 py-0.5 rounded-full text-[9.5px] font-black uppercase bg-primary/10 text-primary border border-primary/20">
-          {addressType}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-0.5 rounded-full text-[9.5px] font-black uppercase bg-primary/10 text-primary border border-primary/20">
+            {addressType}
+          </span>
+          <button
+            type="button"
+            aria-label={isExpanded ? "Collapse customer details" : "Expand customer details"}
+            className="p-1 text-text-muted group-hover:text-primary transition-colors cursor-pointer"
+          >
+            {isExpanded ? <FaChevronUp size={11} /> : <FaChevronDown size={11} />}
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-3.5">
+      {isExpanded && (
+        <div className="space-y-3.5">
         {/* Customer Name */}
         <div>
           <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-1">
@@ -108,6 +124,7 @@ export default function OrderCustomerInfoSection({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

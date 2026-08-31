@@ -53,20 +53,42 @@ export function ensureSingleDefaultAddress(addresses) {
   }));
 }
 
-const getUserDocRef = async (uid) => {
-  if (!uid) return null;
-  // 1. Try direct doc lookup by UID
-  const directRef = doc(fireDB, "users", uid);
-  const directSnap = await getDoc(directRef);
-  if (directSnap.exists()) {
-    return { docRef: directRef, data: directSnap.data(), docId: directSnap.id };
+/**
+ * Looks up a user document using direct getDoc() calls only.
+ * No collection-level where queries — those require admin-level Firestore permissions.
+ * Tries: users/{uid} first, then users/{email} as fallback.
+ */
+const getUserDocRef = async (uid, email = null) => {
+  if (!uid && !email) return null;
+
+  // 1. Direct lookup by UID (primary — always the canonical doc ID)
+  if (uid) {
+    try {
+      const directRef = doc(fireDB, "users", uid);
+      const directSnap = await getDoc(directRef);
+      if (directSnap.exists()) {
+        return { docRef: directRef, data: directSnap.data(), docId: directSnap.id };
+      }
+    } catch (err) {
+      console.warn("Direct UID lookup notice:", err);
+    }
   }
-  // 2. Query where uid == uid
-  const q = query(collection(fireDB, "users"), where("uid", "==", uid));
-  const snap = await getDocs(q);
-  if (!snap.empty) {
-    return { docRef: snap.docs[0].ref, data: snap.docs[0].data(), docId: snap.docs[0].id };
+
+  // 2. Direct lookup by Email (legacy — some docs were keyed by email)
+  if (email) {
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const emailRef = doc(fireDB, "users", normalizedEmail);
+      const emailSnap = await getDoc(emailRef);
+      if (emailSnap.exists()) {
+        return { docRef: emailRef, data: emailSnap.data(), docId: emailSnap.id };
+      }
+    } catch (err) {
+      console.warn("Direct Email lookup notice:", err);
+    }
   }
+
+  // No document found — caller will handle null
   return null;
 };
 
@@ -93,11 +115,11 @@ export const userService = {
   },
 
   /**
-   * Fetches the complete profile of a user by their UID
+   * Fetches the complete profile of a user by their UID or Email
    */
-  async getUserProfile(userId) {
-    if (!userId) return null;
-    const result = await getUserDocRef(userId);
+  async getUserProfile(userId, email = null) {
+    if (!userId && !email) return null;
+    const result = await getUserDocRef(userId, email);
     if (!result) return null;
     return { docId: result.docId, ...result.data };
   },
@@ -429,8 +451,34 @@ export const userService = {
     }
 
     // 2. Save user profile in Firestore users collection
+    // Always write to /users/{uid} so Firestore Security Rules work correctly.
+    // Never use email as the doc ID — that was a legacy pattern that caused duplicate documents.
     const normalizedEmail = (userData.email || "").trim().toLowerCase();
-    const docId = authUid || userData.uid || normalizedEmail || `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+    // Check if a doc already exists with this email (legacy email-keyed doc) — if so, update it in-place
+    // rather than creating a second document at /users/{uid}
+    if (authUid) {
+      const emailDocRef = doc(fireDB, "users", normalizedEmail);
+      const emailDocSnap = await getDoc(emailDocRef);
+      if (emailDocSnap.exists() && emailDocSnap.data()?.uid === authUid) {
+        // Legacy doc keyed by email — migrate it to uid-keyed doc and delete old one
+        const migratedPayload = {
+          ...emailDocSnap.data(),
+          name: userData.name || emailDocSnap.data().name || "",
+          email: normalizedEmail,
+          phone: userData.phone || emailDocSnap.data().phone || "",
+          role: userData.role || emailDocSnap.data().role || "ADMIN",
+          uid: authUid,
+          updatedAt: new Date().toISOString(),
+        };
+        await setDoc(doc(fireDB, "users", authUid), migratedPayload, { merge: true });
+        // Remove the legacy email-keyed duplicate
+        await deleteDoc(emailDocRef);
+        return migratedPayload;
+      }
+    }
+
+    const docId = authUid || userData.uid || `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const docRef = doc(fireDB, "users", docId);
     const payload = {
       name: userData.name || "",

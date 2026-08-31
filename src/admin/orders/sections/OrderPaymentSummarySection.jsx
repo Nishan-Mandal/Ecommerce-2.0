@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FaReceipt, FaCopy, FaCheck } from "react-icons/fa";
+import { FaReceipt, FaCopy, FaCheck, FaMoneyBillWave } from "react-icons/fa";
 
 export default function OrderPaymentSummarySection({
   subtotal,
@@ -8,10 +8,15 @@ export default function OrderPaymentSummarySection({
   grandTotal,
   paymentGateway,
   paymentMethod,
+  paymentStatus = "",
   paymentId,
+  isCod = false,
+  onRecordCashPayment,
+  recordingPayment = false,
   copyToClipboard
 }) {
   const [copied, setCopied] = useState(false);
+  const isPaid = String(paymentStatus).toUpperCase().includes("PAID") || String(paymentStatus).toUpperCase().includes("SUCCESS");
 
   const handleCopyPaymentId = () => {
     copyToClipboard(paymentId, "Payment ID copied!");
@@ -64,6 +69,19 @@ export default function OrderPaymentSummarySection({
           <span className="font-black text-text-base">{paymentMethod}</span>
         </div>
 
+        <div className="flex justify-between items-center text-text-muted">
+          <span>Payment Status</span>
+          <span className={`font-bold uppercase px-2 py-0.5 rounded text-[10px] ${
+            isPaid
+              ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+              : isCod
+              ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+              : "bg-purple-500/10 text-purple-600 border border-purple-500/20"
+          }`}>
+            {isPaid ? "Paid" : isCod ? "Pending on Delivery" : (paymentStatus || "Pending")}
+          </span>
+        </div>
+
         {paymentId && paymentId !== "N/A" && (
           <div className="space-y-1 pt-1">
             <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">
@@ -80,6 +98,21 @@ export default function OrderPaymentSummarySection({
                 {copied ? <FaCheck className="text-emerald-500" size={11} /> : <FaCopy size={11} />}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Action for admin to record COD payment collection */}
+        {isCod && !isPaid && onRecordCashPayment && (
+          <div className="pt-2">
+            <button
+              type="button"
+              disabled={recordingPayment}
+              onClick={onRecordCashPayment}
+              className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+            >
+              <FaMoneyBillWave size={12} />
+              <span>{recordingPayment ? "Recording..." : "Record Cash Payment Collected"}</span>
+            </button>
           </div>
         )}
       </div>

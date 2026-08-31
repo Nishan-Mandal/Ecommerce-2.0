@@ -16,13 +16,16 @@ import getFriendlyErrorMessage from "../../utils/firebaseErrorHandler.js";
 export default function InvoiceDownloadButton({
   order,
   siteConfig: propSiteConfig,
-  buttonClass = "px-3.5 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer",
+  buttonClass,
+  className,
   showIcon = true,
   label = "Download Invoice"
 }) {
   const [downloading, setDownloading] = useState(false);
   const [siteConfig, setSiteConfig] = useState(propSiteConfig || null);
   const [showHiddenTemplate, setShowHiddenTemplate] = useState(false);
+
+  const finalButtonClass = className || buttonClass || "px-3.5 py-1.5 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer";
 
   // Fetch Site Config if not passed as prop
   useEffect(() => {
@@ -37,27 +40,17 @@ export default function InvoiceDownloadButton({
 
   if (!order) return null;
 
-  const invoiceObj = order.invoice;
-  const storagePath = 
-    (typeof invoiceObj === 'object' ? (invoiceObj?.storagePath || invoiceObj?.url || invoiceObj?.downloadUrl) : null) ||
-    (typeof invoiceObj === 'string' && invoiceObj.trim() !== '' ? invoiceObj : null) ||
-    order.invoiceUrl ||
-    order.customInvoiceUrl ||
-    null;
-
-  const isUploaded = Boolean(
-    (invoiceObj && typeof invoiceObj === 'object' && (invoiceObj.uploaded !== false && (invoiceObj.uploaded || invoiceObj.storagePath || invoiceObj.url))) ||
-    (typeof invoiceObj === 'string' && invoiceObj.trim() !== '') ||
-    order.invoiceUrl ||
-    order.customInvoiceUrl
-  ) && Boolean(storagePath);
+  const rawStatus = (order.orderStatus || order.status || "").toUpperCase().trim().replace(/[\s-]+/g, "_");
+  const isDelivered = rawStatus === "DELIVERED" || rawStatus === "ORDER_DELIVERED";
 
   const normalizedData = normalizeInvoiceData(order, siteConfig);
-  const defaultFileName = `Invoice-${normalizedData.invoiceNumber || order.id || order.docId || 'Order'}.pdf`;
-  const uploadFileName = (typeof invoiceObj === 'object' && invoiceObj?.fileName) || defaultFileName;
 
   const handleDownload = async (e) => {
     if (e) e.stopPropagation();
+    if (!isDelivered) {
+      toast.info("Invoice will be available to download once the order is delivered.");
+      return;
+    }
     if (downloading) return;
 
     try {
@@ -122,13 +115,32 @@ export default function InvoiceDownloadButton({
     }
   };
 
+  // If order is not delivered yet, show disabled/info state button
+  if (!isDelivered) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          if (e) e.stopPropagation();
+          toast.info("Invoice will be available to download once the order is delivered.");
+        }}
+        className={`${finalButtonClass} opacity-50 cursor-not-allowed`}
+        title="Invoice will be available to download once the order is delivered"
+      >
+        {showIcon && <FaFileDownload size={12} className="opacity-60" />}
+        <span>{label}</span>
+      </button>
+    );
+  }
+
+
   return (
     <>
       <button
         type="button"
         onClick={handleDownload}
         disabled={downloading}
-        className={`${buttonClass} ${downloading ? "opacity-75 cursor-not-allowed" : ""}`}
+        className={`${finalButtonClass} ${downloading ? "opacity-75 cursor-not-allowed" : ""}`}
         title="Download Tax Invoice"
       >
         {downloading ? (

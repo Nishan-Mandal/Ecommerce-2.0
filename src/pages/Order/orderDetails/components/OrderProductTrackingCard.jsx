@@ -2,12 +2,14 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FaCheckCircle,
-  FaChevronRight,
   FaTimesCircle,
   FaBoxOpen,
   FaExternalLinkAlt,
   FaBan,
+  FaClock,
+  FaChevronDown,
 } from "react-icons/fa";
+import { isCodOrder } from "../../../../admin/orders/tableComponents/orderHelpers";
 
 /**
  * Formats a timestamp or date to "D MMM YYYY" (e.g. "7 Aug 2026")
@@ -101,8 +103,16 @@ export default function OrderProductTrackingCard({
 }) {
   const [showAllUpdates, setShowAllUpdates] = useState(false);
 
-  const rawStatus = (order?.orderStatus || order?.status || "PLACED").toUpperCase();
+  const isCod = isCodOrder(order) ||
+                String(order?.paymentMode || order?.paymentMethod || order?.payment?.gateway || order?.payment?.method || "").toUpperCase().includes("COD") ||
+                String(order?.paymentMode || "").toUpperCase().includes("CASH");
+
+  let rawStatus = (order?.orderStatus || order?.status || "PLACED").toUpperCase();
+  if (isCod && (rawStatus === "PAYMENT_PENDING" || rawStatus === "PENDING" || !rawStatus)) {
+    rawStatus = "PLACED";
+  }
   const isCancelled = rawStatus === "CANCELLED";
+  const isPaymentPending = !isCod && rawStatus === "PAYMENT_PENDING";
 
   const productList = items.length > 0
     ? items
@@ -136,9 +146,11 @@ export default function OrderProductTrackingCard({
   const deliveredDate = getTimestampForStatus("DELIVERED");
   const cancelledDate = getTimestampForStatus("CANCELLED");
 
+  const isOrderPlaced = !isPaymentPending && !isCancelled && ["PLACED", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(rawStatus);
+
   // Stepper milestones list
   const milestones = [
-    { key: "PLACED", label: "Order Placed", date: placedDate, active: true },
+    { key: "PLACED", label: "Order Placed", date: placedDate, active: isOrderPlaced },
     { key: "CONFIRMED", label: "Order Confirmed", date: confirmedDate, active: ["CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(rawStatus) },
     { key: "SHIPPED", label: "Shipped", date: shippedDate, active: ["SHIPPED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(rawStatus) },
     { key: "OUT_FOR_DELIVERY", label: "Out For Delivery", date: outForDeliveryDate, active: ["OUT_FOR_DELIVERY", "DELIVERED"].includes(rawStatus) },
@@ -237,6 +249,16 @@ export default function OrderProductTrackingCard({
               </p>
             </div>
           </div>
+        ) : isPaymentPending ? (
+          <div className="flex items-start gap-3 text-xs text-amber-700 bg-amber-50/60 p-3.5 rounded-xl border border-amber-200/80">
+            <FaClock size={15} className="text-amber-500 shrink-0 mt-0.5 animate-pulse" />
+            <div>
+              <p className="font-bold text-sm">Payment Pending</p>
+              <p className="text-text-muted mt-0.5">
+                Payment confirmation is pending for this order. Once payment is completed, your order will be confirmed and processed.
+              </p>
+            </div>
+          </div>
         ) : (
           /* Vertical Step Milestone Line */
           <div className="space-y-3 pl-1">
@@ -266,7 +288,7 @@ export default function OrderProductTrackingCard({
               className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
             >
               <span>See All Updates</span>
-              <FaChevronRight size={10} className={`transition-transform duration-200 ${showAllUpdates ? "rotate-90" : ""}`} />
+              <FaChevronDown size={10} className={`transition-transform duration-200 ${showAllUpdates ? "rotate-180" : ""}`} />
             </button>
 
             {showAllUpdates && (

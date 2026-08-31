@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc, arrayUnion, Timestamp, collection, query, where, getDocs } from "firebase/firestore";
-import { fireDB } from "../../firebase/FirebaseConfig";
+import { fireDB, auth } from "../../firebase/FirebaseConfig";
 import { orderService } from "../../services/order/orderService";
 import { toast } from "react-toastify";
 import { FaExclamationTriangle } from "react-icons/fa";
@@ -22,6 +22,16 @@ import OrderDetailSkeleton from "../../components/loader/SkeletonLoader/OrderDet
 // Allowed Status Flow
 const STATUS_STEPS = [
   "PAYMENT_PENDING",
+  "PLACED",
+  "CONFIRMED",
+  "PROCESSING",
+  "PACKED",
+  "SHIPPED",
+  "OUT_FOR_DELIVERY",
+  "DELIVERED",
+];
+
+const COD_STATUS_STEPS = [
   "PLACED",
   "CONFIRMED",
   "PROCESSING",
@@ -234,6 +244,22 @@ export default function AdminOrderDetail() {
     }
   };
 
+  const [recordingPayment, setRecordingPayment] = useState(false);
+
+  const handleRecordCashPayment = async () => {
+    setRecordingPayment(true);
+    try {
+      const adminUid = auth.currentUser?.uid || "ADMIN";
+      await orderService.recordCashPayment(id, adminUid);
+      toast.success("Cash payment recorded as collected!");
+      fetchOrder(true);
+    } catch (err) {
+      toast.error(getFriendlyErrorMessage(err, "Failed to record cash payment."));
+    } finally {
+      setRecordingPayment(false);
+    }
+  };
+
   const handlePrintInvoice = () => {
     navigate(`/admin/order/${id}/invoice`);
   };
@@ -289,15 +315,21 @@ export default function AdminOrderDetail() {
   const shippingCharge = Number(order.pricing?.shippingCharge ?? 40);
   const grandTotal = Number(order.pricing?.grandTotal ?? order.totalAmount ?? (subtotal - couponDiscount + shippingCharge));
 
+  const isCod = String(order.paymentMode || order.paymentMethod || order.payment?.gateway || order.payment?.method || "").toUpperCase().includes("COD") ||
+                String(order.paymentMode || "").toUpperCase().includes("CASH");
+
   const advancedStatuses = ["CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"];
-  const paymentStatus = order.payment?.status || order.paymentStatus || (advancedStatuses.includes(currentStatus.toUpperCase()) ? "Success" : "Pending");
-  const paymentGateway = order.payment?.gateway || order.paymentMode || order.paymentInfo?.method || "ONLINE";
-  const paymentMethod = order.payment?.method || order.paymentMode || "Online Payment";
+  const paymentStatus = isCod 
+    ? (currentStatus === "DELIVERED" ? "Paid" : "Cash on Delivery")
+    : (order.payment?.status || order.paymentStatus || (advancedStatuses.includes(currentStatus.toUpperCase()) ? "Success" : "Pending"));
+  const paymentGateway = isCod ? "COD" : (order.payment?.gateway || order.paymentMode || order.paymentInfo?.method || "ONLINE");
+  const paymentMethod = isCod ? "Cash on Delivery" : (order.payment?.method || order.paymentMode || "Online Payment");
   const paymentId = order.payment?.paymentId || order.paymentId || order.id || "N/A";
 
   const tracking = order.tracking || null;
   const history = Array.isArray(order.statusHistory) ? order.statusHistory : [];
-  const currentStepIndex = STATUS_STEPS.indexOf(currentStatus);
+  const effectiveSteps = isCod ? COD_STATUS_STEPS : STATUS_STEPS;
+  const currentStepIndex = effectiveSteps.indexOf(currentStatus);
 
   return (
     <div className="p-4 sm:p-3 max-w-8xl mx-auto space-y-6 text-text-base">
@@ -308,6 +340,7 @@ export default function AdminOrderDetail() {
         updatedAt={order.updatedAt}
         currentStatus={currentStatus}
         paymentStatus={paymentStatus}
+        isCod={isCod}
         statusBadgeStyles={STATUS_BADGE_STYLES}
         paymentBadgeStyles={PAYMENT_BADGE_STYLES}
         formatDate={formatDate}
@@ -331,8 +364,9 @@ export default function AdminOrderDetail() {
           <OrderFulfillmentSection
             currentStatus={currentStatus}
             paymentStatus={paymentStatus}
-            statusSteps={STATUS_STEPS}
+            statusSteps={effectiveSteps}
             currentStepIndex={currentStepIndex}
+            isCod={isCod}
             updating={updating}
             cancelledAt={order.cancelledAt}
             updatedAt={order.updatedAt}
@@ -383,7 +417,11 @@ export default function AdminOrderDetail() {
             grandTotal={grandTotal}
             paymentGateway={paymentGateway}
             paymentMethod={paymentMethod}
+            paymentStatus={order.paymentStatus || order.payment?.status || (isCod ? "PENDING" : paymentStatus)}
             paymentId={paymentId}
+            isCod={isCod}
+            onRecordCashPayment={handleRecordCashPayment}
+            recordingPayment={recordingPayment}
             copyToClipboard={copyToClipboard}
           />
           {/* <OrderMetadataSection
