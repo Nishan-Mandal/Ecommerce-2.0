@@ -78,12 +78,9 @@ function OrderDetailTable({
         }
     };
 
-    // Helper to check if order is pending payment (e.g. incomplete/failed online checkout)
+    // Helper to check if order is pending payment (incomplete/failed checkout sessions)
     const checkIsPending = (norm) => {
-        if (norm.isCod) {
-            return norm.orderStatus === 'PAYMENT_PENDING';
-        }
-        return norm.orderStatus === 'PAYMENT_PENDING' || norm.orderStatus === 'PENDING' || norm.paymentStatus === 'PENDING' || norm.paymentStatus === 'FAILED';
+        return norm.orderStatus === 'PAYMENT_PENDING';
     };
 
     // Real pending count from server stats or fallback to local count
@@ -112,7 +109,7 @@ function OrderDetailTable({
             const norm = normalizeOrder(o);
             const isPending = checkIsPending(norm);
 
-            // By default hide pending orders unless toggle active OR status filter is PAYMENT_PENDING
+            // Hide incomplete payment pending sessions unless specifically viewing PAYMENT_PENDING
             if (!isPendingToggleActive && isPending && statusFilter !== 'PAYMENT_PENDING') {
                 return false;
             }
