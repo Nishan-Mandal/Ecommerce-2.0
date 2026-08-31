@@ -195,6 +195,26 @@ export default function Modal({ setGrandTotal, items, isOpen: externalIsOpen, cl
                 }
             } else {
                 orderInfo.totalAmount += 40;
+                orderInfo.isCod = true;
+                orderInfo.paymentMode = 'Cash on Delivery';
+                orderInfo.paymentMethod = 'COD';
+                orderInfo.paymentStatus = 'PENDING';
+                orderInfo.orderStatus = 'PLACED';
+                orderInfo.status = 'Order Placed';
+                orderInfo.payment = {
+                    paymentId: 'cod_' + Date.now(),
+                    gateway: 'COD',
+                    gatewayOrderId: '',
+                    gatewayPaymentId: '',
+                    method: 'COD',
+                    status: 'PENDING',
+                };
+                orderInfo.paymentInfo = {
+                    method: 'COD',
+                    gateway: 'COD',
+                    status: 'PENDING',
+                };
+
                 await orderService.createOrder(orderInfo);
                 toast.success('Order Placed Successfully');
                 dispatch(clearCart());

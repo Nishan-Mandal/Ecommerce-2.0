@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   FaCheckCircle, FaTruck, FaBoxOpen, FaClock, 
-  FaTimesCircle, FaShieldAlt, FaUser, FaExclamationTriangle, FaCheck, FaCrown
+  FaTimesCircle, FaShieldAlt, FaUser, FaExclamationTriangle, FaCheck, FaCrown, FaMoneyBillWave
 } from 'react-icons/fa';
 
 /**
@@ -78,6 +78,13 @@ export default function StatusBadge({
     case 'PENDING':
       defaultLabel = defaultLabel || 'Payment Pending';
       defaultIcon = defaultIcon || <FaClock className="text-amber-500 animate-pulse" size={iconSize} />;
+      badgeColorClasses = 'bg-transparent text-amber-600 dark:text-amber-400 border border-amber-500/30';
+      break;
+
+    case 'COD':
+    case 'CASH_ON_DELIVERY':
+      defaultLabel = defaultLabel || 'Cash on Delivery';
+      defaultIcon = defaultIcon || <FaMoneyBillWave className="text-amber-500" size={iconSize} />;
       badgeColorClasses = 'bg-transparent text-amber-600 dark:text-amber-400 border border-amber-500/30';
       break;
 

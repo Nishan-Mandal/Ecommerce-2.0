@@ -130,6 +130,9 @@ export default function CheckoutPage() {
               onProceed={checkout.handleProceedToPayment}
               stage={checkout.stage}
               paymentMethod={checkout.paymentMethod}
+              onSelectPaymentMethod={checkout.setPaymentMethod}
+              codHandlingFee={checkout.codHandlingFee}
+              finalTotal={checkout.finalTotal}
               couponCode={checkout.couponCode}
               couponLoading={checkout.couponLoading}
               couponError={checkout.couponError}

@@ -52,14 +52,19 @@ export default function OrderPriceDetailsCard({ order }) {
   const paymentInfo = order?.paymentInfo || order?.payment || {};
   const paymentMode = (
     order?.paymentMode ||
+    order?.paymentMethod ||
     paymentInfo.method ||
     paymentInfo.gateway ||
-    order?.paymentMethod ||
     "ONLINE"
   ).toUpperCase();
 
+  const isCod = paymentMode.includes("COD") ||
+                paymentMode.includes("CASH") ||
+                String(order?.paymentMethod || "").toUpperCase().includes("COD") ||
+                String(order?.payment?.method || "").toUpperCase().includes("COD") ||
+                String(order?.payment?.gateway || "").toUpperCase().includes("COD") ||
+                String(paymentInfo.method || "").toUpperCase().includes("COD");
   const isUpi = paymentMode.includes("UPI");
-  const isCod = paymentMode.includes("COD") || paymentMode.includes("CASH");
 
   return (
     <div className="bg-bg-surface border border-border-base/70 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
@@ -101,6 +106,26 @@ export default function OrderPriceDetailsCard({ order }) {
                 FREE
               </span>
             )}
+          </span>
+        </div>
+
+        {/* COD Handling Fee */}
+        {Number(pricing.codHandlingFee || 0) > 0 && (
+          <div className="flex justify-between items-center text-text-muted">
+            <span>COD Handling Fee</span>
+            <span className="font-bold text-text-base">
+              ₹{Math.round(Number(pricing.codHandlingFee)).toLocaleString("en-IN")}
+            </span>
+          </div>
+        )}
+
+        {/* Payment Method Badge */}
+        <div className="flex justify-between items-center pt-0.5 text-text-muted">
+          <span>Payment Method</span>
+          <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] uppercase tracking-wider ${
+            isCod ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+          }`}>
+            {isCod ? "Cash on Delivery" : (isUpi ? "UPI Payment" : "Online Payment")}
           </span>
         </div>
 

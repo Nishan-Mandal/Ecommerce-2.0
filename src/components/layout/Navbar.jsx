@@ -65,14 +65,13 @@ export default function Navbar() {
     return location.pathname === path;
   };
 
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'kingshukdash123@gmail.com';
+  const isAdmin = user?.user?.role === 'ADMIN' || user?.user?.role === 'SUPERADMIN';
+
   const navlinks = [
     { title: "Home", path: "/" },
     { title: "Products", path: "/allproducts" },
     { title: "Orders", path: "/profile?tab=orders" },
   ];
-
-  const isAdmin = user?.user?.email?.toLowerCase() === adminEmail.toLowerCase() || user?.user?.role === 'ADMIN' || user?.user?.role === 'SUPERADMIN';
 
   const mobiliLinks = [
     { label: "Home", path: "/", icon: "home" },

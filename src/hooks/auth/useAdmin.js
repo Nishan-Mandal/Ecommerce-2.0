@@ -20,15 +20,30 @@ const sanitizeProductForFirestore = (data) => {
   if (!data || typeof data !== 'object') return data;
   const clean = { ...data };
 
-  // Flatten images array and filter out non-strings
-  if (Array.isArray(clean.images)) {
-    clean.images = clean.images.flat(Infinity).filter(img => typeof img === 'string' && img.trim() !== '');
-  } else {
-    clean.images = typeof clean.imageUrl === 'string' && clean.imageUrl ? [clean.imageUrl] : [];
+  // ── Strip client-only fields that must NEVER go to Firestore ──────────────
+  // pendingFiles is a Map of blob URL → File object — not Firestore-serializable
+  delete clean.pendingFiles;
+  // Remove any File / Blob objects that may have leaked into the data
+  delete clean.file;
+  delete clean.blob;
+
+  // Strip any remaining Map/Set/File objects from all top-level keys
+  for (const key of Object.keys(clean)) {
+    const val = clean[key];
+    if (val instanceof Map || val instanceof Set || val instanceof File || val instanceof Blob) {
+      delete clean[key];
+    }
   }
 
-  // Ensure imageUrl is a string
-  if (typeof clean.imageUrl !== 'string') {
+  // Flatten images array and filter out non-strings / blob URLs
+  if (Array.isArray(clean.images)) {
+    clean.images = clean.images.flat(Infinity).filter(img => typeof img === 'string' && img.trim() !== '' && !img.startsWith('blob:'));
+  } else {
+    clean.images = typeof clean.imageUrl === 'string' && clean.imageUrl && !clean.imageUrl.startsWith('blob:') ? [clean.imageUrl] : [];
+  }
+
+  // Ensure imageUrl is a non-blob string
+  if (typeof clean.imageUrl !== 'string' || clean.imageUrl.startsWith('blob:')) {
     clean.imageUrl = clean.images[0] || '';
   }
 
@@ -41,13 +56,13 @@ const sanitizeProductForFirestore = (data) => {
     clean.tags = [];
   }
 
-  // Flatten variants and variant images
+  // Flatten variants and variant images, strip blob URLs
   if (Array.isArray(clean.variants)) {
     clean.variants = clean.variants.map(v => {
       if (!v || typeof v !== 'object') return v;
       const vClean = { ...v };
       if (Array.isArray(vClean.images)) {
-        vClean.images = vClean.images.flat(Infinity).filter(img => typeof img === 'string' && img.trim() !== '');
+        vClean.images = vClean.images.flat(Infinity).filter(img => typeof img === 'string' && img.trim() !== '' && !img.startsWith('blob:'));
       } else {
         vClean.images = [];
       }
@@ -211,8 +226,11 @@ export default function useAdmin() {
 
     const primaryUrl = finalImages[0] || (formState.imageUrl && !formState.imageUrl.startsWith('blob:') ? formState.imageUrl : '');
 
+    // Destructure out pendingFiles — it's a Map and must never reach Firestore
+    const { pendingFiles: _removed, ...restForm } = formState;
+
     return {
-      ...formState,
+      ...restForm,
       imageUrl: primaryUrl,
       images: finalImages,
       variants: finalVariants

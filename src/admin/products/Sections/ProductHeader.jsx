@@ -15,7 +15,7 @@ function ProductHeader({
     const isLive = products ? products.isActive !== false : true;
 
     return (
-        <div className="bg-bg-surface border border-border-base rounded-2xl p-4 shadow-xs">
+        <div className="">
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 

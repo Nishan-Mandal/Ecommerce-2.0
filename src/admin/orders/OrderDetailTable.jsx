@@ -78,8 +78,11 @@ function OrderDetailTable({
         }
     };
 
-    // Helper to check if order is pending
+    // Helper to check if order is pending payment (e.g. incomplete/failed online checkout)
     const checkIsPending = (norm) => {
+        if (norm.isCod) {
+            return norm.orderStatus === 'PAYMENT_PENDING';
+        }
         return norm.orderStatus === 'PAYMENT_PENDING' || norm.orderStatus === 'PENDING' || norm.paymentStatus === 'PENDING' || norm.paymentStatus === 'FAILED';
     };
 
@@ -125,8 +128,8 @@ function OrderDetailTable({
 
             const matchStatus = isCursorPaginated ? true : (statusFilter === 'ALL' || norm.orderStatus === statusFilter);
             const matchPayment = paymentFilter === 'ALL' ||
-                (paymentFilter === 'Online' && (norm.paymentMode.toUpperCase().includes('ONLINE') || norm.paymentMode.toUpperCase().includes('RAZORPAY'))) ||
-                (paymentFilter === 'COD' && norm.paymentMode.toUpperCase().includes('COD'));
+                (paymentFilter === 'Online' && !norm.isCod) ||
+                (paymentFilter === 'COD' && norm.isCod);
 
             return matchSearch && matchStatus && matchPayment;
         });

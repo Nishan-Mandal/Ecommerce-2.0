@@ -13,6 +13,7 @@ export default function useOrders() {
 
   const uid = user?.user?.uid || user?.uid || null;
   const email = user?.user?.email || user?.email || null;
+  const role = user?.user?.role || user?.role || null;
 
   const {
     data: orders = [],
@@ -22,17 +23,18 @@ export default function useOrders() {
     error,
     refetch
   } = useQuery({
-    queryKey: ['orders', 'user', uid, email],
-    queryFn: () => orderService.getOrders(uid, email),
+    queryKey: ['orders', 'user', uid, email, role],
+    queryFn: () => orderService.getOrders(uid, email, role),
     enabled: Boolean(uid),
-    staleTime: 2 * 60 * 1000, // 2 minutes stale time — instant response from cache!
+    staleTime: 10 * 1000, // 10 seconds stale time
     gcTime: 10 * 60 * 1000, // 10 minutes cache retention
-    refetchOnWindowFocus: false, // Prevents unwanted re-fetches when switching browser tabs
-    refetchOnReconnect: false,
+    refetchOnMount: 'always', // Always fetch fresh updates when navigating to orders
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['orders', 'user', uid] });
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
   };
 
   return {

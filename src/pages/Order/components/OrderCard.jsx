@@ -4,6 +4,7 @@ import OrderProductItem from "./OrderProductItem";
 import { FaCopy, FaCheck, FaInfoCircle, FaCalendarAlt, FaCreditCard, FaTruck, FaClock, FaTimesCircle, FaCheckCircle, FaPalette } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { InvoiceDownloadButton } from "../../../invoice/index";
+import { isCodOrder } from "../../../admin/orders/tableComponents/orderHelpers";
 
 function OrderCard({ order, onViewDetails }) {
   const navigate = useNavigate();
@@ -24,7 +25,14 @@ function OrderCard({ order, onViewDetails }) {
   }
 
   // Format Status
-  const rawStatus = (order.orderStatus || order.status || "PLACED").toUpperCase();
+  const isCod = isCodOrder(order) ||
+                String(order.paymentMode || order.paymentMethod || order.payment?.gateway || order.payment?.method || "").toUpperCase().includes("COD") ||
+                String(order.paymentMode || "").toUpperCase().includes("CASH");
+
+  let rawStatus = (order.orderStatus || order.status || "PLACED").toUpperCase();
+  if (isCod && (rawStatus === "PAYMENT_PENDING" || rawStatus === "PENDING" || !rawStatus)) {
+    rawStatus = "PLACED";
+  }
   const getStatusBadge = (st) => {
     switch (st) {
       case "DELIVERED":
@@ -199,7 +207,9 @@ function OrderCard({ order, onViewDetails }) {
       <div className="px-5 py-3 border-t border-border-base/60 bg-bg-base/20 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2 text-[11px] text-text-muted font-bold">
           <FaCreditCard size={12} className="text-primary" />
-          <span>Payment: <strong className="text-text-base">{order.paymentMethod || "COD / Online"}</strong></span>
+          <span>Payment: <strong className="text-text-base">{
+            isCod ? "Cash on Delivery" : (order.paymentMode || order.paymentMethod || order.payment?.method || order.payment?.gateway || "Online Payment")
+          }</strong></span>
         </div>
 
         <div className="flex items-center gap-2">

@@ -2,6 +2,39 @@ import React from "react";
 import { FaCheckCircle, FaTruck, FaBoxOpen, FaClock, FaTimesCircle } from "react-icons/fa";
 
 /**
+ * Universal helper to check if an order is Cash on Delivery (COD)
+ */
+export function isCodOrder(o = {}) {
+    if (!o || typeof o !== "object") return false;
+    if (o.isCod === true) return true;
+    if (Number(o.pricing?.codHandlingFee || o.codHandlingFee || 0) > 0) return true;
+
+    const valuesToCheck = [
+        o.paymentMode,
+        o.paymentMethod,
+        o.payment_method,
+        o.payment_mode,
+        o.paymentType,
+        o.paymentId,
+        o.payment?.method,
+        o.payment?.gateway,
+        o.payment?.mode,
+        o.payment?.type,
+        o.payment?.paymentMode,
+        o.paymentInfo?.method,
+        o.paymentInfo?.gateway,
+        o.paymentInfo?.mode,
+        typeof o.payment === "string" ? o.payment : "",
+    ];
+
+    return valuesToCheck.some((val) => {
+        if (!val) return false;
+        const s = String(val).toUpperCase();
+        return s.includes("COD") || s.includes("CASH");
+    });
+}
+
+/**
  * Format variant details safely whether string or object
  */
 export function formatVariantName(variant) {
@@ -95,23 +128,21 @@ export function safeFormatDate(dateVal, customFormatFn) {
  * Normalize Order object structure
  */
 export function normalizeOrder(allorder) {
+    if (!allorder) return {};
+
     const sAddr = allorder.shippingAddress || {};
     const aInfo = allorder.addressInfo || {};
 
-    const name = aInfo.name || aInfo.fullName || sAddr.fullName || allorder.userProfile?.name || 'N/A';
+    const name = aInfo.name || aInfo.fullName || sAddr.fullName || sAddr.name || allorder.userProfile?.name || allorder.userName || 'N/A';
     const email =
         allorder.email ||
         allorder.userEmail ||
         allorder.customerEmail ||
         allorder.userProfile?.email ||
         aInfo.email ||
-        aInfo.userEmail ||
         sAddr.email ||
-        sAddr.userEmail ||
-        allorder.user?.email ||
-        allorder.userInfo?.email ||
         'N/A';
-    const phone = aInfo.phoneNumber || aInfo.phone || sAddr.phone || allorder.userProfile?.phone || '';
+    const phone = aInfo.phoneNumber || aInfo.phone || sAddr.phone || sAddr.phoneNumber || sAddr.mobile || allorder.phone || allorder.userProfile?.phone || 'N/A';
     
     const streetAddress = aInfo.address || [sAddr.houseNo, sAddr.street, sAddr.landmark, sAddr.city, sAddr.state].filter(Boolean).join(', ') || 'N/A';
     const pincode = aInfo.pincode || sAddr.pincode || 'N/A';
@@ -119,7 +150,13 @@ export function normalizeOrder(allorder) {
     const rawAmount = allorder.totalAmount ?? allorder.pricing?.grandTotal ?? allorder.amount ?? 0;
     const totalAmount = typeof rawAmount === 'number' ? rawAmount : (parseFloat(rawAmount) || 0);
 
-    const paymentMode = allorder.paymentMode || allorder.paymentInfo?.method || allorder.payment?.gateway || 'Online Payment';
+    const isCod = isCodOrder(allorder) || 
+                  String(allorder.paymentMode || allorder.paymentMethod || allorder.paymentInfo?.method || allorder.payment?.gateway || allorder.payment?.method || '').toUpperCase().includes('COD') || 
+                  String(allorder.paymentMode || '').toUpperCase().includes('CASH');
+
+    const paymentMode = isCod 
+      ? 'Cash on Delivery' 
+      : (allorder.paymentMode || allorder.paymentMethod || allorder.paymentInfo?.method || allorder.payment?.gateway || allorder.payment?.method || 'Online Payment');
     const paymentId = allorder.paymentId || allorder.payment?.paymentId || allorder.gatewayOrderId || allorder.orderId || '';
 
     const dateVal = allorder.date || allorder.createdAt;
@@ -127,14 +164,37 @@ export function normalizeOrder(allorder) {
     const paymentStat = (allorder.paymentStatus || allorder.payment?.status || '').toUpperCase();
 
     let orderStatus = rawStatus;
-    if (!orderStatus || orderStatus === 'PENDING') {
-        if (paymentStat === 'PENDING' || paymentStat === 'FAILED' || orderStatus === 'PENDING') {
-            orderStatus = 'PAYMENT_PENDING';
+    if (isCod) {
+        if (orderStatus === 'CONFIRMED' || orderStatus === 'ORDER_CONFIRMED' || orderStatus === 'ORDER CONFIRMED') {
+            orderStatus = 'CONFIRMED';
+        } else if (orderStatus === 'SHIPPED' || orderStatus === 'ORDER_SHIPPED' || orderStatus === 'ORDER SHIPPED' || orderStatus === 'IN_TRANSIT') {
+            orderStatus = 'SHIPPED';
+        } else if (orderStatus === 'OUT_FOR_DELIVERY') {
+            orderStatus = 'OUT_FOR_DELIVERY';
+        } else if (orderStatus === 'DELIVERED' || orderStatus === 'ORDER_DELIVERED' || orderStatus === 'ORDER DELIVERED') {
+            orderStatus = 'DELIVERED';
+        } else if (orderStatus === 'CANCELLED' || orderStatus === 'ORDER_CANCELLED' || orderStatus === 'ORDER CANCELLED') {
+            orderStatus = 'CANCELLED';
+        } else if (orderStatus === 'PACKED' || orderStatus === 'PROCESSING') {
+            orderStatus = orderStatus;
         } else {
+            // All initial COD states normalize directly to PLACED
             orderStatus = 'PLACED';
         }
-    } else if (paymentStat === 'PENDING') {
-        orderStatus = 'PAYMENT_PENDING';
+    } else {
+        if (!orderStatus || orderStatus === 'PENDING' || orderStatus === 'ORDER PLACED' || orderStatus === 'ORDER_PLACED') {
+            if (paymentStat === 'PENDING' || paymentStat === 'FAILED') {
+                orderStatus = 'PAYMENT_PENDING';
+            } else {
+                orderStatus = 'PLACED';
+            }
+        } else if (orderStatus === 'ORDER CANCELLED' || orderStatus === 'ORDER_CANCELLED') {
+            orderStatus = 'CANCELLED';
+        } else if (orderStatus === 'ORDER DELIVERED' || orderStatus === 'ORDER_DELIVERED') {
+            orderStatus = 'DELIVERED';
+        } else if (orderStatus === 'ORDER SHIPPED' || orderStatus === 'ORDER_SHIPPED') {
+            orderStatus = 'SHIPPED';
+        }
     }
 
     const targetId = allorder.docId || allorder.id || allorder.orderId || paymentId;
@@ -145,6 +205,7 @@ export function normalizeOrder(allorder) {
         displayId,
         orderStatus,
         paymentStatus: paymentStat,
+        isCod,
         name,
         email,
         phone,

@@ -102,37 +102,78 @@ export const orderService = {
   },
 
   /**
+   * Records cash payment collection for COD orders
+   */
+  async recordCashPayment(orderId, updatedBy = "ADMIN") {
+    if (!orderId) throw new Error("Order ID is required.");
+    const docRef = doc(fireDB, "orders", orderId);
+    const now = Timestamp.now();
+    await updateDoc(docRef, {
+      paymentStatus: "PAID",
+      "payment.status": "PAID",
+      updatedAt: now,
+      statusHistory: arrayUnion({
+        status: "PAYMENT_COLLECTED",
+        note: "Cash on delivery payment collected.",
+        timestamp: now,
+        updatedBy: updatedBy || "ADMIN",
+      }),
+    });
+  },
+
+  /**
    * Fetches orders from Firestore.
    * If the user is an admin, fetches all orders.
    * Otherwise, fetches orders matching the user's uid (checking both userId and userid fields).
    */
-  async getOrders(userId, email) {
-    if (!userId) return [];
+  async getOrders(userId, email, role = null) {
+    if (!userId && !email) return [];
     
-    const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'kingshukdash123@gmail.com';
     const ordersMap = new Map();
+    const isAdminRole = role === 'ADMIN' || role === 'SUPERADMIN';
 
-    if (email && email.toLowerCase() === adminEmail.toLowerCase()) {
+    if (isAdminRole) {
       const snap = await getDocs(collection(fireDB, "orders"));
-      snap.forEach((doc) => ordersMap.set(doc.id, { docId: doc.id, ...doc.data() }));
+      snap.forEach((doc) => ordersMap.set(doc.id, { docId: doc.id, id: doc.id, ...doc.data() }));
     } else {
-      // Query both userId and userid to handle legacy and Cloud Function order structures
-      const q1 = query(collection(fireDB, "orders"), where("userId", "==", userId));
-      const q2 = query(collection(fireDB, "orders"), where("userid", "==", userId));
+      const queries = [];
+      if (userId) {
+        queries.push(getDocs(query(collection(fireDB, "orders"), where("userId", "==", userId))));
+        queries.push(getDocs(query(collection(fireDB, "orders"), where("userid", "==", userId))));
+        queries.push(getDocs(query(collection(fireDB, "orders"), where("customerId", "==", userId))));
+      }
+      if (email) {
+        queries.push(getDocs(query(collection(fireDB, "orders"), where("userEmail", "==", email))));
+        queries.push(getDocs(query(collection(fireDB, "orders"), where("email", "==", email))));
+        queries.push(getDocs(query(collection(fireDB, "orders"), where("customerEmail", "==", email))));
+      }
       
-      const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-      
-      snap1.forEach((doc) => ordersMap.set(doc.id, { docId: doc.id, ...doc.data() }));
-      snap2.forEach((doc) => ordersMap.set(doc.id, { docId: doc.id, ...doc.data() }));
+      const snaps = await Promise.all(queries);
+      snaps.forEach((snap) => {
+        snap.forEach((doc) => ordersMap.set(doc.id, { docId: doc.id, id: doc.id, ...doc.data() }));
+      });
     }
     
     const ordersArray = Array.from(ordersMap.values());
     
     // Sort descending by date / createdAt (newest orders first)
     ordersArray.sort((a, b) => {
-      const timeA = a.createdAt?.seconds || (a.date?.seconds ? a.date.seconds : 0) || (typeof a.date === 'string' ? new Date(a.date).getTime() : 0);
-      const timeB = b.createdAt?.seconds || (b.date?.seconds ? b.date.seconds : 0) || (typeof b.date === 'string' ? new Date(b.date).getTime() : 0);
-      return timeB - timeA;
+      const getMs = (o) => {
+        if (!o) return 0;
+        const val = o.createdAt || o.date || o.updatedAt;
+        if (!val) return 0;
+        if (typeof val?.toMillis === "function") return val.toMillis();
+        if (typeof val?.toDate === "function") return val.toDate().getTime();
+        if (val?.seconds !== undefined) return val.seconds * 1000 + (val.nanoseconds || 0) / 1000000;
+        if (typeof val === "number") return val;
+        if (typeof val === "string") {
+          const parsed = new Date(val).getTime();
+          return isNaN(parsed) ? 0 : parsed;
+        }
+        if (val instanceof Date) return val.getTime();
+        return 0;
+      };
+      return getMs(b) - getMs(a);
     });
     
     return ordersArray;

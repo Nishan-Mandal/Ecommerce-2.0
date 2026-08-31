@@ -29,5 +29,7 @@ src/firebase/serviceAccountKey.json
 seeding/
 Plans/
 documentation/
-
 TODO
+firestore.rules
+storage.rules
+
