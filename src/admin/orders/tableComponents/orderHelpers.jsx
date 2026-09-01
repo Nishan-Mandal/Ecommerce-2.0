@@ -182,12 +182,12 @@ export function normalizeOrder(allorder) {
             orderStatus = 'PLACED';
         }
     } else {
-        if (!orderStatus || orderStatus === 'PENDING' || orderStatus === 'ORDER PLACED' || orderStatus === 'ORDER_PLACED') {
-            if (paymentStat === 'PENDING' || paymentStat === 'FAILED') {
-                orderStatus = 'PAYMENT_PENDING';
-            } else {
-                orderStatus = 'PLACED';
-            }
+        if (!orderStatus || orderStatus === 'ORDER PLACED' || orderStatus === 'ORDER_PLACED' || orderStatus === 'PLACED') {
+            orderStatus = 'PLACED';
+        } else if (orderStatus === 'PENDING') {
+            orderStatus = (paymentStat === 'PAID' || paymentStat === 'SUCCESS') ? 'PLACED' : 'PAYMENT_PENDING';
+        } else if (orderStatus === 'PAYMENT_PENDING' || orderStatus === 'PAYMENT PENDING') {
+            orderStatus = 'PAYMENT_PENDING';
         } else if (orderStatus === 'ORDER CANCELLED' || orderStatus === 'ORDER_CANCELLED') {
             orderStatus = 'CANCELLED';
         } else if (orderStatus === 'ORDER DELIVERED' || orderStatus === 'ORDER_DELIVERED') {

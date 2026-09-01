@@ -120,10 +120,11 @@ export default function OrderProductTrackingCard({
         ? order.products
         : (Array.isArray(order?.items) && order.items.length > 0 ? order.items : [order]));
 
-  // Real milestone dates from order history
+  // Real milestone dates from order history (search latest entries first)
   const history = Array.isArray(order?.statusHistory) ? order.statusHistory : [];
   const getTimestampForStatus = (statusName) => {
-    const found = history.find(
+    const reversed = [...history].reverse();
+    const found = reversed.find(
       (h) => (h.status || "").toUpperCase() === statusName.toUpperCase()
     );
     if (found?.timestamp) return formatShortDate(found.timestamp);
@@ -141,7 +142,8 @@ export default function OrderProductTrackingCard({
 
   const placedDate = getTimestampForStatus("PLACED");
   const confirmedDate = getTimestampForStatus("CONFIRMED");
-  const shippedDate = getTimestampForStatus("SHIPPED");
+  const packedDate = getTimestampForStatus("PACKED") || getTimestampForStatus("PROCESSING");
+  const shippedDate = getTimestampForStatus("SHIPPED") || getTimestampForStatus("IN_TRANSIT");
   const outForDeliveryDate = getTimestampForStatus("OUT_FOR_DELIVERY");
   const deliveredDate = getTimestampForStatus("DELIVERED");
   const cancelledDate = getTimestampForStatus("CANCELLED");
@@ -152,6 +154,7 @@ export default function OrderProductTrackingCard({
   const milestones = [
     { key: "PLACED", label: "Order Placed", date: placedDate, active: isOrderPlaced },
     { key: "CONFIRMED", label: "Order Confirmed", date: confirmedDate, active: ["CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(rawStatus) },
+    { key: "PACKED", label: "Packed & Processed", date: packedDate, active: ["PROCESSING", "PACKED", "SHIPPED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(rawStatus) },
     { key: "SHIPPED", label: "Shipped", date: shippedDate, active: ["SHIPPED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(rawStatus) },
     { key: "OUT_FOR_DELIVERY", label: "Out For Delivery", date: outForDeliveryDate, active: ["OUT_FOR_DELIVERY", "DELIVERED"].includes(rawStatus) },
     { key: "DELIVERED", label: "Delivered", date: deliveredDate, active: rawStatus === "DELIVERED" },

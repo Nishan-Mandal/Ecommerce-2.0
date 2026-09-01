@@ -32,18 +32,41 @@ function Allproducts() {
         staleTime: 10 * 60 * 1000,
     });
 
-    // Infinite Query Hook for scalable Firestore product loading
+    const isSearchActive = Boolean(debouncedSearchkey && debouncedSearchkey.trim());
+
+    // 1. Infinite Query Hook for scalable Firestore product browsing (when search is not active)
     const {
         allProducts,
         fetchNextPage,
         hasNextPage,
         isFetchingNextPage,
-        isLoading: loading,
+        isLoading: isInfiniteLoading,
     } = useProductsInfinite({
         category: filterType,
         maxPrice: filterPrice,
         sortBy,
         pageSize: 12,
+    });
+
+    // 2. Full-Catalog Search Query (searches across entire Firestore products collection)
+    const {
+        data: searchedProducts = [],
+        isLoading: isSearchLoading,
+    } = useQuery({
+        queryKey: queryKeys.products.search({
+            searchTerm: debouncedSearchkey,
+            category: filterType,
+            maxPrice: filterPrice,
+            sortBy,
+        }),
+        queryFn: () => productService.searchProducts({
+            searchTerm: debouncedSearchkey,
+            category: filterType,
+            maxPrice: filterPrice,
+            sortBy,
+        }),
+        enabled: isSearchActive,
+        staleTime: 30 * 1000,
     });
 
     const addCart = (product) => {
@@ -63,7 +86,6 @@ function Allproducts() {
         new Set([...storeCategories, ...allProducts.map(p => p.category).filter(Boolean)])
     ).sort();
 
-
     const numericPrices = allProducts
         .map(p => Number(p.price || p.minPrice))
         .filter(p => !isNaN(p) && p > 0);
@@ -79,24 +101,9 @@ function Allproducts() {
         ].filter(p => p > 0))
     ).sort((a, b) => a - b);
 
-
-    // Client-side text search filtering on currently loaded server pages
-    const filteredAndSorted = allProducts.filter((obj) => {
-        if (!debouncedSearchkey || !debouncedSearchkey.trim()) return true;
-        const rawQuery = debouncedSearchkey.toLowerCase().trim();
-        const searchTerms = rawQuery.split(',').map(t => t.trim()).filter(Boolean);
-
-        const title = (obj.title || '').toLowerCase();
-        const brand = (obj.brand || '').toLowerCase();
-        const category = (obj.category || '').toLowerCase();
-        const tags = Array.isArray(obj.tags)
-            ? obj.tags.map(t => String(t).toLowerCase()).join(' ')
-            : String(obj.tags || '').toLowerCase();
-
-        const combinedText = `${title} ${brand} ${category} ${tags}`;
-
-        return searchTerms.some(term => combinedText.includes(term));
-    });
+    // Active dataset: full database search results when searching, or paginated catalog when browsing
+    const displayedProducts = isSearchActive ? searchedProducts : allProducts;
+    const loading = isSearchActive ? isSearchLoading : isInfiniteLoading;
 
     return (
         <div className="min-h-screen bg-bg-base text-text-base transition-colors duration-300">
@@ -129,15 +136,15 @@ function Allproducts() {
                     {/* Product Grid */}
                     <AllProductsGrid
                         loading={loading}
-                        filteredAndSorted={filteredAndSorted}
-                        totalProductsCount={allProducts.length}
+                        filteredAndSorted={displayedProducts}
+                        totalProductsCount={displayedProducts.length}
                         sortBy={sortBy}
                         setSortBy={setSortBy}
                         addCart={addCart}
                         onMobileFilterToggle={() => setIsMobileFilterOpen(true)}
-                        fetchNextPage={fetchNextPage}
-                        hasNextPage={hasNextPage}
-                        isFetchingNextPage={isFetchingNextPage}
+                        fetchNextPage={!isSearchActive ? fetchNextPage : undefined}
+                        hasNextPage={!isSearchActive && hasNextPage}
+                        isFetchingNextPage={!isSearchActive && isFetchingNextPage}
                     />
 
                 </div>
