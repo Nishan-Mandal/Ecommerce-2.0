@@ -2,6 +2,7 @@ import React from 'react'
 import { useFilter } from '../../context/FilterContext'
 import { useTheme } from '../../context/ThemeContext'
 import useProducts from '../../hooks/product/useProducts'
+import { normalizeCategoryName } from '../../utils/categoryUtils'
 
 function Filter() {
     const { mode, searchkey, setSearchkey, filterType, setFilterType,
@@ -9,7 +10,7 @@ function Filter() {
     const { products } = useProducts();
 
     const uniquePrices = [...new Set(products.map((item) => item.price))];
-    const uniqueCategory = [...new Set(products.map((item) => item.category))];
+    const uniqueCategory = [...new Set(products.map((item) => normalizeCategoryName(item.category)).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
 
     return (
@@ -22,7 +23,7 @@ function Filter() {
                     <select
                         value={filterType}
                         onChange={(e) => setFilterType(e.target.value)}
-                        className="px-3 h-11 rounded-xl bg-bg-surface border border-border-base text-text-base text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 cursor-pointer transition-all duration-200 w-full sm:w-44"
+                        className="px-3 h-11 rounded-xl bg-card border border-border-subtle text-text-base text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 cursor-pointer transition-all duration-200 w-full sm:w-44"
                     >
                         <option value="">All Categories</option>
                         {uniqueCategory.map((category, index) => {
@@ -35,7 +36,7 @@ function Filter() {
                     <select
                         value={filterPrice}
                         onChange={(e) => setFilterPrice(e.target.value)}
-                        className="px-3 h-11 rounded-xl bg-bg-surface border border-border-base text-text-base text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 cursor-pointer transition-all duration-200 w-full sm:w-44"
+                        className="px-3 h-11 rounded-xl bg-card border border-border-subtle text-text-base text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 cursor-pointer transition-all duration-200 w-full sm:w-44"
                     >
                         <option value="">All Prices</option>
                         {uniquePrices.map((price, index) => {
@@ -48,7 +49,7 @@ function Filter() {
                     {(filterType || filterPrice) && (
                         <button
                             onClick={() => { setFilterType(''); setFilterPrice(''); }}
-                            className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline px-2 transition-all shrink-0"
+                            className="text-xs font-bold text-rose-500 hover:underline px-2 transition-all shrink-0 cursor-pointer"
                         >
                             Reset
                         </button>
@@ -56,7 +57,7 @@ function Filter() {
                 </div>
 
                 {/* Search Bar */}
-                <div className=" flex items-center pr-10 h-11 px-4 rounded-full bg-bg-surface border border-border-base shadow-inner focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition-all duration-200 ">
+                <div className=" flex items-center pr-10 h-11 px-4 rounded-full bg-bg-base border border-border-subtle shadow-inner focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition-all duration-200 ">
                     <span className="material-symbols-outlined text-xl text-text-muted">
                         search
                     </span>

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/auth/useAuth';
-import { FaShoppingCart, FaBoxes, FaUsers, FaChartBar, FaStar, FaBandcamp } from 'react-icons/fa';
+import { FaShoppingCart, FaBoxes, FaUsers, FaChartBar, FaStar, FaBandcamp, FaYoutube, FaUserTie, FaAward } from 'react-icons/fa';
 import { RiCoupon2Fill } from "react-icons/ri";
 import { useSiteConfig } from '../../context/SiteConfigContext';
 import WarningModal from '../../components/modal/WarningModal';
+import ChangePasswordModal from '../Components/common/ChangePasswordModal';
 
 // Import Layout Sections
 import Sidebar from './sections/Sidebar';
@@ -27,6 +28,7 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+    const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
     
     const sidebarItems = [
         { id: 'overview', label: 'Dashboard', icon: <FaChartBar size={16} /> },
@@ -35,6 +37,9 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
         { id: 'users', label: 'Users', icon: <FaUsers size={16} /> },
         { id: 'coupons', label: 'Coupons', icon: <RiCoupon2Fill size={16} /> },
         { id: 'reviews', label: 'Reviews', icon: <FaStar size={16} /> },
+        { id: 'videos', label: 'Videos', icon: <FaYoutube size={16} /> },
+        { id: 'team', label: 'Team', icon: <FaUserTie size={16} /> },
+        { id: 'brands', label: 'Brands', icon: <FaAward size={16} /> },
         { id: 'configure', label: 'Configure', icon: <FaBandcamp size={16} /> }
     ];
 
@@ -57,6 +62,15 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
                 break;
             case 'reviews':
                 navigate('/reviews');
+                break;
+            case 'videos':
+                navigate('/admin/videos');
+                break;
+            case 'team':
+                navigate('/admin/team');
+                break;
+            case 'brands':
+                navigate('/configure?tab=brands');
                 break;
             case 'configure':
                 navigate('/configure');
@@ -83,6 +97,7 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
     const getHeaderTitle = () => {
         if (location.pathname === '/addproduct') return 'Add New Product';
         if (location.pathname === '/updateproduct') return 'Update Product Details';
+        if (location.pathname === '/admin/videos') return 'Content → Videos';
         if (activeView === 'overview') return 'Dashboard';
         return `${activeView.charAt(0).toUpperCase() + activeView.slice(1)}`;
     };
@@ -98,6 +113,7 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
                 handleNavClick={handleNavClick}
                 config={config}
                 handleLogout={() => setIsLogoutModalOpen(true)}
+                onOpenChangePassword={() => setIsChangePasswordModalOpen(true)}
             />
 
             {/* 2. Mobile Bottom Navigation */}
@@ -111,23 +127,23 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
                 sidebarItems={sidebarItems}
                 activeView={activeView}
                 sidebarCollapsed={sidebarCollapsed}
+                setSidebarCollapsed={setSidebarCollapsed}
                 handleNavClick={handleNavClick}
                 config={config}
                 handleLogout={() => setIsLogoutModalOpen(true)}
+                onOpenChangePassword={() => setIsChangePasswordModalOpen(true)}
             />
 
             {/* 4. Main Panel Workspace */}
             <div
                 className={`
-                    flex-1 flex flex-col h-full overflow-hidden transition-all duration-200 ml-0 print:ml-0 print:h-auto print:overflow-visible
-                    ${sidebarCollapsed ? 'md:ml-20 lg:ml-[260px]' : 'md:ml-[260px] lg:ml-[260px]'}
+                    flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ml-0 print:ml-0 print:h-auto print:overflow-visible
+                    ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-[260px]'}
                 `}
             >
                 {/* Fixed Top Header (never scrolls) */}
                 <Header
                     setDrawerOpen={setDrawerOpen}
-                    sidebarCollapsed={sidebarCollapsed}
-                    setSidebarCollapsed={setSidebarCollapsed}
                     title={getHeaderTitle()}
                 />
 
@@ -147,6 +163,12 @@ export default function AdminLayout({ children, activeView = 'products', onViewC
                 onCancel={() => setIsLogoutModalOpen(false)}
                 confirmText="Log Out"
                 cancelText="Cancel"
+            />
+
+            {/* Admin Self Change Password Modal */}
+            <ChangePasswordModal
+                isOpen={isChangePasswordModalOpen}
+                onClose={() => setIsChangePasswordModalOpen(false)}
             />
         </div>
     );

@@ -5,12 +5,12 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { Timestamp } from 'firebase/firestore';
 import { uploadService } from '../../services/upload/uploadService.js';
-import { mediaService } from '../../services/media/mediaService.js';
 import { generateVariantCombinations } from '../../utils/variantUtils.js';
 import { useDraftManager } from '../common/useDraftManager.js';
 import { useAuth as useAuthCtx } from '../../context/AuthContext.jsx';
 import { getFriendlyErrorMessage } from '../../utils/firebaseErrorHandler.js';
 import { queryKeys } from '../../utils/queryKeys.js';
+import { normalizeCategoryName } from '../../utils/categoryUtils.js';
 
 /**
  * Helper to flatten and sanitize arrays before sending to Firestore
@@ -104,7 +104,7 @@ export default function useAdmin() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [variantUploadingIndex, setVariantUploadingIndex] = useState(null);
+  const [variantUploadingIndex, _setVariantUploadingIndex] = useState(null);
 
   const initialFormState = {
     id: '',
@@ -269,8 +269,14 @@ export default function useAdmin() {
       // Upload pending images only now after validation passed
       const preparedForm = await uploadPendingImages(productForm);
 
+      const cleanCategory = normalizeCategoryName(preparedForm.category);
+      if (cleanCategory) {
+        await productService.saveCategory(cleanCategory);
+      }
+
       const rawData = {
         ...preparedForm,
+        category: cleanCategory,
         isActive: preparedForm.isActive !== false,
         hasVariants: Boolean(preparedForm.hasVariants),
         price: preparedForm.hasVariants ? null : Number(preparedForm.price) || 0,
@@ -303,6 +309,7 @@ export default function useAdmin() {
 
       toast.success("Product Added successfully");
       queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
       // Clear draft BEFORE navigating to prevent stale draft on return
       clearProductDraft();
       setTimeout(() => {
@@ -348,8 +355,14 @@ export default function useAdmin() {
       // Upload pending images only now after validation passed
       const preparedForm = await uploadPendingImages(productForm);
 
+      const cleanCategory = normalizeCategoryName(preparedForm.category);
+      if (cleanCategory) {
+        await productService.saveCategory(cleanCategory);
+      }
+
       const rawData = {
         ...preparedForm,
+        category: cleanCategory,
         isActive: preparedForm.isActive !== false,
         hasVariants: Boolean(preparedForm.hasVariants),
         price: preparedForm.hasVariants ? null : Number(preparedForm.price) || 0,
@@ -362,6 +375,7 @@ export default function useAdmin() {
       const updateData = sanitizeProductForFirestore(rawData);
       await productService.updateProduct(productForm.id, updateData);
       queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
       toast.success("Product Updated successfully");
       setTimeout(() => {
         navigate('/products');
@@ -667,6 +681,7 @@ export default function useAdmin() {
     handleVariantImageUpload,
     handleVariantImageDelete,
     variantUploadingIndex,
+    isEditing,
     handleCancel
   };
 }

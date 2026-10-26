@@ -84,12 +84,20 @@ function resolveItemPrice(item, order) {
       0
     );
     const totalItemsCount = (Array.isArray(order?.products) ? order.products.length : (Array.isArray(order?.items) ? order.items.length : 1)) || 1;
-    unitPrice = Math.round((fallbackTotal / totalItemsCount) / qty);
+    unitPrice = (fallbackTotal / totalItemsCount) / qty;
     itemTotal = unitPrice * qty;
   }
 
   return { unitPrice, itemTotal, qty };
 }
+
+const fmt = (val) => {
+  const num = Number(val) || 0;
+  return num.toLocaleString('en-IN', {
+    minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+};
 
 /**
  * OrderProductTrackingCard Component
@@ -167,10 +175,10 @@ export default function OrderProductTrackingCard({
   const trackingUrl = trackingInfo.trackingUrl || trackingInfo.url || "";
 
   return (
-    <div className="bg-bg-surface border border-border-base/70 rounded-2xl shadow-xs overflow-hidden divide-y divide-border-base/50">
+    <div className="bg-card border border-border-subtle rounded-2xl shadow-xs overflow-hidden divide-y divide-border-subtle">
       {/* ── 1. Purchased Items List ─────────────────────────────────────── */}
       <div className="p-5 sm:p-6 space-y-4">
-        <div className="divide-y divide-border-base/40 space-y-4">
+        <div className="divide-y divide-border-subtle space-y-4">
           {productList.map((item, idx) => {
             const img = item?.productImage || item?.imageUrl || item?.images?.[0] || "";
             const title = item?.productName || item?.title || item?.name || "Product Item";
@@ -189,7 +197,7 @@ export default function OrderProductTrackingCard({
                 className={`flex items-start gap-4 ${idx > 0 ? "pt-4" : ""}`}
               >
                 {/* Product Thumbnail */}
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-bg-base/30 border border-border-base/60 p-1.5 shrink-0 overflow-hidden flex items-center justify-center shadow-2xs">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-bg-base border border-border-subtle p-1.5 shrink-0 overflow-hidden flex items-center justify-center shadow-2xs">
                   {img ? (
                     <img
                       src={img}
@@ -224,12 +232,12 @@ export default function OrderProductTrackingCard({
 
                   <div className="flex items-center gap-2 text-xs pt-0.5 flex-wrap">
                     <span className="text-base font-black text-text-base">
-                      ₹{Math.round(unitPrice).toLocaleString("en-IN")}
+                      ₹{fmt(unitPrice)}
                     </span>
                     <span className="text-text-muted font-medium">• Qty: {qty}</span>
                     {qty > 1 && (
                       <span className="text-primary font-bold">
-                        (Total: ₹{Math.round(itemTotal).toLocaleString("en-IN")})
+                        (Total: ₹{fmt(itemTotal)})
                       </span>
                     )}
                   </div>
@@ -295,7 +303,7 @@ export default function OrderProductTrackingCard({
             </button>
 
             {showAllUpdates && (
-              <div className="mt-3 p-3.5 bg-bg-surface rounded-xl border border-border-base/50 text-xs space-y-2 animate-fadeIn">
+              <div className="mt-3 p-3.5 bg-bg-base rounded-xl border border-border-subtle text-xs space-y-2 animate-fadeIn">
                 {history.map((h, i) => (
                   <div key={i} className="flex justify-between items-center text-text-muted">
                     <span className="font-bold text-text-base">{(h.status || "").replace(/_/g, " ")}</span>
@@ -304,7 +312,7 @@ export default function OrderProductTrackingCard({
                 ))}
 
                 {courierName && (
-                  <div className="pt-2 border-t border-border-base/40 flex justify-between items-center text-[11px]">
+                  <div className="pt-2 border-t border-border-subtle flex justify-between items-center text-[11px]">
                     <span>Courier: <strong className="text-text-base">{courierName}</strong></span>
                     {awbNumber && <span>AWB: <strong className="font-mono text-primary">{awbNumber}</strong></span>}
                   </div>

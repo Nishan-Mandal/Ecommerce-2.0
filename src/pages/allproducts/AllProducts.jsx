@@ -10,6 +10,8 @@ import { useDispatch, useSelector } from 'react-redux'
 import { addToCart } from '../../redux/cartSlice'
 import { toast } from 'react-toastify'
 import { queryKeys } from '../../utils/queryKeys';
+import { computeTotalStock } from '../../utils/productUtils';
+import { normalizeCategoryName } from '../../utils/categoryUtils';
 import AllProductsBanner from './sections/AllProductsBanner';
 import AllProductsSidebar from './sections/AllProductsSidebar';
 import AllProductsGrid from './sections/AllProductsGrid';
@@ -70,6 +72,18 @@ function Allproducts() {
     });
 
     const addCart = (product) => {
+        const totalStock = computeTotalStock(product);
+        if (totalStock <= 0 || product.isActive === false) {
+            toast.error("This product is currently out of stock.");
+            return;
+        }
+        const hasVariants = (product.variantTypes && product.variantTypes.length > 0) || 
+                            (Array.isArray(product.variants) && product.variants.length > 1);
+        if (hasVariants) {
+            navigate(`/productdetails/${product.id}`);
+            toast.info("Please select variant options first.");
+            return;
+        }
         const { time, ...serializableProduct } = product;
         dispatch(addToCart(serializableProduct));
         toast.success('Added to cart!');
@@ -83,8 +97,8 @@ function Allproducts() {
 
     // Dynamically derive categories & price boundaries from database
     const dynamicCategories = Array.from(
-        new Set([...storeCategories, ...allProducts.map(p => p.category).filter(Boolean)])
-    ).sort();
+        new Set([...storeCategories, ...allProducts.map(p => p.category)].map(normalizeCategoryName).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b));
 
     const numericPrices = allProducts
         .map(p => Number(p.price || p.minPrice))

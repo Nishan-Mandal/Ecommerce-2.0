@@ -12,11 +12,13 @@
 const configure = {
 
   // ─── Company Identity ──────────────────────────────────────────────────────
-  companyName: "HN Enterprise",
+  companyName: "Company Name",
   companyTagline: "Quality you can trust.",
   companyLogo: "",   // Firebase Storage URL
   faviconUrl: "",    // Firebase Storage URL
   invoiceTemplate: "classic",
+  founderName: "SK Abdul Ohid",
+  founderPhone: "+91 95641 40786",
 
   // ─── Contact Information ───────────────────────────────────────────────────
   address: {
@@ -34,8 +36,15 @@ const configure = {
   ],
 
   emails: [
-    { label: "Support", email: "[EMAIL_ADDRESS]" }
+    { label: "Support", email: "support@example.com" }
   ],
+
+  // ─── WhatsApp Modal / Floating Button ──────────────────────────────────────
+  whatsappModal: {
+    enabled: true,
+    phoneNumber: "+91 95641 40786",
+    message: "Hi Bengal Tiles, I would like to inquire about your tiles and showroom collection.",
+  },
 
   // ─── Social Links ──────────────────────────────────────────────────────────
   socialLinks: [

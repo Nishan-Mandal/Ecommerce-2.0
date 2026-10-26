@@ -22,8 +22,8 @@ const Input = ({ value, onChange, placeholder, type = "text", disabled = false, 
         placeholder={placeholder}
         disabled={disabled}
         readOnly={readOnly}
-        className={`w-full h-11 rounded-xl border border-border-base bg-white px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all ${
-            disabled || readOnly ? "bg-gray-100/90 text-gray-500 cursor-not-allowed border-gray-200 select-none" : ""
+        className={`w-full h-11 rounded-xl border border-border-subtle bg-bg-base px-4 text-sm font-medium text-text-base placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all ${
+            disabled || readOnly ? "bg-bg-surface text-text-muted cursor-not-allowed border-border-subtle select-none" : ""
         } ${className}`}
     />
 );
@@ -53,13 +53,16 @@ function LogoUpload({ label, currentUrl, onUpload, hint }) {
         setUploading(true);
         setProgress(0);
         try {
-            const url = await uploadService.uploadProductImage(pendingFile, setProgress);
+            const url = await uploadService.uploadCompanyAsset(pendingFile, setProgress);
             await onUpload(url);
             setLocalPreview(null);
             setPendingFile(null);
             toast.success(`${label} uploaded and saved successfully`);
         } catch (err) {
-            toast.error("Upload failed");
+            const errorMsg = err?.code === 'storage/unauthorized'
+                ? "Permission denied: Please ensure you are logged in to upload assets."
+                : (err?.message || "Upload failed");
+            toast.error(errorMsg);
             console.error(err);
         } finally {
             setUploading(false);
@@ -72,27 +75,27 @@ function LogoUpload({ label, currentUrl, onUpload, hint }) {
     };
 
     return (
-        <div className="space-y-4 bg-bg-surface p-4 rounded-2xl border border-border-base/60">
-            {/* Preview panel */}
-            <div className={`relative h-40 rounded-2xl border-2 border-dashed overflow-hidden bg-white flex items-center justify-center transition-colors ${
-                displayUrl ? "border-primary/30" : "border-border-base"
+        <div className="space-y-4 bg-bg-surface p-4 rounded-2xl border border-border-subtle">
+            {/* Preview panel with transparency checkerboard */}
+            <div className={`relative h-40 rounded-2xl border-2 border-dashed overflow-hidden bg-bg-base flex items-center justify-center transition-colors bg-[radial-gradient(#3a2d0b_1px,transparent_1px)] [background-size:12px_12px] ${
+                displayUrl ? "border-primary/40" : "border-border-subtle"
             }`}>
                 {displayUrl ? (
                     <>
                         <img
                             src={displayUrl}
                             alt={label}
-                            className="max-h-full max-w-full object-contain p-4"
+                            className="max-h-full max-w-full object-contain p-4 drop-shadow-xs"
                         />
                         {localPreview && (
-                            <div className="absolute top-3 right-3 px-2 py-1 rounded-full bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wider shadow-xs">
+                            <div className="absolute top-3 right-3 px-2 py-1 rounded-full bg-primary text-compli text-[10px] font-bold uppercase tracking-wider shadow-xs">
                                 Unsaved
                             </div>
                         )}
                     </>
                 ) : (
                     <div className="text-center">
-                        <span className="material-symbols-outlined text-4xl text-gray-300">image</span>
+                        <span className="material-symbols-outlined text-4xl text-text-subtle">image</span>
                         <p className="mt-2 text-xs text-text-muted font-medium">No {label} set</p>
                     </div>
                 )}
@@ -108,7 +111,7 @@ function LogoUpload({ label, currentUrl, onUpload, hint }) {
                         <span>Uploading...</span>
                         <span>{progress}%</span>
                     </div>
-                    <div className="h-2 rounded-full bg-gray-150 overflow-hidden">
+                    <div className="h-2 rounded-full bg-bg-base border border-border-subtle/50 overflow-hidden">
                         <div
                             className="h-full bg-primary transition-all duration-300"
                             style={{ width: `${progress}%` }}
@@ -132,7 +135,7 @@ function LogoUpload({ label, currentUrl, onUpload, hint }) {
                         <button
                             type="button"
                             onClick={handleDiscard}
-                            className="h-10 px-3.5 rounded-xl border border-border-base bg-white hover:bg-gray-50 text-text-muted font-bold text-xs transition-colors cursor-pointer shrink-0"
+                            className="h-10 px-3.5 rounded-xl border border-border-subtle bg-card hover:bg-card-hover text-text-base font-bold text-xs transition-colors cursor-pointer shrink-0"
                         >
                             Discard
                         </button>
@@ -140,13 +143,13 @@ function LogoUpload({ label, currentUrl, onUpload, hint }) {
                 )}
 
                 <label className="block">
-                    <span className="w-full h-10 rounded-xl border border-border-base bg-white hover:bg-gray-50 text-text-base font-bold text-xs transition-colors flex items-center justify-center cursor-pointer shadow-xs gap-1.5">
+                    <span className="w-full h-10 rounded-xl border border-border-subtle bg-card hover:bg-card-hover text-text-base font-bold text-xs transition-colors flex items-center justify-center cursor-pointer shadow-xs gap-1.5">
                         <span className="material-symbols-outlined text-base">photo_camera</span>
                         <span>{displayUrl ? `Replace ${label}` : `Select ${label}`}</span>
                     </span>
                     <input
                         type="file"
-                        accept="image/*"
+                        accept="image/png, image/webp, image/svg+xml, image/jpeg, image/x-icon, image/*"
                         className="hidden"
                         onChange={handleFileSelect}
                         disabled={uploading}
@@ -157,7 +160,7 @@ function LogoUpload({ label, currentUrl, onUpload, hint }) {
     );
 }
 
-export default function CompanyTab({ draft, updateDraft }) {
+export default function CompanyTab({ draft, updateDraft, markFieldSaved }) {
     const { setConfig } = useSiteConfig();
     const { user } = useAuth();
 
@@ -166,6 +169,7 @@ export default function CompanyTab({ draft, updateDraft }) {
         try {
             await configureService.saveSiteConfig({ companyLogo: url }, user?.uid || "");
             setConfig((prev) => ({ ...prev, companyLogo: url }));
+            if (markFieldSaved) markFieldSaved("companyLogo", url);
         } catch (err) {
             console.error("Failed to save company logo:", err);
             toast.error("Failed to save logo to database");
@@ -177,6 +181,7 @@ export default function CompanyTab({ draft, updateDraft }) {
         try {
             await configureService.saveSiteConfig({ faviconUrl: url }, user?.uid || "");
             setConfig((prev) => ({ ...prev, faviconUrl: url }));
+            if (markFieldSaved) markFieldSaved("faviconUrl", url);
         } catch (err) {
             console.error("Failed to save favicon:", err);
             toast.error("Failed to save favicon to database");
@@ -204,12 +209,30 @@ export default function CompanyTab({ draft, updateDraft }) {
                 </Field>
             </div>
 
+            {/* Founder Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
+                <Field label="Founder Name">
+                    <Input
+                        value={draft.founderName || ""}
+                        onChange={(e) => updateDraft({ founderName: e.target.value })}
+                        placeholder="e.g. SK Abdul Ohid"
+                    />
+                </Field>
+                <Field label="Founder Phone Number">
+                    <Input
+                        value={draft.founderPhone || ""}
+                        onChange={(e) => updateDraft({ founderPhone: e.target.value })}
+                        placeholder="e.g. +91 95641 40786"
+                    />
+                </Field>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Field label="Company Logo">
                     <LogoUpload
                         label="Logo"
                         currentUrl={draft.companyLogo}
-                        hint="Shown in Navbar and Admin sidebar. Recommended: 200×200px PNG."
+                        hint="Shown in Navbar and Admin sidebar. Supports transparent background PNG, WebP, SVG."
                         onUpload={handleLogoUpload}
                     />
                 </Field>
@@ -217,7 +240,7 @@ export default function CompanyTab({ draft, updateDraft }) {
                     <LogoUpload
                         label="Favicon"
                         currentUrl={draft.faviconUrl}
-                        hint="Shown in browser tab. Recommended: 32×32px or 64×64px ICO/PNG."
+                        hint="Shown in browser tab. Recommended: 32×32px ICO/PNG with transparency."
                         onUpload={handleFaviconUpload}
                     />
                 </Field>

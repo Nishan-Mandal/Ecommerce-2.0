@@ -39,6 +39,11 @@ export const DEFAULT_CONFIG = {
     address: { line1: "", line2: "", city: "", state: "", pincode: "", country: "India", mapUrl: "" },
     phones: [],
     emails: [],
+    whatsappModal: {
+        enabled: true,
+        phoneNumber: "",
+        message: "",
+    },
     socialLinks: DEFAULT_SOCIAL_LINKS,
     bannersCount: 0,
     collectionsCount: 0,
@@ -53,6 +58,25 @@ export const DEFAULT_CONFIG = {
         enableOnline: true,
         enableCod: true,
     },
+    bengalTilesSection: {
+        enabled: true,
+        title: "Bengal Tiles",
+        badgeText: "PREMIUM SHOWROOM & DEALERSHIP",
+        subtitle: "The Premium Tiles, Marble, Granite Showroom & Dealer in West Bengal",
+        buttonText: "Contact us",
+        buttonType: "whatsapp",
+        buttonLink: "",
+        whatsappNumber: "9564140786",
+        whatsappMessage: "Hi Bengal Tiles, I would like to inquire about your tiles, marble, and granite collection.",
+        desktopImage: "",
+        mobileImage: "",
+    },
+    brands: [],
+    brandsSection: {
+        title: "Brand Partner and Dealer",
+        subtitle: "",
+        enabled: true,
+    },
     updatedAt: null,
     updatedBy: "",
 };
@@ -65,14 +89,25 @@ export const configureService = {
     async getSiteConfig() {
         const snap = await getDoc(SITE_DOC());
         if (!snap.exists()) return { ...DEFAULT_CONFIG };
-        return { ...DEFAULT_CONFIG, ...snap.data() };
+        const rawData = snap.data();
+        // Exclude fields managed by independent services (videos, teamMembers)
+        // so that draft store settings never cache or overwrite them
+        const { videos, teamMembers, videosInitialized, ...cleanConfig } = rawData;
+        return { ...DEFAULT_CONFIG, ...cleanConfig };
     },
 
     /** Partially update the site config (merge) */
     async saveSiteConfig(data, adminUid = "") {
+        // Strip out independent collections/docs managed by their own services
+        // so that saving site settings never accidentally overwrites videos or team members!
+        const cleanData = { ...data };
+        delete cleanData.videos;
+        delete cleanData.teamMembers;
+        delete cleanData.videosInitialized;
+
         await setDoc(
             SITE_DOC(),
-            { ...data, updatedAt: serverTimestamp(), updatedBy: adminUid },
+            { ...cleanData, updatedAt: serverTimestamp(), updatedBy: adminUid },
             { merge: true }
         );
     },
@@ -92,7 +127,7 @@ export const configureService = {
      * @param {function} onProgress - Optional (0-100) progress callback
      */
     async addBanner(file, meta = {}, onProgress) {
-        const imageUrl = await uploadService.uploadProductImage(file, onProgress);
+        const imageUrl = await uploadService.uploadBannerImage(file, onProgress);
 
         const bannerDoc = await addDoc(BANNERS_COL(), {
             imageUrl,
@@ -122,7 +157,7 @@ export const configureService = {
         await deleteDoc(doc(BANNERS_COL(), bannerId));
         if (imageUrl) {
             try {
-                await uploadService.deleteProductImage(imageUrl);
+                await uploadService.deleteFile(imageUrl);
             } catch (e) {
                 console.warn("Could not delete banner image from storage:", e);
             }

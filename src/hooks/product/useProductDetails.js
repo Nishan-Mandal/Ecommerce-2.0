@@ -102,10 +102,14 @@ export default function useProductDetails() {
 
   // ── 3. Derived Ratings Calculation ────────────────────────────────
   const averageRating = useMemo(() => {
-    if (!ratings || ratings.length === 0) return 4.8;
-    const total = ratings.reduce((acc, curr) => acc + Number(curr.rating || curr.stars || 5), 0);
+    if (!ratings || ratings.length === 0) {
+      if (product?.averageRating) return Number(Number(product.averageRating).toFixed(1));
+      if (product?.rating) return Number(Number(product.rating).toFixed(1));
+      return null;
+    }
+    const total = ratings.reduce((acc, curr) => acc + Number(curr.rating || curr.stars || 0), 0);
     return Number((total / ratings.length).toFixed(1));
-  }, [ratings]);
+  }, [ratings, product]);
 
   // ── 4. Sync Initial Selected Image ────────────────────────────────
   useEffect(() => {
@@ -146,7 +150,7 @@ export default function useProductDetails() {
       variantId: variantId,
       quantity: quantity
     };
-    const { time, ...serializable } = cartItem;
+    const { time: _time, ...serializable } = cartItem;
     dispatch(addToCart(serializable));
     toast.success('Added to cart!');
   }, [dispatch]);

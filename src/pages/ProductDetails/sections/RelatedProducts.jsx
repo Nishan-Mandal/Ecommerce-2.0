@@ -8,6 +8,7 @@ import { useDispatch } from 'react-redux';
 import { addToCart } from '../../../redux/cartSlice';
 import { toast } from 'react-toastify';
 import { queryKeys } from '../../../utils/queryKeys';
+import { computeTotalStock } from '../../../utils/productUtils';
 
 /**
  * RelatedProducts Component
@@ -19,6 +20,18 @@ export default function RelatedProducts({ category, currentProductId }) {
   const dispatch = useDispatch();
 
   const addCart = (product) => {
+    const totalStock = computeTotalStock(product);
+    if (totalStock <= 0 || product.isActive === false) {
+      toast.error("This product is currently out of stock.");
+      return;
+    }
+    const hasVariants = (product.variantTypes && product.variantTypes.length > 0) || 
+                        (Array.isArray(product.variants) && product.variants.length > 1);
+    if (hasVariants) {
+      navigate(`/productdetails/${product.id}`);
+      toast.info("Please select variant options first.");
+      return;
+    }
     const { time, ...serializableProduct } = product;
     dispatch(addToCart(serializableProduct));
     toast.success('Added to cart!');
@@ -68,7 +81,7 @@ export default function RelatedProducts({ category, currentProductId }) {
               const el = document.getElementById('related-scroll');
               if (el) el.scrollBy({ left: -300, behavior: 'smooth' });
             }}
-            className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
+            className="w-10 h-10 rounded-full border border-border-subtle bg-card text-text-base flex items-center justify-center hover:bg-card-hover hover:border-primary/50 transition-colors cursor-pointer"
             aria-label="Scroll left"
           >
             <span className="material-symbols-outlined">chevron_left</span>
@@ -78,7 +91,7 @@ export default function RelatedProducts({ category, currentProductId }) {
               const el = document.getElementById('related-scroll');
               if (el) el.scrollBy({ left: 300, behavior: 'smooth' });
             }}
-            className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
+            className="w-10 h-10 rounded-full border border-border-subtle bg-card text-text-base flex items-center justify-center hover:bg-card-hover hover:border-primary/50 transition-colors cursor-pointer"
             aria-label="Scroll right"
           >
             <span className="material-symbols-outlined">chevron_right</span>
@@ -89,10 +102,10 @@ export default function RelatedProducts({ category, currentProductId }) {
       {loading ? (
         <div className="flex gap-6 overflow-x-auto pb-4" style={{ scrollbarWidth: 'none' }}>
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="w-[280px] flex-shrink-0 animate-pulse">
-              <div className="bg-gray-200 rounded-2xl aspect-[4/3] mb-4" />
-              <div className="h-4 bg-gray-200 rounded mb-2 w-3/4" />
-              <div className="h-4 bg-gray-200 rounded w-1/3" />
+            <div key={i} className="w-[280px] flex-shrink-0 animate-pulse bg-card border border-border-subtle rounded-2xl p-3 space-y-3">
+              <div className="bg-bg-surface rounded-xl aspect-[4/3]" />
+              <div className="h-4 bg-bg-surface rounded w-3/4" />
+              <div className="h-4 bg-bg-surface rounded w-1/3" />
             </div>
           ))}
         </div>

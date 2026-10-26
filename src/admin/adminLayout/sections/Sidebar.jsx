@@ -9,30 +9,60 @@ export default function Sidebar({
     sidebarItems,
     activeView,
     sidebarCollapsed,
+    setSidebarCollapsed,
     handleNavClick,
     config,
-    handleLogout
+    handleLogout,
+    onOpenChangePassword,
 }) {
     const navigate = useNavigate();
     return (
         <aside
             className={`
-                hidden md:flex flex-col fixed inset-y-0 left-0 z-40 bg-bg-surface border-r border-border-base transition-all duration-200 print:hidden
-                ${sidebarCollapsed ? 'md:w-20 lg:w-[260px]' : 'md:w-[260px] lg:w-[260px]'}
+                hidden md:flex flex-col fixed inset-y-0 left-0 z-40 bg-bg-surface border-r border-border-subtle transition-all duration-300 print:hidden
+                ${sidebarCollapsed ? 'w-20' : 'w-[260px]'}
             `}
         >
-            {/* Logo & Company Name */}
-            <div  onClick={() => navigate('/')} className="px-6 py-4 cursor-pointer border-b border-border-base flex items-center gap-3 h-16 shrink-0">
-                {config.companyLogo ? (
-                    <img src={config.companyLogo} alt={config.companyName} className="w-8 h-8 object-contain rounded-lg" />
+            {/* Top Header: Logo & Expand/Collapse Button */}
+            <div className={`border-b border-border-subtle flex items-center h-16 shrink-0 transition-all ${
+                sidebarCollapsed ? 'justify-center px-3' : 'justify-between px-5'
+            }`}>
+                {!sidebarCollapsed ? (
+                    <>
+                        <div 
+                            onClick={() => navigate('/')} 
+                            className="flex items-center gap-3 cursor-pointer overflow-hidden min-w-0 group"
+                            title="View Store"
+                        >
+                            {config.companyLogo ? (
+                                <img src={config.companyLogo} alt={config.companyName} className="w-8 h-8 object-contain rounded-lg shrink-0" />
+                            ) : (
+                                <span className="material-symbols-outlined text-primary text-[28px] shrink-0">settings_suggest</span>
+                            )}
+                            <span className="font-bold text-[16px] text-text-base uppercase tracking-tight truncate group-hover:text-primary transition-colors">
+                                {config.companyName || "Admin Panel"}
+                            </span>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setSidebarCollapsed(true)}
+                            className="p-1.5 text-text-muted hover:text-primary hover:bg-card-hover rounded-xl transition-colors cursor-pointer shrink-0"
+                            title="Collapse sidebar"
+                        >
+                            <span className="material-symbols-outlined text-[20px]">menu_open</span>
+                        </button>
+                    </>
                 ) : (
-                    <span className="material-symbols-outlined text-primary text-[28px]">settings_suggest</span>
+                    <button
+                        type="button"
+                        onClick={() => setSidebarCollapsed(false)}
+                        className="w-10 h-10 flex items-center justify-center text-text-muted hover:text-primary hover:bg-card-hover rounded-xl transition-colors cursor-pointer"
+                        title="Expand sidebar"
+                    >
+                        <span className="material-symbols-outlined text-[22px]">menu</span>
+                    </button>
                 )}
-                <span className={`font-bold text-[16px] text-text-base uppercase tracking-tight truncate transition-opacity duration-200 ${
-                    sidebarCollapsed ? 'md:hidden lg:block' : 'block'
-                }`}>
-                    {config.companyName || "Admin Panel"}
-                </span>
             </div>
 
             {/* Navigation Items */}
@@ -43,49 +73,72 @@ export default function Sidebar({
                         <button
                             key={item.id}
                             onClick={() => handleNavClick(item.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer text-sm font-semibold ${
+                            title={sidebarCollapsed ? item.label : undefined}
+                            className={`w-full flex items-center ${
+                                sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+                            } rounded-xl transition-all duration-200 cursor-pointer text-sm font-semibold ${
                                 isActive 
-                                    ? 'bg-primary text-compli' 
-                                    : 'text-text-muted hover:bg-gray-50 hover:text-text-base'
+                                    ? 'bg-primary text-compli font-bold shadow-md shadow-primary/20' 
+                                    : 'text-text-muted hover:bg-card-hover hover:text-primary'
                             }`}
                         >
-                            <span className={isActive ? 'text-compli' : 'text-text-muted'}>
+                            <span className={isActive ? 'text-compli shrink-0' : 'text-text-muted group-hover:text-primary shrink-0 transition-colors'}>
                                 {item.icon}
                             </span>
-                            <span className={`transition-opacity duration-200 ${
-                                sidebarCollapsed ? 'md:hidden lg:block' : 'block'
-                            }`}>
-                                {item.label}
-                            </span>
+                            {!sidebarCollapsed && (
+                                <span className="truncate">
+                                    {item.label}
+                                </span>
+                            )}
                         </button>
                     );
                 })}
             </nav>
 
             {/* Sidebar Footer */}
-            <div className="p-3 border-t border-border-base space-y-1 shrink-0">
+            <div className="p-3 border-t border-border-subtle space-y-1 shrink-0">
+                {/* Change Password for Admin */}
+                <button
+                    type="button"
+                    onClick={onOpenChangePassword}
+                    title={sidebarCollapsed ? "Change Password" : undefined}
+                    className={`w-full flex items-center ${
+                        sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-4 py-2.5'
+                    } rounded-xl text-sm font-semibold text-text-muted hover:bg-card-hover hover:text-primary transition-colors cursor-pointer`}
+                >
+                    <span className="material-symbols-outlined text-[20px] text-amber-500 shrink-0">lock_reset</span>
+                    {!sidebarCollapsed && (
+                        <span className="truncate">Change Password</span>
+                    )}
+                </button>
+
+                {/* View Store Link */}
                 <a
                     href="/"
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-text-muted hover:bg-gray-50 hover:text-text-base transition-colors"
+                    title={sidebarCollapsed ? "View Store" : undefined}
+                    className={`flex items-center ${
+                        sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-4 py-2.5'
+                    } rounded-xl text-sm font-semibold text-text-muted hover:bg-card-hover hover:text-primary transition-colors`}
                 >
-                    <span className="material-symbols-outlined text-[20px]">storefront</span>
-                    <span className={`transition-opacity duration-200 ${
-                        sidebarCollapsed ? 'md:hidden lg:block' : 'block'
-                    }`}>
-                        View Store
-                    </span>
+                    <span className="material-symbols-outlined text-[20px] shrink-0">storefront</span>
+                    {!sidebarCollapsed && (
+                        <span className="truncate">View Store</span>
+                    )}
                 </a>
 
+                {/* Logout Button */}
                 <button
+                    type="button"
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-550/10 transition-all font-extrabold cursor-pointer"
+                    title={sidebarCollapsed ? "Logout" : undefined}
+                    className={`w-full flex items-center ${
+                        sidebarCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-4 py-2.5'
+                    } rounded-xl text-sm font-semibold text-rose-500 hover:bg-rose-500/10 transition-all font-extrabold cursor-pointer`}
                 >
-                    <span className="material-symbols-outlined text-[20px]">logout</span>
-                    <span className={`transition-opacity duration-200 ${
-                        sidebarCollapsed ? 'md:hidden lg:block' : 'block'
-                    }`}>
-                        Logout
-                    </span>
+                    <span className="material-symbols-outlined text-[20px] shrink-0">logout</span>
+                    {!sidebarCollapsed && (
+                        <span className="truncate">Logout</span>
+                    )}
                 </button>
             </div>
         </aside>

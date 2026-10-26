@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import AdminLayout from './adminLayout/AdminLayout';
+import Loader from '../components/loader/Loader';
 
 function Admin() {
     const location = useLocation();
@@ -14,13 +15,18 @@ function Admin() {
         if (path === '/users') return 'users';
         if (path.startsWith('/coupons')) return 'coupons';
         if (path === '/reviews' || path === '/review') return 'reviews';
+        if (path === '/admin/videos') return 'videos';
+        if (path === '/admin/team' || path === '/team') return 'team';
+        if (path === '/admin/brands' || (path === '/configure' && location.search.includes('tab=brands'))) return 'brands';
         if (path === '/configure') return 'configure';
         return 'overview';
     };
 
     return (
         <AdminLayout activeView={getActiveView()}>
-            <Outlet />
+            <Suspense fallback={<Loader />}>
+                <Outlet />
+            </Suspense>
         </AdminLayout>
     );
 }

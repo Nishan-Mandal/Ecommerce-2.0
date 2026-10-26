@@ -98,16 +98,11 @@ export default function OrderRateExperienceCard({ items = [], orderId, onReviewS
   if (!productId && items.length === 0) return null;
 
   return (
-    <div className="bg-bg-surface border border-border-base/70 rounded-2xl p-5 sm:p-6 shadow-xs space-y-3.5">
+    <div className="bg-card border border-border-subtle rounded-2xl p-5 sm:p-6 shadow-xs space-y-3.5">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-sm sm:text-base font-bold text-text-base">
           Rate your experience
         </h3>
-        {existingRating && (
-          <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/40">
-            ✓ Rated {existingRating.rating} / 5 Stars
-          </span>
-        )}
       </div>
 
       {/* Multi-item switcher tabs (if order contains more than 1 item) */}
@@ -122,8 +117,8 @@ export default function OrderRateExperienceCard({ items = [], orderId, onReviewS
                 onClick={() => setSelectedIndex(idx)}
                 className={`px-3 py-1 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
                   selectedIndex === idx
-                    ? "bg-primary text-white shadow-xs"
-                    : "bg-bg-base hover:bg-border-base/60 text-text-muted border border-border-base/40"
+                    ? "bg-primary text-compli shadow-xs font-bold"
+                    : "bg-bg-base hover:bg-card-hover text-text-muted border border-border-subtle"
                 }`}
               >
                 {itTitle.length > 20 ? `${itTitle.slice(0, 20)}...` : itTitle}
@@ -133,7 +128,7 @@ export default function OrderRateExperienceCard({ items = [], orderId, onReviewS
         </div>
       )}
 
-      <div className="bg-bg-base/30 border border-border-base/50 rounded-xl p-4 sm:p-5 space-y-3">
+      <div className="bg-bg-base border border-border-subtle rounded-xl p-4 sm:p-5 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <p className="text-xs font-bold text-text-base">
             {productTitle ? `How was ${productTitle}?` : "Rate this product"}
@@ -155,7 +150,7 @@ export default function OrderRateExperienceCard({ items = [], orderId, onReviewS
                 {star <= activeRating ? (
                   <FaStar className="text-amber-400 fill-current" />
                 ) : (
-                  <FaRegStar className="text-gray-300 dark:text-gray-600" />
+                  <FaRegStar className="text-border-subtle" />
                 )}
               </button>
             ))}
@@ -170,7 +165,7 @@ export default function OrderRateExperienceCard({ items = [], orderId, onReviewS
               onChange={(e) => setReviewText(e.target.value)}
               placeholder="Write a brief review about product quality, fit, or delivery (optional)..."
               rows={2}
-              className="w-full p-2.5 text-xs rounded-xl border border-border-base bg-bg-surface text-text-base focus:border-primary focus:outline-hidden"
+              className="w-full p-2.5 text-xs rounded-xl border border-border-subtle bg-bg-surface text-text-base placeholder:text-text-subtle focus:border-primary focus:outline-hidden"
             />
             <div className="flex justify-end gap-2">
               <button
@@ -183,7 +178,7 @@ export default function OrderRateExperienceCard({ items = [], orderId, onReviewS
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold bg-primary text-white hover:bg-primary-hover rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold bg-primary text-compli hover:bg-primary-hover rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50"
               >
                 <FaPaperPlane size={10} />
                 <span>{submitting ? "Submitting..." : "Submit Rating"}</span>

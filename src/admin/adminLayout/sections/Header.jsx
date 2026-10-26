@@ -6,27 +6,16 @@ import React from 'react';
  */
 export default function Header({
     setDrawerOpen,
-    sidebarCollapsed,
-    setSidebarCollapsed,
     title
 }) {
     return (
-        <header className="sticky top-0 z-30 bg-bg-surface/85 backdrop-blur-md border-b border-border-base/60 flex items-center justify-between px-4 md:px-6 lg:px-8 h-16 shrink-0 print:hidden">
+        <header className="sticky top-0 z-30 bg-bg-surface/85 backdrop-blur-md border-b border-border-subtle flex items-center justify-between px-4 md:px-6 lg:px-8 h-16 shrink-0 print:hidden">
             <div className="flex items-center gap-4">
                 {/* Mobile Menu Toggle */}
                 <button
                     onClick={() => setDrawerOpen(true)}
-                    className="md:hidden flex items-center justify-center text-text-base cursor-pointer hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
+                    className="md:hidden flex items-center justify-center text-text-base cursor-pointer hover:bg-card-hover hover:text-primary p-1.5 rounded-lg transition-colors"
                     title="Open Menu"
-                >
-                    <span className="material-symbols-outlined text-[24px]">menu</span>
-                </button>
-
-                {/* Tablet Menu Toggle */}
-                <button
-                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                    className="hidden md:flex lg:hidden items-center justify-center text-text-base cursor-pointer hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
-                    title="Toggle Sidebar"
                 >
                     <span className="material-symbols-outlined text-[24px]">menu</span>
                 </button>
@@ -39,7 +28,7 @@ export default function Header({
 
             {/* Right Area: Admin Badge */}
             <div className="flex items-center gap-3">
-                <div className="px-3 py-1 bg-emerald-50 border border-emerald-100 rounded-full text-[#17700d] font-bold text-[10px] md:text-xs uppercase tracking-wider">
+                <div className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary font-bold text-[10px] md:text-xs uppercase tracking-wider">
                     Admin
                 </div>
             </div>

@@ -1,4 +1,5 @@
 import { DEFAULT_SOCIAL_LINKS } from "../../../services/configure/configureService";
+import ToggleButton from "../../../components/Common/ToggleButton";
 
 const PLATFORM_LABELS = {
     facebook: "Facebook",
@@ -35,8 +36,8 @@ export default function SocialTab({ draft, updateDraft }) {
                         key={link.platform}
                         className={`flex flex-col gap-3.5 p-4 rounded-2xl border transition-all ${
                             link.isActive
-                                ? "border-primary/30 bg-primary/5 shadow-xs"
-                                : "border-border-base bg-bg-surface"
+                                ? "border-primary/40 bg-primary/10 shadow-xs"
+                                : "border-border-subtle bg-bg-surface"
                         }`}
                     >
                         {/* Top Info and Toggle Row */}
@@ -48,15 +49,12 @@ export default function SocialTab({ draft, updateDraft }) {
                                 </span>
                             </div>
                             
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={link.isActive}
-                                    onChange={(e) => update(link.platform, "isActive", e.target.checked)}
-                                    className="sr-only peer"
-                                />
-                                <div className="w-9 h-5 bg-gray-300 rounded-full peer peer-checked:bg-primary transition relative after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-4 cursor-pointer" />
-                            </label>
+                            <ToggleButton
+                                checked={Boolean(link.isActive)}
+                                onChange={(val) => update(link.platform, "isActive", val)}
+                                size="sm"
+                                color="primary"
+                            />
                         </div>
 
                         {/* Input URL (collapsible/visible when active) */}
@@ -70,7 +68,7 @@ export default function SocialTab({ draft, updateDraft }) {
                                         ? "e.g. 919876543210 or https://wa.me/919876543210"
                                         : `https://${link.platform}.com/yourpage`
                                 }
-                                className="w-full h-11 px-4 rounded-xl border border-border-base bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all"
+                                className="w-full h-11 px-4 rounded-xl border border-border-subtle bg-bg-base text-text-base placeholder:text-text-subtle text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
                             />
                         )}
                     </div>

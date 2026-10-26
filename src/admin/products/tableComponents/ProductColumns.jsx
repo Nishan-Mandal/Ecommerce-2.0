@@ -4,10 +4,12 @@ import StatusBadge from '../../Components/common/StatusBadge';
 import ToggleButton from '../../../components/Common/ToggleButton';
 import {
   getProductStockCount,
+  getProductStockInfo,
   getProductDisplayPrice,
   getStockBadgeProps,
   formatProductDate,
 } from '../utils/productTableUtils';
+import VariantStockDropdown from './VariantStockDropdown';
 
 /**
  * Builds table column definitions for desktop product table view
@@ -33,7 +35,7 @@ function getProductTableColumns({
       header: 'Product',
       className: 'w-16',
       render: (item) => (
-        <div className="w-10 h-10 rounded-lg overflow-hidden border border-border-base bg-bg-base flex items-center justify-center">
+        <div className="w-10 h-10 rounded-lg overflow-hidden border border-border-subtle bg-bg-base flex items-center justify-center">
           <img
             src={item.imageUrl || item.images?.[0] || 'https://via.placeholder.com/80'}
             alt={item.title}
@@ -74,12 +76,24 @@ function getProductTableColumns({
       key: 'stock',
       header: 'Stock Status',
       align: 'center',
-      className: 'w-36 text-center hidden md:table-cell',
+      className: 'w-44 text-center hidden md:table-cell',
       cellClassName: 'text-center hidden md:table-cell',
       render: (item) => {
-        const stockCount = getProductStockCount(item);
-        const badgeProps = getStockBadgeProps(stockCount);
-        return <StatusBadge {...badgeProps} />;
+        const stockInfo = getProductStockInfo(item);
+        const badgeProps = getStockBadgeProps(stockInfo.totalStock);
+        return (
+          <div className="flex flex-col items-center justify-center gap-1.5 py-1">
+            <StatusBadge {...badgeProps} />
+            {stockInfo.hasVariants && (
+              <VariantStockDropdown
+                product={item}
+                stockInfo={stockInfo}
+                onEditClick={onEditClick}
+                align="center"
+              />
+            )}
+          </div>
+        );
       },
     },
     {
@@ -127,7 +141,7 @@ function getProductTableColumns({
           <button
             type="button"
             onClick={() => onDeleteClick && onDeleteClick(item)}
-            className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+            className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer"
             title="Delete Product"
           >
             <FaTrash size={12} />

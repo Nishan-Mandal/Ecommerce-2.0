@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { FaStar, FaRegStar, FaExclamationTriangle } from "react-icons/fa";
 
 function StarRating({ rating = 0 }) {
@@ -15,22 +17,32 @@ function StarRating({ rating = 0 }) {
 }
 
 function DeleteReviewModal({ open, review, products = {}, deleting, onClose, onDelete }) {
-    if (!open) return null;
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!open || !mounted || typeof document === "undefined" || !document.body) return null;
 
     const productName = review?.productId
         ? products[review.productId] || review.productId
         : "—";
 
-    return (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="w-full max-w-sm bg-bg-surface border border-border-base rounded-xl shadow-lg text-xs overflow-hidden">
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 backdrop-blur-md p-4" role="dialog" aria-modal="true">
+            <div className="min-h-full flex items-center justify-center py-6">
+                <div
+                    className="w-full max-w-sm bg-card border border-border-subtle rounded-2xl shadow-xl text-xs overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                >
 
                 {/* Icon + Title */}
-                <div className="p-5 text-center">
-                    <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+                <div className="p-6 text-center">
+                    <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 flex items-center justify-center mx-auto">
                         <FaExclamationTriangle size={20} />
                     </div>
-                    <h2 className="text-base font-bold mt-3">Delete Review?</h2>
+                    <h2 className="text-base font-bold text-text-base mt-3">Delete Review?</h2>
                     <p className="text-[11px] text-text-muted mt-2 leading-relaxed">
                         This will permanently remove the review by
                         <span className="font-bold text-text-base"> {review?.userName}</span>.
@@ -40,7 +52,7 @@ function DeleteReviewModal({ open, review, products = {}, deleting, onClose, onD
 
                 {/* Review Preview Card */}
                 {review && (
-                    <div className="mx-4 mb-4 rounded-lg border border-border-base bg-bg-base p-3 space-y-1.5">
+                    <div className="mx-4 mb-4 rounded-xl border border-border-subtle bg-bg-base p-3 space-y-1.5">
                         <div className="flex items-center justify-between">
                             <p className="font-bold text-text-base">{review.userName}</p>
                             <StarRating rating={review.rating} />
@@ -57,12 +69,12 @@ function DeleteReviewModal({ open, review, products = {}, deleting, onClose, onD
                 )}
 
                 {/* Actions */}
-                <div className="border-t border-border-base p-3.5 flex gap-2">
+                <div className="border-t border-border-subtle p-4 flex gap-3">
                     <button
                         type="button"
                         onClick={onClose}
                         disabled={deleting}
-                        className="flex-1 py-1.5 rounded-lg border border-border-base bg-bg-base hover:bg-bg-base/70 font-semibold transition disabled:opacity-50 text-xs"
+                        className="flex-1 py-2 rounded-xl border border-border-subtle bg-bg-base hover:bg-card-hover text-text-base font-bold transition disabled:opacity-50 text-xs cursor-pointer"
                     >
                         Cancel
                     </button>
@@ -70,7 +82,7 @@ function DeleteReviewModal({ open, review, products = {}, deleting, onClose, onD
                         type="button"
                         onClick={onDelete}
                         disabled={deleting}
-                        className="flex-1 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition disabled:opacity-50 text-xs"
+                        className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition disabled:opacity-50 text-xs cursor-pointer"
                     >
                         {deleting ? "Deleting..." : "Delete Review"}
                     </button>
@@ -78,6 +90,8 @@ function DeleteReviewModal({ open, review, products = {}, deleting, onClose, onD
 
             </div>
         </div>
+    </div>,
+    document.body
     );
 }
 

@@ -13,6 +13,14 @@ function formatVariantName(variant) {
   return String(variant);
 }
 
+const fmt = (val) => {
+  const num = Number(val) || 0;
+  return num.toLocaleString('en-IN', {
+    minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+};
+
 function OrderProductItem({ item, orderStatus }) {
   const img = item.productImage || item.imageUrl || item.images?.[0] || "https://via.placeholder.com/150";
   const title = item.productName || item.title || item.name || "Product Item";
@@ -47,10 +55,10 @@ function OrderProductItem({ item, orderStatus }) {
   }
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-bg-base/50 border border-border-base/60 hover:bg-bg-base transition-colors group">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-card border border-border-subtle hover:bg-card-hover transition-colors group">
       {/* Product Image & Info */}
       <div className="flex items-center gap-3.5 flex-1 min-w-0">
-        <div className="w-16 h-16 rounded-lg bg-white border border-border-base p-1 overflow-hidden shrink-0 shadow-xs group-hover:scale-105 transition-transform duration-200">
+        <div className="w-16 h-16 rounded-lg bg-bg-base border border-border-subtle p-1 overflow-hidden shrink-0 shadow-xs group-hover:scale-105 transition-transform duration-200">
           <img
             src={img}
             alt={title}
@@ -77,17 +85,17 @@ function OrderProductItem({ item, orderStatus }) {
           <div className="mt-1.5 flex items-center gap-3 text-[11px] text-text-muted">
             <span className="font-semibold">Qty: <strong className="text-text-base">{qty}</strong></span>
             <span>•</span>
-            <span className="font-semibold">Price: <strong className="text-text-base">₹{price.toLocaleString("en-IN")}</strong></span>
+            <span className="font-semibold">Price: <strong className="text-text-base">₹{fmt(price)}</strong></span>
           </div>
         </div>
       </div>
 
       {/* Item Price */}
-      <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-border-base/40 shrink-0">
+      <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-border-subtle shrink-0">
         <div className="text-right">
           <span className="text-[10px] text-text-muted block font-semibold">Total Item Price</span>
           <span className="font-black text-sm text-text-base">
-            ₹{itemTotal.toLocaleString("en-IN")}
+            ₹{fmt(itemTotal)}
           </span>
         </div>
       </div>

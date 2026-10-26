@@ -1,7 +1,7 @@
 import React from "react";
 import { FaBoxOpen, FaSave } from "react-icons/fa";
 import StatusBadge from "../../Components/common/StatusBadge.jsx";
-import ToggleButton from "../../../components/common/ToggleButton.jsx";
+import ToggleButton from "../../../components/Common/ToggleButton.jsx";
 
 function ProductHeader({
     title = "Add Product",
@@ -50,7 +50,7 @@ function ProductHeader({
                 <div className="flex items-center gap-2.5 shrink-0">
                     {/* Top Status Switch Button */}
                     {products && setProducts && (
-                        <div className="flex items-center justify-center px-2 pr-3 border-r border-border-base/60">
+                        <div className="flex items-center justify-center px-2 pr-3 border-r border-border-subtle">
                             <ToggleButton
                                 checked={isLive}
                                 onChange={(checked) => setProducts({ ...products, isActive: checked })}
